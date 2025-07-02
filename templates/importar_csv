@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Importar CSV</title>
+</head>
+<body>
+  <h1>Importar Funcionários via CSV</h1>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="arquivo" accept=".csv" required />
+    <button type="submit">Importar</button>
+  </form>
+  <a href="/">← Voltar</a>
+</body>
+</html>

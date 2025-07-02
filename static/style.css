@@ -1,0 +1,226 @@
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .action-selector {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      user-select: none;
+    }
+
+    .action-selector button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 25px;
+      background: #ddd;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-weight: bold;
+    }
+
+    .action-selector button.active {
+      background: #007bff;
+      color: white;
+      box-shadow: 0 0 8px #007bffaa;
+    }
+
+    form {
+      background: white;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px #00000020;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    form label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    form input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-top: 6px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      font-size: 1em;
+    }
+
+    form input[type="date"] {
+      padding: 6px 10px;
+    }
+
+    .buttons-row {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    button.primary-btn {
+      padding: 12px 25px;
+      background-color: #28a745;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button.primary-btn:hover {
+      background-color: #218838;
+    }
+
+    button.secondary-btn {
+      padding: 12px 20px;
+      background-color: #17a2b8;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button.secondary-btn:hover {
+      background-color: #117a8b;
+    }
+
+    #csvFeedback {
+      max-width: 400px;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #155724;
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    #csvError {
+      max-width: 400px;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #721c24;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .botao-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin: 30px 0;
+}
+
+.btn {
+  padding: 12px 25px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  user-select: none;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 12px rgba(0,0,0,0.25);
+}
+
+/* Cores personalizadas */
+.btn-azul {
+  background-color: #007BFF;
+}
+
+.btn-azul:hover {
+  background-color: #0056b3;
+}
+
+.btn-verde {
+  background-color: #28a745;
+}
+
+.btn-verde:hover {
+  background-color: #19692c;
+}
+
+.btn-laranja {
+  background-color: #fd7e14;
+}
+
+.btn-laranja:hover {
+  background-color: #b35b0b;
+}
+
+.btn-amarelo {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-amarelo:hover {
+  background-color: #cc9a06;
+  color: #fff;
+}
+
+.btn-vermelho {
+  background-color: #dc3545;
+}
+
+.btn-vermelho:hover {
+  background-color: #8a1c24;
+}
+
+
+/*CSS DOS FUNCIONARIOS*/
+
+.form-busca {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.input-busca {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  flex: 1;
+  max-width: 300px;
+}
+
+.btn-busca {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-busca:hover {
+  background-color: #0056b3;
+}

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel Funcionários</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='/static/style.css') }}">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .action-selector {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      user-select: none;
+    }
+
+    .action-selector button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 25px;
+      background: #ddd;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-weight: bold;
+    }
+
+    .action-selector button.active {
+      background: #007bff;
+      color: white;
+      box-shadow: 0 0 8px #007bffaa;
+    }
+
+    form {
+      background: white;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px #00000020;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    form label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    form input {
+      width: 100%;
+      padding: 8px 12px;
+      margin-top: 6px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      font-size: 1em;
+    }
+
+    form input[type="date"] {
+      padding: 6px 10px;
+    }
+
+    .buttons-row {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    button.primary-btn {
+      padding: 12px 25px;
+      background-color: #28a745;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button.primary-btn:hover {
+      background-color: #218838;
+    }
+
+    button.secondary-btn {
+      padding: 12px 20px;
+      background-color: #17a2b8;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button.secondary-btn:hover {
+      background-color: #117a8b;
+    }
+
+    #csvFeedback {
+      max-width: 400px;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #155724;
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    #csvError {
+      max-width: 400px;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #721c24;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .botao-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin: 30px 0;
+}
+
+.btn {
+  padding: 12px 25px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  user-select: none;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 12px rgba(0,0,0,0.25);
+}
+
+/* Cores personalizadas */
+.btn-azul {
+  background-color: #007BFF;
+}
+
+.btn-azul:hover {
+  background-color: #0056b3;
+}
+
+.btn-verde {
+  background-color: #28a745;
+}
+
+.btn-verde:hover {
+  background-color: #19692c;
+}
+
+.btn-laranja {
+  background-color: #fd7e14;
+}
+
+.btn-laranja:hover {
+  background-color: #b35b0b;
+}
+
+.btn-amarelo {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-amarelo:hover {
+  background-color: #cc9a06;
+  color: #fff;
+}
+
+.btn-vermelho {
+  background-color: #dc3545;
+}
+
+.btn-vermelho:hover {
+  background-color: #8a1c24;
+}
+
+  </style>
+</head>
+<body>
+  <h1>Painel de Funcionários</h1>
+
+  <div class="action-selector" id="actionSelector" >
+    <button class="active" data-action="cadastrar">Cadastrar</button>
+    <button data-action="alterar">Alterar</button>
+    <button data-action="remover">Remover</button>
+    <button data-action="funcionarios">Funcionarios</button>
+    <button data-action="sistemas">Beneficios</button>
+  </div>
+
+  <div class="botao-container">
+  <a href="/funcionarios" class="btn btn-azul">Ver Funcionários</a>
+  <a href="/sistemas" class="btn btn-verde">Sistemas Ativos</a>
+  <a href="/cadastrar" class="btn btn-laranja">Cadastrar Funcionário</a>
+  <a href="/alterar" class="btn btn-amarelo">Alterar Funcionário</a>
+  <a href="/remover" class="btn btn-vermelho">Remover Funcionário</a>
+</div>
+
+
+  <form id="funcionarioForm" method="POST" action="/funcionarios">
+    <label for="nome">Nome Completo</label>
+    <input type="text" id="nome" name="nome" required />
+
+    <label for="cpf">CPF</label>
+    <input type="text" id="cpf" name="cpf" required />
+
+    <label for="email">E-mail</label>
+    <input type="email" id="email" name="email" required />
+
+    <label for="telefone">Telefone</label>
+    <input type="text" id="telefone" name="telefone" />
+
+    <label for="cargo">Cargo</label>
+    <input type="text" id="cargo" name="cargo" />
+
+    <label for="setor">Setor</label>
+    <input type="text" id="setor" name="setor" />
+
+    <label for="data_nascimento">Data de Nascimento</label>
+    <input type="date" id="data_nascimento" name="data_nascimento" />
+
+    <label for="contato_emergencia_nome">Nome do Contato de Emergência</label>
+    <input type="text" id="contato_emergencia_nome" name="contato_emergencia_nome" />
+
+    <label for="contato_emergencia_telefone">Telefone do Contato de Emergência</label>
+    <input type="text" id="contato_emergencia_telefone" name="contato_emergencia_telefone" />
+
+    <div class="buttons-row">
+      <button id="mainActionBtn" class="primary-btn" type="submit">Cadastrar</button>
+
+      <label for="csvFileInput" id="csvLabel" class="secondary-btn" style="cursor:pointer; display: flex;">
+        Importar CSV
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+      </label>
+    </div>
+  </form>
+
+  <div id="csvFeedback">Funcionários importados com sucesso!</div>
+  <div id="csvError"></div>
+
+  <script>
+    const actionButtons = document.querySelectorAll('#actionSelector button');
+    const mainActionBtn = document.getElementById('mainActionBtn');
+    const csvLabel = document.getElementById('csvLabel');
+
+    actionButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        actionButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        const action = button.getAttribute('data-action');
+
+        switch(action) {
+          case 'cadastrar':
+            mainActionBtn.textContent = 'Cadastrar';
+            mainActionBtn.type = 'submit';
+            csvLabel.style.display = 'flex';
+            break;
+
+          case 'alterar':
+            mainActionBtn.textContent = 'Alterar';
+            mainActionBtn.type = 'submit'; // pode ser ajustado pra tratar update no backend
+            csvLabel.style.display = 'none';
+            break;
+
+          case 'remover':
+            mainActionBtn.textContent = 'Remover';
+            mainActionBtn.type = 'submit'; // pode ser ajustado pra tratar remoção no backend
+            csvLabel.style.display = 'none';
+            break;
+          
+          case 'funcionarios' :action
+          break;
+        }
+      });
+    });
+
+    // Upload CSV
+    const csvInput = document.getElementById('csvFileInput');
+    const feedback = document.getElementById('csvFeedback');
+    const errorMsg = document.getElementById('csvError');
+
+    csvInput.addEventListener('change', () => {
+      const file = csvInput.files[0];
+      if (!file) return;
+
+      feedback.style.display = 'none';
+      errorMsg.style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('arquivo', file);
+
+      fetch('/importar_csv', {
+        method: 'POST',
+        body: formData
+      })
+      .then(resp => resp.json())
+      .then(data => {
+        if(data.success){
+          feedback.textContent = data.message;
+          feedback.style.display = 'block';
+        } else {
+          errorMsg.textContent = data.message || 'Erro desconhecido';
+          errorMsg.style.display = 'block';
+        }
+        csvInput.value = '';
+      })
+      .catch(() => {
+        errorMsg.textContent = 'Erro ao enviar arquivo.';
+        errorMsg.style.display = 'block';
+        csvInput.value = '';
+      });
+    });
+  </script>
+</body>
+</html>
