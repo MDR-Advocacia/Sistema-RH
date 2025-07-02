@@ -197,30 +197,127 @@
 
 /*CSS DOS FUNCIONARIOS*/
 
-.form-busca {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
 
-.input-busca {
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  flex: 1;
-  max-width: 300px;
-}
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
-.btn-busca {
-  background-color: #007BFF;
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
+    a {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #007bff;
+      text-decoration: none;
+    }
 
-.btn-busca:hover {
-  background-color: #0056b3;
-}
+    a:hover {
+      text-decoration: underline;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #007bff;
+      color: white;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .form-busca {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .form-busca input {
+    flex: 1;
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .form-busca button {
+    padding: 8px 16px;
+    background-color: #004aad;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  .form-busca button:hover {
+    background-color: #00337a;
+  }
+
+
+/*FIM DE FUNCIONARIO*/
+
+/*SISTEMAS. HTML*/
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    a {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #28a745;
+      color: white;
+    }
+  
+/*FIM DE SISTEMAS*/
