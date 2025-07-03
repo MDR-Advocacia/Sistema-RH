@@ -2,6 +2,8 @@ import csv
 import json
 import os
 
+from flask import request, render_template
+from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template
 from .models import Funcionario, Sistema
 from io import TextIOWrapper
@@ -135,8 +137,10 @@ def buscar_funcionarios():
 def alterar_colaborador():
     return render_template("alterar.html")
 
-@main.route('/alterar', methods=['POST'])
-def salvar_alteracoes():
+from flask import request, redirect, url_for, flash
+
+@main.route('/alterar_colaborador', methods=['POST'])
+def alterar_colaborador_post():
     cpf = request.form.get("cpf")
     funcionario = Funcionario.query.filter_by(cpf=cpf).first()
 
@@ -151,10 +155,11 @@ def salvar_alteracoes():
     for campo in campos:
         if campo in request.form:
             valor = request.form.get(campo)
-            if campo == "data_nascimento":
+            if campo == "data_nascimento" and valor:
                 valor = datetime.strptime(valor, "%Y-%m-%d")
             setattr(funcionario, campo, valor)
 
     db.session.commit()
-    return render_template("alterar.html", mensagem="Alterações salvas com sucesso!")
 
+    # Sem usar flash: renderiza a página com uma mensagem
+    return render_template("alterar.html", mensagem="Alterações salvas com sucesso!")
