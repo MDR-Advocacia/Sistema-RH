@@ -106,3 +106,55 @@ def importar_csv():
 def form_cadastrar():
     return render_template('cadastrar.html')
 
+@main.route('/api/buscar_funcionarios')
+def buscar_funcionarios():
+    termo = request.args.get('q', '').strip().lower()
+
+    if not termo:
+        return jsonify([])
+
+    funcionarios = Funcionario.query.filter(Funcionario.nome.ilike(f"%{termo}%")).all()
+
+    resultado = []
+    for f in funcionarios:
+        resultado.append({
+            "nome": f.nome,
+            "cpf": f.cpf,
+            "email": f.email,
+            "telefone": f.telefone,
+            "cargo": f.cargo,
+            "setor": f.setor,
+            "data_nascimento": f.data_nascimento.strftime("%Y-%m-%d") if f.data_nascimento else "",
+            "contato_emergencia_nome": f.contato_emergencia_nome,
+            "contato_emergencia_telefone": f.contato_emergencia_telefone
+        })
+
+    return jsonify(resultado)
+
+@main.route('/alterar')
+def alterar_colaborador():
+    return render_template("alterar.html")
+
+@main.route('/alterar', methods=['POST'])
+def salvar_alteracoes():
+    cpf = request.form.get("cpf")
+    funcionario = Funcionario.query.filter_by(cpf=cpf).first()
+
+    if not funcionario:
+        return "Funcionário não encontrado", 404
+
+    campos = [
+        'nome', 'email', 'telefone', 'cargo', 'setor',
+        'data_nascimento', 'contato_emergencia_nome', 'contato_emergencia_telefone'
+    ]
+
+    for campo in campos:
+        if campo in request.form:
+            valor = request.form.get(campo)
+            if campo == "data_nascimento":
+                valor = datetime.strptime(valor, "%Y-%m-%d")
+            setattr(funcionario, campo, valor)
+
+    db.session.commit()
+    return render_template("alterar.html", mensagem="Alterações salvas com sucesso!")
+

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Alterar Colaborador</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .resultado-busca {
+            border: 1px solid #ccc;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        .resultado-busca div {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .resultado-busca div:hover {
+            background-color: #eee;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Alterar Colaborador</h1>
+
+        <div class="form-group">
+            <input type="text" id="busca" placeholder="Digite o nome do colaborador..." autocomplete="off">
+            <button type="button" id="btn-buscar">Buscar</button>
+        </div>
+
+        <div id="resultados" class="resultado-busca"></div>
+
+        <form id="form-alterar" class="hidden" method="POST" action="{{ url_for('main.salvar_alteracoes') }}">
+            <h2>Editar informações</h2>
+
+            <input type="hidden" name="cpf" id="cpf-colaborador">
+
+            {% set campos = [
+                'nome', 'email', 'telefone', 'cargo', 'setor',
+                'data_nascimento', 'contato_emergencia_nome', 'contato_emergencia_telefone'
+            ] %}
+
+            {% for campo in campos %}
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" class="check-alterar" data-target="{{ campo }}"> 
+                    Alterar {{ campo.replace('_', ' ').capitalize() }}
+                </label>
+                <input type="{{ 'date' if 'data' in campo else 'text' }}" 
+                       name="{{ campo }}" 
+                       id="input-{{ campo }}" 
+                       disabled>
+            </div>
+            {% endfor %}
+
+            <button type="submit">Salvar alterações</button>
+        </form>
+    </div>
+
+    <script>
+        const btnBuscar = document.getElementById("btn-buscar");
+        const buscaInput = document.getElementById("busca");
+        const resultadosDiv = document.getElementById("resultados");
+        const formAlterar = document.getElementById("form-alterar");
+        const cpfInput = document.getElementById("cpf-colaborador");
+
+        function preencherFormulario(f) {
+            cpfInput.value = f.cpf;
+            document.getElementById("input-nome").value = f.nome;
+            document.getElementById("input-email").value = f.email;
+            document.getElementById("input-telefone").value = f.telefone;
+            document.getElementById("input-cargo").value = f.cargo;
+            document.getElementById("input-setor").value = f.setor;
+            document.getElementById("input-data_nascimento").value = f.data_nascimento;
+            document.getElementById("input-contato_emergencia_nome").value = f.contato_emergencia_nome;
+            document.getElementById("input-contato_emergencia_telefone").value = f.contato_emergencia_telefone;
+            formAlterar.classList.remove("hidden");
+        }
+
+        document.querySelectorAll(".check-alterar").forEach(checkbox => {
+            checkbox.addEventListener("change", function () {
+                const campo = this.dataset.target;
+                const input = document.getElementById("input-" + campo);
+                input.disabled = !this.checked;
+            });
+        });
+
+        btnBuscar.addEventListener("click", function () {
+            const termo = buscaInput.value.trim();
+            resultadosDiv.innerHTML = "";
+
+            if (termo.length < 2) return;
+
+            fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`)
+                .then(res => res.json())
+                .then(funcionarios => {
+                    if (funcionarios.length === 0) {
+                        resultadosDiv.innerHTML = "<div>Nenhum colaborador encontrado.</div>";
+                        return;
+                    }
+
+                    funcionarios.forEach(f => {
+                        const div = document.createElement("div");
+                        div.textContent = f.nome;
+                        div.addEventListener("click", function () {
+                            preencherFormulario(f);
+                            resultadosDiv.innerHTML = "";
+                            buscaInput.value = f.nome;
+                        });
+                        resultadosDiv.appendChild(div);
+                    });
+                });
+        });
+    </script>
+</body>
+</html>
