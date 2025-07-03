@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify, render_template
 from .models import Funcionario, Sistema
 from io import TextIOWrapper
 from . import db
-from datetime import datetime
+
 
 main = Blueprint('main', __name__)
 
@@ -16,26 +16,45 @@ main = Blueprint('main', __name__)
 def index():
     return render_template('index.html')
 
+@main.route('/cadastrar', methods=['GET'])
+def exibir_formulario_cadastro():
+    return render_template('cadastrar.html')
+
 @main.route('/cadastrar', methods=['POST'])
-def cadastrar():
-    data = request.get_json()
+def processar_cadastro():
+    nome = request.form.get('nome')
+    cpf = request.form.get('cpf')
+    email = request.form.get('email')
+    telefone = request.form.get('telefone')
+    cargo = request.form.get('cargo')
+    setor = request.form.get('setor')
+    data_nascimento = request.form.get('data_nascimento')
+    contato_nome = request.form.get('contato_emergencia_nome')
+    contato_telefone = request.form.get('contato_emergencia_telefone')
+
+    if not nome or not cpf:
+        return "Nome e CPF são obrigatórios", 400
+
+    funcionario_existente = Funcionario.query.filter_by(cpf=cpf).first()
+    if funcionario_existente:
+        return "Funcionário com esse CPF já existe", 400
+
     funcionario = Funcionario(
-        nome=data['nome'],
-        cpf=data['cpf'],
-        cargo=data['cargo'],
-        setor=data['setor'],
-        email=data['email'],
-        data_admissao=datetime.strptime(data['data_admissao'], '%Y-%m-%d')
+        nome=nome,
+        cpf=cpf,
+        email=email,
+        telefone=telefone,
+        cargo=cargo,
+        setor=setor,
+        data_nascimento=datetime.strptime(data_nascimento, '%Y-%m-%d') if data_nascimento else None,
+        contato_emergencia_nome=contato_nome,
+        contato_emergencia_telefone=contato_telefone
     )
+
     db.session.add(funcionario)
     db.session.commit()
 
-    for nome_sistema in data['sistemas']:
-        sistema = Sistema(nome=nome_sistema, status='ativo', funcionario_id=funcionario.id)
-        db.session.add(sistema)
-
-    db.session.commit()
-    return jsonify({'message': 'Funcionário cadastrado com sucesso!'})
+    return render_template('cadastrar.html', mensagem="Funcionário cadastrado com sucesso!")
 
 @main.route('/funcionarios')
 def listar_funcionarios():
@@ -104,9 +123,6 @@ def importar_csv():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao processar CSV: {str(e)}'})
 
-@main.route('/cadastrar', methods=['GET'])
-def form_cadastrar():
-    return render_template('cadastrar.html')
 
 @main.route('/api/buscar_funcionarios')
 def buscar_funcionarios():
@@ -163,3 +179,25 @@ def alterar_colaborador_post():
 
     # Sem usar flash: renderiza a página com uma mensagem
     return render_template("alterar.html", mensagem="Alterações salvas com sucesso!")
+
+@main.route('/remover')
+def deletar():
+    return render_template('deletar.html')
+
+
+@main.route('/remover_funcionario', methods=['POST'])
+def remover_funcionario():
+    cpf = request.form.get('cpf')
+    if not cpf:
+        return jsonify({'success': False, 'message': 'CPF não informado'}), 400
+
+    funcionario = Funcionario.query.filter_by(cpf=cpf).first()
+    if not funcionario:
+        return jsonify({'success': False, 'message': 'Funcionário não encontrado'}), 404
+
+    db.session.delete(funcionario)
+    db.session.commit()
+    # Redireciona para página de deletar com mensagem? Ou só retorna JSON?
+    # Se preferir redirecionar, troque para redirect(url_for('main.deletar'))
+    return redirect(url_for('main.deletar'))
+
