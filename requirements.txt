@@ -4,3 +4,5 @@ Flask-Migrate
 Flask-Cors
 python-dotenv
 psycopg2-binary
+
+#pip install -r requirements.txt
