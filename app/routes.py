@@ -2,9 +2,10 @@ import csv
 import json
 import os
 
-from flask import request, render_template
+
+from sqlalchemy import or_
 from datetime import datetime
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash
 from .models import Funcionario, Sistema
 from io import TextIOWrapper
 from . import db
@@ -104,15 +105,15 @@ def importar_csv():
                 continue
 
             funcionario = Funcionario(
-                nome=linha.get('Nome completo', ''),
+                nome=linha.get('Nome Completo', ''),
                 cpf=linha.get('CPF', ''),
-                email=linha.get('Email', ''),
+                email=linha.get('E-mail', ''),
                 telefone=linha.get('Telefone', ''),
                 cargo=linha.get('Cargo', ''),
                 setor=linha.get('Setor', ''),
-                data_nascimento=datetime.strptime(linha.get('Data nascimento', '01/01/1900'), '%d/%m/%Y'),
-                contato_emergencia_nome=linha.get('Nome contato emergência', ''),
-                contato_emergencia_telefone=linha.get('Telefone contato emergência', '')
+                data_nascimento=datetime.strptime(linha.get('Data de Nascimento', '01/01/1900'), '%d/%m/%Y'),
+                contato_emergencia_nome=linha.get('Contato de Emergencia (Nome)', ''),
+                contato_emergencia_telefone=linha.get('Contato de Emergencia (Telefone)', '')
             )
             db.session.add(funcionario)
             count += 1
@@ -131,7 +132,12 @@ def buscar_funcionarios():
     if not termo:
         return jsonify([])
 
-    funcionarios = Funcionario.query.filter(Funcionario.nome.ilike(f"%{termo}%")).all()
+    funcionarios = Funcionario.query.filter(
+        or_(
+            Funcionario.nome.ilike(f"%{termo}%"),
+            Funcionario.cpf.ilike(f"%{termo}%")
+        )
+    ).all()
 
     resultado = []
     for f in funcionarios:
@@ -153,7 +159,7 @@ def buscar_funcionarios():
 def alterar_colaborador():
     return render_template("alterar.html")
 
-from flask import request, redirect, url_for, flash
+
 
 @main.route('/alterar_colaborador', methods=['POST'])
 def alterar_colaborador_post():

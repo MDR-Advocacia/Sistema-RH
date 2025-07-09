@@ -37,6 +37,17 @@
         }
         .resultado-busca div:hover { background-color: #eee; }
         .hidden { display: none; }
+
+        .alert-sucesso {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
@@ -55,6 +66,14 @@
         <a href="/">← Voltar</a>
         <div id="resultados" class="resultado-busca"></div>
     </div>
+    
+
+    {% if mensagem %}
+    <div class="alert-sucesso">
+        {{ mensagem }}
+    </div>
+    {% endif %}
+
 
     <form id="form-alterar" class="hidden" method="POST" action="/alterar_colaborador">
         <h2>Editar Informações</h2>
