@@ -5,9 +5,9 @@ import os
 
 from sqlalchemy import or_
 from datetime import datetime
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, make_response
 from .models import Funcionario, Sistema
-from io import TextIOWrapper
+from io import TextIOWrapper, StringIO
 from . import db
 
 
@@ -124,6 +124,48 @@ def importar_csv():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao processar CSV: {str(e)}'})
 
+
+@main.route('/exportar_csv')
+def exportar_csv():
+    termo_busca = request.args.get('q', '').strip().lower()
+
+    funcionarios_query = Funcionario.query
+    if termo_busca:
+        funcionarios_query = funcionarios_query.filter(
+            or_(
+                Funcionario.nome.ilike(f"%{termo_busca}%"),
+                Funcionario.cpf.ilike(f"%{termo_busca}%"),
+                Funcionario.setor.ilike(f"%{termo_busca}%")
+            )
+        )
+    
+    funcionarios = funcionarios_query.all()
+
+    # Cria um arquivo CSV em memória
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Escreve o cabeçalho
+    writer.writerow([
+        'Nome Completo', 'CPF', 'E-mail', 'Telefone', 'Cargo', 'Setor',
+        'Data de Nascimento', 'Contato de Emergencia (Nome)', 'Contato de Emergencia (Telefone)'
+    ])
+
+    # Escreve os dados dos funcionários
+    for f in funcionarios:
+        writer.writerow([
+            f.nome, f.cpf, f.email, f.telefone, f.cargo, f.setor,
+            f.data_nascimento.strftime('%d/%m/%Y') if f.data_nascimento else '',
+            f.contato_emergencia_nome, f.contato_emergencia_telefone
+        ])
+
+    output.seek(0)
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=funcionarios.csv"
+    response.headers["Content-type"] = "text/csv"
+
+    return response
 
 @main.route('/api/buscar_funcionarios')
 def buscar_funcionarios():
