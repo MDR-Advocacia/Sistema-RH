@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Alterar Colaborador</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.0">
     <style>
         .container {
             max-width: 700px;
@@ -57,11 +57,14 @@
     'data_nascimento', 'contato_emergencia_nome', 'contato_emergencia_telefone'
 ] %}
 
+
+<h1>Alterar Funcionario</h1>
+
 <div class="container">
-    <h1>Alterar Colaborador</h1>
+    
 
     <div class="form-group">
-        <input type="text" id="busca" placeholder="Digite o nome do colaborador..." autocomplete="off">
+        <input type="text" id="busca" placeholder="Digite o nome do funcionario..." autocomplete="off">
         <button id="botao-busca" type="button">Buscar</button>
         <a href="/">← Voltar</a>
         <div id="resultados" class="resultado-busca"></div>

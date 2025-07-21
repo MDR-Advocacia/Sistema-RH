@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Remover Colaborador</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.0">
     <style>
         .container {
             max-width: 700px;
@@ -17,6 +17,9 @@
         input[type="text"] {
             width: 100%; padding: 8px; margin-top: 5px;
             border: 1px solid #ccc; border-radius: 4px;
+        }
+        .form-com-popup {
+            position: relative;
         }
         button {
             background-color: #b22222;
@@ -44,20 +47,22 @@
 </head>
 <body>
 
+<h1>Remover Funcionario</h1>
+
 <div class="container">
-    <h1>Remover Colaborador</h1>
+    
 
      <div class="form-group">
         <input type="text" id="busca" placeholder="Digite o nome do colaborador..." autocomplete="off">
-        <button id="botao-busca" type="button">Buscar</button>
-        <a href="/">← Voltar</a>
+         <button id="botao-busca" type="button">Buscar</button>
+         <a href="/">← Voltar</a>
         <div id="resultados" class="resultado-busca"></div>
     </div>
 
     <form id="form-deletar" class="hidden" method="POST" action="/remover_funcionario">
         <h2>Confirme remoção</h2>
         <input type="hidden" name="cpf" id="cpf-colaborador">
-        <p>Colaborador selecionado: <span id="nome-colaborador"></span></p>
+        <p>Funcionario selecionado: <span id="nome-colaborador"></span></p>
         <button type="submit" onclick="return confirm('Tem certeza que deseja remover este colaborador?')">Remover Colaborador</button>
     </form>
 </div>

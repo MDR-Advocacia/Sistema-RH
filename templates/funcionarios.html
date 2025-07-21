@@ -9,17 +9,22 @@
   <h1>Lista de Funcionários</h1>
   <a href="/">← Voltar</a>
 <table class="table table-striped">
-  <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" class="form-busca">
-    <input
-      type="text"
-      name="q"
-      placeholder="Buscar por nome, CPF ou setor..."
-      value="{{ request.args.get('q', '') }}"
-      class="input-busca"
-    >
-    <button type="submit" class="btn-busca">Buscar</button>
-  <a href="{{ url_for('main.exportar_csv', q=request.args.get('q', '')) }}" class="btn-exportar">Exportar CSV</a>
-  </form>
+  <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" style="display: flex; flex-grow: 1; gap: 10px;">
+        <input
+          type="text"
+          name="q"
+          placeholder="Buscar por nome, CPF ou setor..."
+          value="{{ request.args.get('q', '') }}"
+          class="input-busca"
+          style="flex-grow: 1;"
+        >
+        <button type="submit" class="btn-busca">Buscar</button>
+    </form>
+    
+    <a href="{{ url_for('main.exportar_csv', q=request.args.get('q', '')) }}" class="btn-busca">Exportar CSV</a>
+</div>
+
+<table class="table table-striped">
 
   <thead>
     <tr>

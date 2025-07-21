@@ -21,3 +21,7 @@ document.getElementById('formFuncionario').addEventListener('submit', async func
   const resultado = await res.json();
   document.getElementById('resultado').innerText = resultado.message;
 });
+
+document.getElementById('botao-voltar').addEventListener('click', function() {
+    window.location.href = '/';
+});

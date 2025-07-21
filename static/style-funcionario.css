@@ -1,78 +1,163 @@
-/*CSS DOS FUNCIONARIOS*/
+/* ===================================================================
+   STYLE-FUNCIONARIO.CSS - VERSÃO DARK MODE
+   =================================================================== */
 
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
+/*
+  --------------------------------------------------------------
+  # Importação de Fonte e Variáveis Globais (Tema Escuro)
+  --------------------------------------------------------------
+*/
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-    h1 {
-      color: #333;
-      text-align: center;
-      margin-bottom: 20px;
-    }
+:root {
+  /* Cores baseadas no index.css, adaptadas para o tema escuro */
+  --cor-fundo: #1a1d24; /* Fundo principal escuro */
+  --cor-superficie: #2b344a; /* Cor para containers como a tabela */
+  --cor-primaria: #3e4a63; /* Cor de destaque para cabeçalhos e botões */
+  --cor-primaria-hover: #526182;
 
-    a {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #007bff;
-      text-decoration: none;
-    }
+  /* Cores de Texto */
+  --cor-texto-principal: #f0f2f5; /* Texto principal claro */
+  --cor-texto-secundario: #a8b2c9;
+  --cor-texto-contraste: #ffffff;
 
-    a:hover {
-      text-decoration: underline;
-    }
+  /* Efeito especial para as células da tabela */
+  --cor-celula-transparente: rgba(255, 255, 255, 0.07);
+}
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      border-radius: 8px;
-      overflow: hidden;
-    }
+/*
+  --------------------------------------------------------------
+  # Estilos Gerais (Tema Escuro)
+  --------------------------------------------------------------
+*/
+body {
+  font-family: 'Poppins', sans-serif;
+  background: var(--cor-fundo);
+  color: var(--cor-texto-principal);
+  margin: 0;
+  padding: 20px;
+}
 
-    th, td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
+h1 {
+  color: var(--cor-texto-contraste);
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30px;
+}
 
-    th {
-      background: #007bff;
-      color: white;
-    }
+a {
+  color: var(--cor-primaria-hover);
+  text-decoration: none;
+  transition: 0.3s;
+}
 
-    ul {
-      margin: 0;
-      padding-left: 20px;
-    }
+a:hover {
+  color: var(--cor-texto-contraste);
+  text-decoration: underline;
+}
 
-    .form-busca {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
-  }
+/*
+  --------------------------------------------------------------
+  # Formulário de Busca (Tema Escuro)
+  --------------------------------------------------------------
+*/
+.form-busca {
+  margin: 0 auto 30px auto;
+  display: flex;
+  gap: 10px;
+  max-width: 600px;
+  align-items: center;
+}
 
-  .form-busca input {
-    flex: 1;
-    padding: 8px;
-    font-size: 14px;
-  }
+.form-busca input {
+  flex: 1;
+  padding: 10px 15px;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  border-radius: 5px;
+  border: 1px solid var(--cor-superficie);
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-principal);
+  transition: border-color 0.3s;
+}
 
-  .form-busca button {
-    padding: 8px 16px;
-    background-color: #004aad;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 4px;
-  }
+.form-busca input:focus {
+  border-color: var(--cor-primaria-hover);
+  outline: none;
+}
 
-  .form-busca button:hover {
-    background-color: #00337a;
-  }
+.form-busca button {
+  padding: 10px 20px;
+  background-color: var(--cor-primaria);
+  color: var(--cor-texto-contraste);
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
 
+.form-busca button:hover {
+  background-color: var(--cor-primaria-hover);
+  transform: scale(1.05);
+}
 
-/*FIM DE FUNCIONARIO*/
+/*
+  --------------------------------------------------------------
+  # Tabela de Funcionários (Tema Escuro com Células Claras)
+  --------------------------------------------------------------
+*/
+table {
+  width: 100%;
+  border-collapse: separate; /* Necessário para o espaçamento e bordas funcionarem bem */
+  border-spacing: 0;
+  background: var(--cor-superficie);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th {
+  padding: 15px 20px;
+  text-align: left;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-contraste);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  padding: 15px 20px;
+  text-align: left;
+  color: var(--cor-texto-principal);
+  border-bottom: 1px solid var(--cor-primaria); /* Linha sutil para separar */
+  
+  /* EFEITO ESPECIAL: Fundo claro e semitransparente para os dados */
+  background: var(--cor-celula-transparente);
+  transition: background-color 0.3s ease;
+}
+
+tr:hover td {
+    background-color: rgba(255, 255, 255, 0.12); /* Intensifica o efeito no hover */
+}
+
+/* Remove a borda da última linha */
+tr:last-child td {
+  border-bottom: none;
+}
+
+ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--cor-texto-secundario);
+}
+
+/* Adicione no final do seu arquivo style.css */
+.botoes-acao {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Cria um espaço entre os botões */
+  margin-top: 15px; /* Cria um espaço acima dos botões */
+}

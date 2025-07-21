@@ -1,323 +1,251 @@
-    body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      background: #f5f7fa;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+/* ===================================================================
+   STYLE.CSS - VERSÃO DARK MODE (AJUSTADO E SEGURO)
+   =================================================================== */
 
-    .action-selector {
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      user-select: none;
-    }
+/*
+  --------------------------------------------------------------
+  # Importação de Fonte e Variáveis Globais (Tema Escuro)
+  --------------------------------------------------------------
+*/
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-    .action-selector button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 25px;
-      background: #ddd;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      font-weight: bold;
-    }
-
-    .action-selector button.active {
-      background: #007bff;
-      color: white;
-      box-shadow: 0 0 8px #007bffaa;
-    }
-
-    form {
-      background: white;
-      padding: 25px 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px #00000020;
-      max-width: 500px;
-      width: 100%;
-    }
-
-    form label {
-      display: block;
-      margin-top: 15px;
-      font-weight: 600;
-    }
-
-    form input {
-      width: 100%;
-      padding: 8px 12px;
-      margin-top: 6px;
-      border-radius: 5px;
-      border: 1px solid #bbb;
-      font-size: 1em;
-    }
-
-    form input[type="date"] {
-      padding: 6px 10px;
-    }
-
-    .buttons-row {
-      display: flex;
-      gap: 15px;
-      margin-top: 20px;
-      justify-content: flex-start;
-      align-items: center;
-    }
-
-    button.primary-btn {
-      padding: 12px 25px;
-      background-color: #28a745;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    button.primary-btn:hover {
-      background-color: #218838;
-    }
-
-    button.secondary-btn {
-      padding: 12px 20px;
-      background-color: #17a2b8;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    button.secondary-btn:hover {
-      background-color: #117a8b;
-    }
-
-    #csvFeedback {
-      max-width: 400px;
-      margin-top: 10px;
-      font-weight: bold;
-      color: #155724;
-      background-color: #d4edda;
-      border: 1px solid #c3e6cb;
-      padding: 10px;
-      border-radius: 5px;
-      display: none;
-    }
-
-    #csvError {
-      max-width: 400px;
-      margin-top: 10px;
-      font-weight: bold;
-      color: #721c24;
-      background-color: #f8d7da;
-      border: 1px solid #f5c6cb;
-      padding: 10px;
-      border-radius: 5px;
-      display: none;
-    }
-
-    .botao-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  justify-content: center;
-  margin: 30px 0;
-}
-
-.btn {
-  padding: 12px 25px;
-  font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  user-select: none;
-}
-
-.btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 12px rgba(0,0,0,0.25);
-}
-
-/* Cores personalizadas */
-.btn-azul {
-  background-color: #007BFF;
-}
-
-.btn-azul:hover {
-  background-color: #0056b3;
-}
-
-.btn-verde {
-  background-color: #28a745;
-}
-
-.btn-verde:hover {
-  background-color: #19692c;
-}
-
-.btn-laranja {
-  background-color: #fd7e14;
-}
-
-.btn-laranja:hover {
-  background-color: #b35b0b;
-}
-
-.btn-amarelo {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-.btn-amarelo:hover {
-  background-color: #cc9a06;
-  color: #fff;
-}
-
-.btn-vermelho {
-  background-color: #dc3545;
-}
-
-.btn-vermelho:hover {
-  background-color: #8a1c24;
-}
-
-
-/*CSS DOS FUNCIONARIOS*/
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      color: #333;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    a {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #007bff;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th, td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-
-    th {
-      background: #007bff;
-      color: white;
-    }
-
-    ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-
-    .form-busca {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
-  }
-
-  .form-busca input {
-    flex: 1;
-    padding: 8px;
-    font-size: 14px;
-  }
-
-  .form-busca button {
-    padding: 8px 16px;
-    background-color: #004aad;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-
-  .form-busca button:hover {
-    background-color: #00337a;
-  }
-
-
-/*FIM DE FUNCIONARIO*/
-
-/*SISTEMAS. HTML*/
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-    }
-
-    a {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #007bff;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th, td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-
-    th {
-      background: #28a745;
-      color: white;
-    }
+:root {
+  /* Paleta de cores para o tema escuro */
+  --cor-fundo: #1a1d24;
+  --cor-superficie: #2b344a; /* Cor para formulários, tabelas, etc. */
+  --cor-primaria: #3e4a63;
+  --cor-primaria-hover: #526182;
   
-/*FIM DE SISTEMAS*/
+  /* Cores de Texto */
+  --cor-texto-principal: #f0f2f5;
+  --cor-texto-secundario: #a8b2c9;
+  --cor-texto-contraste: #ffffff;
+
+  /* Cores de Ação e Feedback */
+  --cor-sucesso: #28a745;
+  --cor-sucesso-hover: #218838;
+  --cor-erro: #dc3545;
+  --cor-erro-hover: #c82333;
+}
+
+/*
+  --------------------------------------------------------------
+  # Estilos Gerais e Formulários (Tema Escuro)
+  --------------------------------------------------------------
+*/
+body {
+  font-family: 'Poppins', sans-serif;
+  padding: 40px;
+  background: var(--cor-fundo);
+  color: var(--cor-texto-principal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.action-selector button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto-secundario);
+  cursor: pointer;
+  transition: 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.action-selector button:hover {
+    background-color: var(--cor-primaria);
+    color: var(--cor-texto-contraste);
+}
+
+.action-selector button.active {
+  background: var(--cor-primaria-hover);
+  color: var(--cor-texto-contraste);
+}
+
+form {
+  background: var(--cor-superficie);
+  padding: 25px 30px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  max-width: 500px;
+  width: 100%;
+}
+
+form label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+  color: var(--cor-texto-secundario);
+}
+
+form input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border-radius: 5px;
+  border: 1px solid var(--cor-primaria);
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto-principal);
+  font-size: 1em;
+  font-family: 'Poppins', sans-serif;
+}
+
+form input:focus {
+    border-color: var(--cor-primaria-hover);
+    outline: none;
+}
+
+.buttons-row {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+/* Botões com estilo unificado */
+button.primary-btn, button.secondary-btn, .btn {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  color: var(--cor-texto-contraste);
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: 0.3s ease;
+  text-decoration: none;
+}
+/* Adicione no final do seu arquivo style.css */
+.botoes-acao {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Cria um espaço entre os botões */
+  margin-top: 15px; /* Cria um espaço acima dos botões */
+}
+
+button.primary-btn:hover, button.secondary-btn:hover, .btn:hover {
+  transform: scale(1.05);
+}
+
+/* Cores específicas para os botões */
+button.primary-btn { background-color: var(--cor-sucesso); }
+button.primary-btn:hover { background-color: var(--cor-sucesso-hover); }
+button.secondary-btn { background-color: var(--cor-primaria); }
+button.secondary-btn:hover { background-color: var(--cor-primaria-hover); }
+
+/*
+  --------------------------------------------------------------
+  # Seções de Tabela (Funcionários e Sistemas)
+  --------------------------------------------------------------
+*/
+.secao-funcionarios, .secao-sistemas {
+    width: 100%;
+    max-width: 1200px; /* Limita a largura em telas grandes */
+    margin-top: 40px;
+}
+
+.secao-funcionarios h1, .secao-sistemas h1 {
+  color: var(--cor-texto-contraste);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.secao-funcionarios table, .secao-sistemas table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--cor-superficie);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.secao-funcionarios th, .secao-sistemas th {
+  padding: 12px 15px;
+  text-align: left;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-contraste);
+  font-weight: 600;
+}
+
+.secao-funcionarios td, .secao-sistemas td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--cor-primaria);
+    color: var(--cor-texto-principal);
+}
+
+.secao-funcionarios tr:last-child td, .secao-sistemas tr:last-child td {
+    border-bottom: none;
+}
+
+/*
+  --------------------------------------------------------------
+  # Estilos para a Busca de Colaboradores
+  --------------------------------------------------------------
+*/
+
+/* Container que exibe os resultados da busca */
+#resultados {
+  margin-top: 10px;
+  border: 1px solid var(--cor-primaria);
+  border-radius: 5px;
+  max-height: 250px; /* Limita a altura para não esticar a página */
+  overflow-y: auto; /* Adiciona uma barra de rolagem se houver muitos resultados */
+  background-color: var(--cor-superficie); /* Garante o fundo escuro do container */
+}
+
+/* Estilo para cada item (colaborador) na lista de resultados */
+#resultados div {
+  padding: 12px 15px;
+  color: var(--cor-texto-principal); /* <<< CORREÇÃO PRINCIPAL: Texto claro */
+  cursor: pointer;
+  border-bottom: 1px solid var(--cor-primaria); /* Linha para separar os nomes */
+  transition: background-color 0.3s ease;
+}
+
+/* Remove a borda do último item da lista */
+#resultados div:last-child {
+  border-bottom: none;
+}
+
+/* Efeito visual ao passar o mouse sobre um colaborador */
+#resultados div:hover {
+  background-color: var(--cor-primaria-hover);
+  color: var(--cor-texto-contraste);
+}
+
+
+/*
+  --------------------------------------------------------------
+  # Componente de Pop-up de Confirmação (Seguro e Isolado)
+  --------------------------------------------------------------
+*/
+
+/* ATENÇÃO: Use esta classe no <form> que contém o pop-up */
+.form-com-popup {
+  position: relative;
+}
+
+.container {
+max-width: 700px; /* Mantém a largura que você tinha no HTML */
+margin: 30px auto; /* Centraliza o container na página */
+padding: 20px; /* Adiciona um pouco de espaço interno */
+border-radius: 8px; /* Mantém as bordas arredondadas */
+box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Mantém a sombra */
+}
+
+#form-deletar {
+width: 85%; /* Mantém a largura */
+padding: 20px; /* Reduzi o padding interno */
+background-color: var(--cor-superficie);
+border-radius: 10px;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+z-index: 10;
+margin-top: 30px; /* Adiciona espaço abaixo do formulário de busca */
+box-sizing: border-box; /* Garante que padding não aumente a largura */
+text-align: center; /* Centraliza o texto dentro do pop-up */
+}
+
+.hidden {
+  display: none !important;
+}
