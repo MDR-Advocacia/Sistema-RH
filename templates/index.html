@@ -1,98 +1,54 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8" />
-  <title>Painel Funcionários</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.0">
+{% extends "base.html" %}
 
-</head>
-<body>
-  <h1>Painel de Funcionários</h1>
+{% block title %}Dashboard{% endblock %}
 
-  <div class="botao-container">
-  <a href="/funcionarios" class="btn btn-azul">Ver Funcionários</a>
-  <a href="/sistemas" class="btn btn-verde">Sistemas Ativos</a>
-  <a href="/avisos" class="btn btn-azul">Mural de Avisos</a>
-  <a href="/documentos/gestao" class="btn btn-verde">Gestão de Documentos</a>
-  <a href="/cadastrar" class="btn btn-laranja">Cadastrar Funcionário</a>
-  <a href="/alterar" class="btn btn-amarelo">Alterar Funcionário</a>
-  <a href="/remover" class="btn btn-vermelho">Remover Funcionário</a>
-</div>
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Dashboard</h1>
+        {% if current_user.is_authenticated and current_user.tem_permissao('admin_rh') %}
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('main.exibir_formulario_cadastro') }}" class="btn btn-sm btn-brand">
+                <i class="bi bi-plus-circle"></i> Novo Funcionário
+            </a>
+        </div>
+        {% endif %}
+    </div>
 
+    {% if current_user.is_authenticated and current_user.tem_permissao('admin_rh') %}
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="fw-bold">XX</h3>
+                            <p class="mb-0 text-secondary">Colaboradores Ativos</p>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-primary-emphasis"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-3">
+                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="fw-bold">XX</h3>
+                            <p class="mb-0 text-secondary">Avisos no Mural</p>
+                        </div>
+                        <i class="bi bi-megaphone-fill fs-1 text-success-emphasis"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-light border" role="alert">
+      <h4 class="alert-heading">Bem-vindo(a), {{ current_user.funcionario.nome }}!</h4>
+      <p>Este é o seu painel pessoal. Utilize o menu ao lado para navegar pelo sistema.</p>
+    </div>
+    {% endif %}
 
-  <script>
-    const actionButtons = document.querySelectorAll('#actionSelector button');
-    const mainActionBtn = document.getElementById('mainActionBtn');
-    const csvLabel = document.getElementById('csvLabel');
-
-    actionButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        actionButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-
-        const action = button.getAttribute('data-action');
-
-        switch(action) {
-          case 'cadastrar':
-            mainActionBtn.textContent = 'Cadastrar';
-            mainActionBtn.type = 'submit';
-            csvLabel.style.display = 'flex';
-            break;
-
-          case 'alterar':
-            mainActionBtn.textContent = 'Alterar';
-            mainActionBtn.type = 'submit'; // pode ser ajustado pra tratar update no backend
-            csvLabel.style.display = 'none';
-            break;
-
-          case 'remover':
-            mainActionBtn.textContent = 'Remover';
-            mainActionBtn.type = 'submit'; // pode ser ajustado pra tratar remoção no backend
-            csvLabel.style.display = 'none';
-            break;
-          
-          case 'funcionarios' :action
-          break;
-        }
-      });
-    });
-
-    // Upload CSV
-    const csvInput = document.getElementById('csvFileInput');
-    const feedback = document.getElementById('csvFeedback');
-    const errorMsg = document.getElementById('csvError');
-
-    csvInput.addEventListener('change', () => {
-      const file = csvInput.files[0];
-      if (!file) return;
-
-      feedback.style.display = 'none';
-      errorMsg.style.display = 'none';
-
-      const formData = new FormData();
-      formData.append('arquivo', file);
-
-      fetch('/importar_csv', {
-        method: 'POST',
-        body: formData
-      })
-      .then(resp => resp.json())
-      .then(data => {
-        if(data.success){
-          feedback.textContent = data.message;
-          feedback.style.display = 'block';
-        } else {
-          errorMsg.textContent = data.message || 'Erro desconhecido';
-          errorMsg.style.display = 'block';
-        }
-        csvInput.value = '';
-      })
-      .catch(() => {
-        errorMsg.textContent = 'Erro ao enviar arquivo.';
-        errorMsg.style.display = 'block';
-        csvInput.value = '';
-      });
-    });
-  </script>
-</body>
-</html>
+{% endblock %}

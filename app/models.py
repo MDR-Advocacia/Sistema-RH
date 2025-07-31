@@ -31,6 +31,7 @@ class Usuario(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True) # Um usuário por funcionário
+    senha_provisoria = db.Column(db.Boolean, default=True, nullable=False) # <-- ADICIONE ESTA LINHA
 
     # Relações
     funcionario = db.relationship('Funcionario', backref=db.backref('usuario', uselist=False))
@@ -71,6 +72,7 @@ class Funcionario(db.Model):
     data_nascimento = db.Column(db.Date)
     contato_emergencia_nome = db.Column(db.String(120))
     contato_emergencia_telefone = db.Column(db.String(20))
+    foto_perfil = db.Column(db.String(255), nullable=True) # FOTO DE PERFIL
 
     # Relações
     sistemas = db.relationship('Sistema', secondary=funcionario_sistemas, lazy='subquery',

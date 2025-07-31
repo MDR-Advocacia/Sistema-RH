@@ -6,13 +6,14 @@ import os
 from sqlalchemy import or_
 from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, make_response
-from .models import Funcionario, Sistema
+from .models import Funcionario, Sistema, Permissao, Usuario
 from io import TextIOWrapper, StringIO
 from . import db
 from flask_login import login_required
 from .models import Aviso, LogCienciaAviso
 from .decorators import permission_required
 from flask_login import current_user
+
 
 
 main = Blueprint('main', __name__)
@@ -23,44 +24,73 @@ def index():
     return render_template('index.html')
 
 @main.route('/cadastrar', methods=['GET'])
+@login_required
+@permission_required('admin_rh') # Protege o acesso à página de cadastro
 def exibir_formulario_cadastro():
-    return render_template('cadastrar.html')
+    # Busca todas as permissões disponíveis para exibi-las no formulário
+    permissoes = Permissao.query.all()
+    return render_template('cadastrar.html', permissoes=permissoes)
 
 @main.route('/cadastrar', methods=['POST'])
+@login_required
+@permission_required('admin_rh') # Protege o envio do formulário
 def processar_cadastro():
+    # --- Coleta de Dados do Formulário ---
+    # Dados do Funcionário
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
     email = request.form.get('email')
     telefone = request.form.get('telefone')
     cargo = request.form.get('cargo')
     setor = request.form.get('setor')
-    data_nascimento = request.form.get('data_nascimento')
-    contato_nome = request.form.get('contato_emergencia_nome')
-    contato_telefone = request.form.get('contato_emergencia_telefone')
+    data_nascimento_str = request.form.get('data_nascimento')
 
-    if not nome or not cpf:
-        return "Nome e CPF são obrigatórios", 400
+    # Dados do Usuário
+    password = request.form.get('password')
+    permissoes_selecionadas_ids = request.form.getlist('permissoes') # Pega a lista de IDs das permissões
 
-    funcionario_existente = Funcionario.query.filter_by(cpf=cpf).first()
-    if funcionario_existente:
-        return "Funcionário com esse CPF já existe", 400
+    # --- Validações ---
+    if not nome or not cpf or not email or not password:
+        flash('Nome, CPF, Email e Senha são obrigatórios.')
+        return redirect(url_for('main.exibir_formulario_cadastro'))
 
-    funcionario = Funcionario(
+    if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
+        flash('CPF ou Email já cadastrado no sistema.')
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+
+    # --- Criação dos Objetos ---
+    # 1. Cria o Funcionário
+    novo_funcionario = Funcionario(
         nome=nome,
         cpf=cpf,
         email=email,
         telefone=telefone,
         cargo=cargo,
         setor=setor,
-        data_nascimento=datetime.strptime(data_nascimento, '%Y-%m-%d') if data_nascimento else None,
-        contato_emergencia_nome=contato_nome,
-        contato_emergencia_telefone=contato_telefone
+        data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None
     )
-
-    db.session.add(funcionario)
+    db.session.add(novo_funcionario)
+    # Precisamos salvar o funcionário primeiro para que ele tenha um ID
     db.session.commit()
 
-    return render_template('cadastrar.html', mensagem="Funcionário cadastrado com sucesso!")
+    # 2. Cria o Usuário associado ao Funcionário
+    novo_usuario = Usuario(
+        email=email,
+        funcionario_id=novo_funcionario.id
+    )
+    novo_usuario.set_password(password)
+    
+    # 3. Associa as Permissões ao Usuário
+    if permissoes_selecionadas_ids:
+        permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
+        for p in permissoes_a_adicionar:
+            novo_usuario.permissoes.append(p)
+
+    db.session.add(novo_usuario)
+    db.session.commit()
+
+    flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
+    return redirect(url_for('main.listar_funcionarios'))
 
 @main.route('/funcionarios')
 def listar_funcionarios():
@@ -333,3 +363,47 @@ def ver_logs_ciencia(aviso_id):
     logs = LogCienciaAviso.query.filter_by(aviso_id=aviso.id).order_by(LogCienciaAviso.data_ciencia.desc()).all()
 
     return render_template('avisos/log_ciencia.html', aviso=aviso, logs=logs)
+
+## MODAL DO FUNCIONARIO
+
+@main.route('/api/funcionario/<int:funcionario_id>')
+@login_required
+@permission_required('admin_rh')
+def detalhes_funcionario(funcionario_id):
+    """
+    Retorna os dados detalhados de um funcionário em formato JSON.
+    """
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+
+    documentos_list = [
+        {
+            'id': doc.id,
+            'nome_arquivo': doc.nome_arquivo,
+            'tipo_documento': doc.tipo_documento,
+            'data_upload': doc.data_upload.strftime('%d/%m/%Y %H:%M'),
+            'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)
+        } for doc in funcionario.documentos
+    ]
+    
+    # Futuramente, podemos adicionar uma lógica para buscar pendências aqui.
+    pendencias = [
+        {'id': 1, 'descricao': 'Ajuste no controle de ponto de Junho/2025', 'status': 'Pendente'},
+        {'id': 2, 'descricao': 'Assinar termo de confidencialidade', 'status': 'Pendente'}
+    ] # Apenas dados de exemplo por enquanto
+
+    funcionario_data = {
+        'id': funcionario.id,
+        'nome': funcionario.nome,
+        'cpf': funcionario.cpf,
+        'email': funcionario.email,
+        'telefone': funcionario.telefone,
+        'cargo': funcionario.cargo,
+        'setor': funcionario.setor,
+        'data_nascimento': funcionario.data_nascimento.strftime('%d/%m/%Y') if funcionario.data_nascimento else 'Não informado',
+        'contato_emergencia_nome': funcionario.contato_emergencia_nome or 'Não informado',
+        'contato_emergencia_telefone': funcionario.contato_emergencia_telefone or 'Não informado',
+        'documentos': documentos_list,
+        'pendencias': pendencias
+    }
+
+    return jsonify(funcionario_data)

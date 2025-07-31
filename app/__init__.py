@@ -1,9 +1,11 @@
-from flask import Flask
+from flask import Flask, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
 from .config import Config
 from flask_login import LoginManager
+from flask import request
+from flask_login import current_user
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -18,6 +20,8 @@ def create_app():
     app.config.from_object(Config)
     # Adicione uma SECRET_KEY, essencial para a segurança da sessão
     app.config['SECRET_KEY'] = 'uma-chave-secreta-muito-segura-trocar-depois'
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, '..', 'uploads')
+    
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -44,6 +48,17 @@ def create_app():
     # --- Registra o blueprint de documentos ---
     from .documentos import documentos_bp
     app.register_blueprint(documentos_bp, url_prefix='/documentos')
+
+    from .perfil import perfil_bp
+    app.register_blueprint(perfil_bp, url_prefix='/perfil')
+
+    @app.before_request
+    def check_for_temporary_password():
+        # Ignora o check para as rotas de assets (static) e de autenticação
+        if current_user.is_authenticated and 'auth.' not in request.endpoint and 'static' not in request.endpoint:
+            if current_user.senha_provisoria:
+                # Se a senha for provisória, redireciona para a página de troca
+                return redirect(url_for('auth.change_password'))
 
 
     return app

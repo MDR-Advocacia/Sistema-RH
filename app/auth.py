@@ -1,7 +1,7 @@
 # app/auth.py
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from .models import Usuario
 from . import db
 
@@ -33,3 +33,25 @@ def login_post():
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+
+@auth.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        nova_senha = request.form.get('nova_senha')
+        confirmacao = request.form.get('confirmacao_senha')
+
+        if not nova_senha or nova_senha != confirmacao:
+            flash('As senhas não conferem ou estão em branco.')
+            return redirect(url_for('auth.change_password'))
+
+        # Atualiza a senha e a flag no banco
+        current_user.set_password(nova_senha)
+        current_user.senha_provisoria = False
+        db.session.commit()
+
+        flash('Senha alterada com sucesso! Você pode prosseguir.')
+        return redirect(url_for('main.index'))
+
+    return render_template('auth/change_password.html')

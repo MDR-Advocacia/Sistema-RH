@@ -1,62 +1,163 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Funcionários</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style-funcionario.css') }}?v=1.0">
-</head>
-<body>
-  <h1>Lista de Funcionários</h1>
-  <a href="/">← Voltar</a>
-<table class="table table-striped">
-  <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" style="display: flex; flex-grow: 1; gap: 10px;">
-        <input
-          type="text"
-          name="q"
-          placeholder="Buscar por nome, CPF ou setor..."
-          value="{{ request.args.get('q', '') }}"
-          class="input-busca"
-          style="flex-grow: 1;"
-        >
-        <button type="submit" class="btn-busca">Buscar</button>
-    </form>
-    
-    <a href="{{ url_for('main.exportar_csv', q=request.args.get('q', '')) }}" class="btn-busca">Exportar CSV</a>
+{% extends "base.html" %}
+
+{% block title %}Funcionários{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Funcionários</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('main.exibir_formulario_cadastro') }}" class="btn btn-sm btn-brand">
+                <i class="bi bi-plus-circle"></i> Novo Funcionário
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light p-3">
+            <form method="GET" action="{{ url_for('main.listar_funcionarios') }}">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" placeholder="Buscar por nome, CPF ou setor..." value="{{ request.args.get('q', '') }}">
+                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Buscar</button>
+                    <a href="{{ url_for('main.exportar_csv', q=request.args.get('q', '')) }}" class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+                    </a>
+                </div>
+            </form>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tabela-funcionarios" class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cargo</th>
+                            <th>Setor</th>
+                            <th>Email</th>
+                            <th>Telefone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in funcionarios %}
+                        <tr data-id="{{ f.id }}" style="cursor: pointer;">
+                            <td>{{ f.nome }}</td>
+                            <td>{{ f.cargo or 'N/A' }}</td>
+                            <td>{{ f.setor or 'N/A' }}</td>
+                            <td>{{ f.email }}</td>
+                            <td>{{ f.telefone or 'N/A' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">Nenhum funcionário encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<div class="modal fade" id="modal-detalhes" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-nome">Detalhes do Colaborador</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-conteudo">
+            <p>Carregando...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <a href="#" id="modal-link-alterar" class="btn btn-brand">Alterar Cadastro</a>
+      </div>
+    </div>
+  </div>
 </div>
 
-<table class="table table-striped">
+{% endblock %}
 
-  <thead>
-    <tr>
-      <th>Nome</th>
-      <th>CPF</th>
-      <th>Email</th>
-      <th>Telefone</th>
-      <th>Cargo</th>
-      <th>Setor</th>
-      <th>Data de Nascimento</th>
-      <th>Contato Emergência (Nome)</th>
-      <th>Contato Emergência (Telefone)</th>
-      <th>Benefícios Ativos</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for f in funcionarios %}
-    <tr>
-    <td>{{ f.nome }}</td>
-    <td>{{ f.cpf }}</td>
-    <td>{{ f.email }}</td>
-    <td>{{ f.telefone }}</td>
-    <td>{{ f.cargo }}</td>
-    <td>{{ f.setor }}</td>
-    <td>{{ f.data_nascimento }}</td>
-    <td>{{ f.contato_emergencia_nome }}</td>
-    <td>{{ f.contato_emergencia_telefone }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tabelaFuncionarios = document.getElementById('tabela-funcionarios');
+    const modalElement = document.getElementById('modal-detalhes');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    const modalNome = document.getElementById('modal-nome');
+    const modalConteudo = document.getElementById('modal-conteudo');
+    const modalLinkAlterar = document.getElementById('modal-link-alterar');
 
+    if (tabelaFuncionarios) {
+        tabelaFuncionarios.addEventListener('click', function (event) {
+            const linha = event.target.closest('tr');
+            if (!linha || !linha.dataset.id) return;
 
-</body>
-</html>
+            const funcionarioId = linha.dataset.id;
+            
+            modalNome.textContent = 'Carregando...';
+            modalConteudo.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+            modal.show();
+
+            fetch(`/api/funcionario/${funcionarioId}`)
+                .then(response => response.json())
+                .then(data => {
+                    modalNome.textContent = data.nome;
+                    modalLinkAlterar.href = `/alterar?cpf=${data.cpf}`;
+
+                    let documentosHtml = '<li class="list-group-item">Nenhum documento encontrado.</li>';
+                    if (data.documentos && data.documentos.length > 0) {
+                        documentosHtml = data.documentos.map(doc => `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div><i class="bi bi-file-earmark-text me-2"></i><strong>${doc.tipo_documento}:</strong> ${doc.nome_arquivo}</div>
+                                <a href="${doc.url_download}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Baixar</a>
+                            </li>`).join('');
+                    }
+
+                    let pendenciasHtml = '<li class="list-group-item">Nenhuma pendência.</li>';
+                    if (data.pendencias && data.pendencias.length > 0) {
+                        pendenciasHtml = data.pendencias.map(p => `
+                            <li class="list-group-item">${p.descricao} <span class="badge bg-warning text-dark float-end">${p.status}</span></li>`).join('');
+                    }
+
+                    // --- HTML DO CONTEÚDO DO MODAL REESTRUTURADO ---
+                    modalConteudo.innerHTML = `
+                        <h5><i class="bi bi-person-badge"></i> Informações Profissionais</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6"><strong>Cargo:</strong> ${data.cargo || 'N/A'}</div>
+                            <div class="col-md-6"><strong>Setor:</strong> ${data.setor || 'N/A'}</div>
+                        </div>
+
+                        <h5><i class="bi bi-person-lines-fill"></i> Dados Pessoais</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6"><strong>CPF:</strong> ${data.cpf}</div>
+                            <div class="col-md-6"><strong>Data de Nasc.:</strong> ${data.data_nascimento}</div>
+                            <div class="col-md-6"><strong>E-mail:</strong> ${data.email}</div>
+                            <div class="col-md-6"><strong>Telefone:</strong> ${data.telefone || 'N/A'}</div>
+                        </div>
+
+                        <h5><i class="bi bi-telephone-fill"></i> Contato de Emergência</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6"><strong>Nome:</strong> ${data.contato_emergencia_nome}</div>
+                            <div class="col-md-6"><strong>Telefone:</strong> ${data.contato_emergencia_telefone}</div>
+                        </div>
+                        
+                        <hr>
+
+                        <h4><i class="bi bi-file-earmark-zip-fill"></i> Documentos</h4>
+                        <ul class="list-group list-group-flush mb-4">${documentosHtml}</ul>
+
+                        <h4><i class="bi bi-exclamation-triangle-fill"></i> Pendências</h4>
+                        <ul class="list-group list-group-flush">${pendenciasHtml}</ul>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar detalhes do funcionário:', error);
+                    modalConteudo.innerHTML = '<p class="text-danger">Erro ao carregar os dados. Tente novamente.</p>';
+                });
+        });
+    }
+});
+</script>
+{% endblock %}
