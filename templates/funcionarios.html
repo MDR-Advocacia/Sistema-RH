@@ -14,22 +14,40 @@
 
     <div class="card shadow-sm">
         <div class="card-header bg-light p-3">
-            <form method="GET" action="{{ url_for('main.listar_funcionarios') }}">
-                <div class="input-group">
-                    <input type="text" class="form-control" name="q" placeholder="Buscar por nome, CPF ou setor..." value="{{ request.args.get('q', '') }}">
-                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Buscar</button>
+            <div class="d-flex justify-content-between">
+                <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" class="flex-grow-1 me-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" placeholder="Buscar por nome, CPF ou setor..." value="{{ request.args.get('q', '') }}">
+                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Buscar</button>
+                    </div>
+                </form>
+                <div id="bulk-actions" class="btn-group d-none">
+                    <button id="btn-alterar-lote" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-editar-lote"><i class="bi bi-pencil-square"></i> Alterar Selecionados</button>
+                    <button id="btn-remover-lote" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Remover Selecionados</button>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-importar-csv">
+                        <i class="bi bi-upload"></i> Importar
+                    </button>
                     <a href="{{ url_for('main.exportar_csv', q=request.args.get('q', '')) }}" class="btn btn-outline-success">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Exportar
                     </a>
                 </div>
-            </form>
+            </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table id="tabela-funcionarios" class="table table-hover align-middle">
+                <table id="tabela-funcionarios" class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Nome</th>
+                            <th scope="col" class="text-center" style="width: 5%;"><input class="form-check-input" type="checkbox" id="selecionar-todos"></th>
+                            <th scope="col">
+                                <a href="{{ url_for('main.listar_funcionarios', q=request.args.get('q', ''), sort='nome_asc' if request.args.get('sort') != 'nome_asc' else 'nome_desc') }}" class="text-decoration-none text-dark">
+                                    Nome
+                                    {% if request.args.get('sort') == 'nome_asc' %}<i class="bi bi-sort-alpha-down"></i>{% endif %}
+                                    {% if request.args.get('sort') == 'nome_desc' %}<i class="bi bi-sort-alpha-up"></i>{% endif %}
+                                </a>
+                            </th>
                             <th>Cargo</th>
                             <th>Setor</th>
                             <th>Email</th>
@@ -38,8 +56,9 @@
                     </thead>
                     <tbody>
                         {% for f in funcionarios %}
-                        <tr data-id="{{ f.id }}" style="cursor: pointer;">
-                            <td>{{ f.apelido or f.nome }}</td>
+                        <tr data-id="{{ f.id }}">
+                            <td class="text-center"><input class="form-check-input check-item" type="checkbox" value="{{ f.id }}"></td>
+                            <td class="funcionario-link" style="cursor: pointer;">{{ f.apelido or f.nome }}</td>
                             <td>{{ f.cargo or 'N/A' }}</td>
                             <td>{{ f.setor or 'N/A' }}</td>
                             <td>{{ f.email }}</td>
@@ -47,7 +66,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center">Nenhum funcionário encontrado.</td>
+                            <td colspan="6" class="text-center p-4">Nenhum funcionário encontrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -78,111 +97,274 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="modal-importar-csv" tabindex="-1" aria-labelledby="importarCsvLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="importarCsvLabel">Importar Funcionários em Lote</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Para importar múltiplos funcionários de uma vez, siga os passos abaixo:</p>
+        <ol>
+            <li><strong>Baixe o modelo CSV.</strong> Ele contém as colunas necessárias no formato correto.</li>
+            <li>Preencha a planilha com os dados dos novos colaboradores.</li>
+            <li><strong>Anexe o arquivo preenchido</strong> para iniciar a importação.</li>
+        </ol>
+        <hr>
+        <div class="d-grid gap-2">
+            <a href="{{ url_for('static', filename='modelo_importacao.csv') }}" download class="btn btn-success">
+                <i class="bi bi-download"></i> Baixar Modelo CSV
+            </a>
+            <button type="button" id="btn-anexar-csv" class="btn btn-brand">
+                <i class="bi bi-paperclip"></i> Anexar CSV Preenchido
+            </button>
+            <input type="file" id="input-csv" style="display: none;" accept=".csv">
+        </div>
+        <div id="import-feedback" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modal-editar-lote" tabindex="-1" aria-labelledby="editarLoteLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editarLoteLabel">Alterar Funcionários em Lote</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form id="form-editar-lote">
+              <div class="modal-body">
+                <p>Você está prestes a alterar os dados para <strong id="contador-selecionados"></strong> funcionário(s). Preencha apenas os campos que deseja modificar.</p>
+                <input type="hidden" name="ids" id="ids-para-alterar">
+                <div class="mb-3">
+                    <label for="lote-cargo" class="form-label">Novo Cargo</label>
+                    <input type="text" class="form-control" name="cargo" id="lote-cargo" placeholder="Deixe em branco para não alterar">
+                </div>
+                <div class="mb-3">
+                    <label for="lote-setor" class="form-label">Novo Setor</label>
+                    <input type="text" class="form-control" name="setor" id="lote-setor" placeholder="Deixe em branco para não alterar">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-brand">Salvar Alterações</button>
+              </div>
+          </form>
+        </div>
+      </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // --- SCRIPT PARA MODAL DE DETALHES ---
     const tabelaFuncionarios = document.getElementById('tabela-funcionarios');
     const modalElement = document.getElementById('modal-detalhes');
-    if (!modalElement) return;
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        const modalNome = document.getElementById('modal-nome');
+        const modalConteudo = document.getElementById('modal-conteudo');
+        const modalLinkAlterar = document.getElementById('modal-link-alterar');
+        const modalBtnRemover = document.getElementById('modal-btn-remover');
 
-    const modal = new bootstrap.Modal(modalElement);
-    
-    const modalNome = document.getElementById('modal-nome');
-    const modalConteudo = document.getElementById('modal-conteudo');
-    const modalLinkAlterar = document.getElementById('modal-link-alterar');
-    const modalBtnRemover = document.getElementById('modal-btn-remover');
+        if (tabelaFuncionarios) {
+            tabelaFuncionarios.addEventListener('click', function (event) {
+                // Abre o modal apenas se o clique for na célula do nome
+                if (!event.target.classList.contains('funcionario-link')) return;
 
-    if (tabelaFuncionarios) {
-        tabelaFuncionarios.addEventListener('click', function (event) {
-            const linha = event.target.closest('tr');
-            if (!linha || !linha.dataset.id) return;
+                const linha = event.target.closest('tr');
+                if (!linha || !linha.dataset.id) return;
 
-            const funcionarioId = linha.dataset.id;
-            
-            modalNome.textContent = 'Carregando...';
-            modalConteudo.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-            modal.show();
+                const funcionarioId = linha.dataset.id;
+                
+                modalNome.textContent = 'Carregando...';
+                modalConteudo.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+                modal.show();
 
-            fetch(`/api/funcionario/${funcionarioId}`)
+                fetch(`/api/funcionario/${funcionarioId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        modalNome.textContent = data.nome;
+                        modalLinkAlterar.href = `/funcionario/${data.id}/editar`;
+                        modalBtnRemover.dataset.id = data.id;
+
+                        let documentosHtml = '<li class="list-group-item">Nenhum documento encontrado.</li>';
+                        if (data.documentos && data.documentos.length > 0) {
+                            documentosHtml = data.documentos.map(doc => `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div><i class="bi bi-file-earmark-text me-2"></i><strong>${doc.tipo_documento}:</strong> ${doc.nome_arquivo}</div>
+                                    <a href="${doc.url_download}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Baixar</a>
+                                </li>`).join('');
+                        }
+
+                        let pendenciasHtml = '<li class="list-group-item">Nenhuma pendência.</li>';
+                        if (data.pendencias && data.pendencias.length > 0) {
+                            pendenciasHtml = data.pendencias.map(p => `
+                                <li class="list-group-item">${p.descricao} <span class="badge bg-warning text-dark float-end">${p.status}</span></li>`).join('');
+                        }
+
+                        modalConteudo.innerHTML = `
+                            <h5><i class="bi bi-person-badge"></i> Informações Profissionais</h5>
+                            <div class="row mb-3"><div class="col-md-6"><strong>Cargo:</strong> ${data.cargo || 'N/A'}</div><div class="col-md-6"><strong>Setor:</strong> ${data.setor || 'N/A'}</div></div>
+                            <h5><i class="bi bi-person-lines-fill"></i> Dados Pessoais</h5>
+                            <div class="row mb-3"><div class="col-md-6"><strong>CPF:</strong> ${data.cpf}</div><div class="col-md-6"><strong>Data de Nasc.:</strong> ${data.data_nascimento}</div><div class="col-md-6"><strong>E-mail:</strong> ${data.email}</div><div class="col-md-6"><strong>Telefone:</strong> ${data.telefone || 'N/A'}</div></div>
+                            <h5><i class="bi bi-telephone-fill"></i> Contato de Emergência</h5>
+                            <div class="row mb-4"><div class="col-md-6"><strong>Nome:</strong> ${data.contato_emergencia_nome}</div><div class="col-md-6"><strong>Telefone:</strong> ${data.contato_emergencia_telefone}</div></div>
+                            <hr><h4><i class="bi bi-file-earmark-zip-fill"></i> Documentos</h4><ul class="list-group list-group-flush mb-4">${documentosHtml}</ul>
+                            <h4><i class="bi bi-exclamation-triangle-fill"></i> Pendências</h4><ul class="list-group list-group-flush">${pendenciasHtml}</ul>
+                        `;
+                    })
+                    .catch(error => console.error('Erro:', error));
+            });
+        }
+
+        modalBtnRemover.addEventListener('click', function() {
+            const funcionarioId = this.dataset.id;
+            const nomeFuncionario = modalNome.textContent;
+            if (confirm(`Tem certeza que deseja remover "${nomeFuncionario}"?\n\nEsta ação é irreversível!`)) {
+                fetch(`/api/funcionario/${funcionarioId}/remover`, { method: 'DELETE' })
                 .then(response => response.json())
                 .then(data => {
-                    modalNome.textContent = data.nome;
-                    modalLinkAlterar.href = `/funcionario/${data.id}/editar`;
-                    modalBtnRemover.dataset.id = data.id;
-
-                    let documentosHtml = '<li class="list-group-item">Nenhum documento encontrado.</li>';
-                    if (data.documentos && data.documentos.length > 0) {
-                        documentosHtml = data.documentos.map(doc => `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div><i class="bi bi-file-earmark-text me-2"></i><strong>${doc.tipo_documento}:</strong> ${doc.nome_arquivo}</div>
-                                <a href="${doc.url_download}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Baixar</a>
-                            </li>`).join('');
+                    alert(data.message);
+                    if (data.success) {
+                        modal.hide();
+                        document.querySelector(`tr[data-id='${funcionarioId}']`).remove();
                     }
-
-                    let pendenciasHtml = '<li class="list-group-item">Nenhuma pendência.</li>';
-                    if (data.pendencias && data.pendencias.length > 0) {
-                        pendenciasHtml = data.pendencias.map(p => `
-                            <li class="list-group-item">${p.descricao} <span class="badge bg-warning text-dark float-end">${p.status}</span></li>`).join('');
-                    }
-
-                    modalConteudo.innerHTML = `
-                        <h5><i class="bi bi-person-badge"></i> Informações Profissionais</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6"><strong>Cargo:</strong> ${data.cargo || 'N/A'}</div>
-                            <div class="col-md-6"><strong>Setor:</strong> ${data.setor || 'N/A'}</div>
-                        </div>
-                        <h5><i class="bi bi-person-lines-fill"></i> Dados Pessoais</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6"><strong>CPF:</strong> ${data.cpf}</div>
-                            <div class="col-md-6"><strong>Data de Nasc.:</strong> ${data.data_nascimento}</div>
-                            <div class="col-md-6"><strong>E-mail:</strong> ${data.email}</div>
-                            <div class="col-md-6"><strong>Telefone:</strong> ${data.telefone || 'N/A'}</div>
-                        </div>
-                        <h5><i class="bi bi-telephone-fill"></i> Contato de Emergência</h5>
-                        <div class="row mb-4">
-                            <div class="col-md-6"><strong>Nome:</strong> ${data.contato_emergencia_nome}</div>
-                            <div class="col-md-6"><strong>Telefone:</strong> ${data.contato_emergencia_telefone}</div>
-                        </div>
-                        <hr>
-                        <h4><i class="bi bi-file-earmark-zip-fill"></i> Documentos</h4>
-                        <ul class="list-group list-group-flush mb-4">${documentosHtml}</ul>
-                        <h4><i class="bi bi-exclamation-triangle-fill"></i> Pendências</h4>
-                        <ul class="list-group list-group-flush">${pendenciasHtml}</ul>
-                    `;
-                })
-                .catch(error => {
-                    console.error('Erro ao buscar detalhes do funcionário:', error);
-                    modalConteudo.innerHTML = '<p class="text-danger">Erro ao carregar os dados. Tente novamente.</p>';
                 });
+            }
         });
     }
 
-    modalBtnRemover.addEventListener('click', function() {
-        const funcionarioId = this.dataset.id;
-        const nomeFuncionario = modalNome.textContent;
+    // --- SCRIPT PARA AÇÕES EM LOTE ---
+    const selecionarTodos = document.getElementById('selecionar-todos');
+    const checkItens = document.querySelectorAll('.check-item');
+    const bulkActions = document.getElementById('bulk-actions');
+    const btnRemoverLote = document.getElementById('btn-remover-lote');
 
-        if (confirm(`Tem certeza que deseja remover "${nomeFuncionario}"?\n\nEsta ação é irreversível!`)) {
-            fetch(`/api/funcionario/${funcionarioId}/remover`, {
-                method: 'DELETE'
+    function toggleBulkActions() {
+        const selecionados = document.querySelectorAll('.check-item:checked');
+        if (selecionados.length > 0) {
+            bulkActions.classList.remove('d-none');
+        } else {
+            bulkActions.classList.add('d-none');
+        }
+    }
+
+    if (selecionarTodos) {
+        selecionarTodos.addEventListener('change', function() {
+            checkItens.forEach(checkbox => checkbox.checked = this.checked);
+            toggleBulkActions();
+        });
+    }
+
+    checkItens.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            selecionarTodos.checked = (document.querySelectorAll('.check-item:checked').length === checkItens.length);
+            toggleBulkActions();
+        });
+    });
+
+    if (btnRemoverLote) {
+        btnRemoverLote.addEventListener('click', function() {
+            const ids = Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value);
+            if (ids.length === 0) return;
+            if (confirm(`Tem certeza que deseja remover ${ids.length} funcionário(s)?`)) {
+                fetch('/api/funcionarios/remover-em-lote', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: ids })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                });
+            }
+        });
+    }
+    
+    document.querySelectorAll('.funcionario-link').forEach(cell => {
+        cell.addEventListener('click', function() {
+            this.closest('tr').dispatchEvent(new MouseEvent('click', { 'bubbles': true, 'cancelable': true }));
+        });
+    });
+
+    // --- SCRIPT PARA IMPORTAÇÃO DE CSV COM MODAL ---
+    const btnAnexar = document.getElementById('btn-anexar-csv');
+    const inputCsv = document.getElementById('input-csv');
+    const importFeedback = document.getElementById('import-feedback');
+
+    if (btnAnexar) {
+        btnAnexar.addEventListener('click', () => inputCsv.click());
+        inputCsv.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('arquivo', file);
+            importFeedback.innerHTML = `<div class="d-flex align-items-center"><strong>Importando: ${file.name}...</strong><div class="spinner-border ms-auto" role="status"></div></div>`;
+            btnAnexar.disabled = true;
+            fetch("{{ url_for('main.importar_csv') }}", { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                const alertClass = data.success ? 'alert-success' : 'alert-danger';
+                importFeedback.innerHTML = `<div class="alert ${alertClass}">${data.message}</div>`;
+                if (data.success) setTimeout(() => window.location.reload(), 2000);
+            })
+            .catch(error => importFeedback.innerHTML = '<div class="alert alert-danger">Erro de comunicação.</div>')
+            .finally(() => {
+                btnAnexar.disabled = false;
+                inputCsv.value = '';
+            });
+        });
+    }
+
+    // --- SCRIPT PARA EDIÇÃO EM LOTE ---
+    const btnAlterarLote = document.getElementById('btn-alterar-lote');
+    const formEditarLote = document.getElementById('form-editar-lote');
+    const contadorSelecionados = document.getElementById('contador-selecionados');
+    const idsParaAlterar = document.getElementById('ids-para-alterar');
+
+    if (btnAlterarLote) {
+        btnAlterarLote.addEventListener('click', () => {
+            const selecionados = document.querySelectorAll('.check-item:checked');
+            const ids = Array.from(selecionados).map(cb => cb.value);
+            contadorSelecionados.textContent = ids.length;
+            idsParaAlterar.value = ids.join(',');
+        });
+    }
+
+    if (formEditarLote) {
+        formEditarLote.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const ids = idsParaAlterar.value.split(',').map(Number);
+            const cargo = document.getElementById('lote-cargo').value;
+            const setor = document.getElementById('lote-setor').value;
+
+            if (ids.length === 0) return;
+
+            fetch('/api/funcionarios/editar-em-lote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids, cargo: cargo, setor: setor })
             })
             .then(response => response.json())
             .then(data => {
+                alert(data.message);
                 if (data.success) {
-                    alert(data.message);
-                    modal.hide();
-                    document.querySelector(`tr[data-id='${funcionarioId}']`).remove();
-                } else {
-                    alert('Erro: ' + data.message);
+                    window.location.reload();
                 }
             })
-            .catch(error => {
-                console.error('Erro na remoção:', error);
-                alert('Ocorreu um erro de comunicação. Tente novamente.');
-            });
-        }
-    });
+            .catch(error => alert('Ocorreu um erro de comunicação.'));
+        });
+     }
+
 });
 </script>
 {% endblock %}

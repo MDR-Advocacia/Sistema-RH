@@ -34,6 +34,24 @@
                     <label for="setor" class="form-label">Setor</label>
                     <input type="text" class="form-control" id="setor" name="setor" value="{{ funcionario.setor or '' }}">
                 </div>
+                <div class="col-md-6">
+                    <label for="data_nascimento" class="form-label">Data de Nascimento</label>
+                    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" value="{{ funcionario.data_nascimento.strftime('%Y-%m-%d') if funcionario.data_nascimento }}">
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="mb-3">Contato de Emergência</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="contato_emergencia_nome" class="form-label">Nome do Contato</label>
+                    <input type="text" class="form-control" id="contato_emergencia_nome" name="contato_emergencia_nome" value="{{ funcionario.contato_emergencia_nome or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="contato_emergencia_telefone" class="form-label">Telefone do Contato</label>
+                    <input type="text" class="form-control" id="contato_emergencia_telefone" name="contato_emergencia_telefone" value="{{ funcionario.contato_emergencia_telefone or '' }}">
+                </div>
             </div>
 
             <hr class="my-4">
