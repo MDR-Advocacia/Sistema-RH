@@ -9,11 +9,13 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from .models import Funcionario, Sistema
 from io import TextIOWrapper, StringIO
 from . import db
+from flask_login import login_required
 
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
+@login_required # <-- Adicione esta linha para proteger a rota
 def index():
     return render_template('index.html')
 
