@@ -23,10 +23,14 @@
 
                 <div class="col-md-8">
                     <h5>Dados de Contato</h5>
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="nome" name="nome" value="{{ funcionario.nome }}" required>
+                    </div>
                      <div class="mb-3">
                         <label for="apelido" class="form-label">Apelido / Nome de Exibição</label>
                         <input type="text" class="form-control" id="apelido" name="apelido" value="{{ funcionario.apelido or '' }}">
-                        <div class="form-text">Este nome aparecerá no menu lateral.</div>
+                        <div class="form-text">Este nome só aparecerá no menu lateral.</div>
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">E-mail (não pode ser alterado)</label>

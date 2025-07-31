@@ -14,12 +14,14 @@
     {% endif %}
 </div>
 
-{% with messages = get_flashed_messages() %}
+{% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ messages[0] }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category or 'success' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
 {% endif %}
 {% endwith %}
 
@@ -30,7 +32,7 @@
             <div>
                 <h5 class="card-title mb-1">{{ aviso.titulo }}</h5>
                 <small class="text-muted">
-                    Publicado por: {{ aviso.autor.funcionario.nome }} em {{ aviso.data_publicacao.strftime('%d/%m/%Y %H:%M') }}
+                    Publicado por: {{ aviso.autor.funcionario.nome }} em {{ aviso.data_publicacao | localtime }}
                 </small>
             </div>
             <div>
@@ -44,14 +46,34 @@
         <hr>
         <p class="card-text" style="white-space: pre-wrap;">{{ aviso.conteudo }}</p>
         
+        {% if aviso.anexos.all() %}
+        <hr>
+        <h6 class="card-subtitle mb-2 text-muted">Anexos:</h6>
+        <ul class="list-unstyled">
+            {% for anexo in aviso.anexos %}
+            <li>
+                <a href="{{ url_for('main.download_anexo_aviso', filename=anexo.path_armazenamento) }}">
+                    <i class="bi bi-paperclip"></i> {{ anexo.nome_arquivo_original }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
         <div class="text-end">
-            {% if current_user.tem_permissao('admin_rh') %}
+            {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
+                <form method="POST" action="{{ url_for('main.remover_aviso', aviso_id=aviso.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover este aviso? Esta ação não pode ser desfeita.');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> Remover
+                    </button>
+                </form>
                 <a href="{{ url_for('main.ver_logs_ciencia', aviso_id=aviso.id) }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-card-checklist"></i> Ver Logs de Ciência
+                    <i class="bi bi-card-checklist"></i> Ver Logs
                 </a>
             {% endif %}
+
             {% if aviso.id not in avisos_lidos_ids %}
-                <form method="POST" action="{{ url_for('main.dar_ciencia_aviso', aviso_id=aviso.id) }}" style="display: inline;">
+                <form method="POST" action="{{ url_for('main.dar_ciencia_aviso', aviso_id=aviso.id) }}" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-accent">Estou Ciente</button>
                 </form>
             {% endif %}

@@ -15,14 +15,14 @@
     </div>
 
     {% if current_user.is_authenticated and current_user.tem_permissao('admin_rh') %}
-    
+    <h3 class="h5 text-muted mb-3">Visão Geral da Empresa</h3>
     <div class="row">
         <div class="col-md-4">
             <div class="card shadow-sm mb-3">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h3 class="fw-bold">{{ total_funcionarios }}</h3>
+                            <h3 class="fw-bold">{{ dados.total_funcionarios }}</h3>
                             <p class="mb-0 text-secondary">Colaboradores Ativos</p>
                         </div>
                         <i class="bi bi-people-fill fs-1 text-primary-emphasis"></i>
@@ -35,7 +35,7 @@
                  <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h3 class="fw-bold">{{ total_avisos }}</h3>
+                            <h3 class="fw-bold">{{ dados.total_avisos }}</h3>
                             <p class="mb-0 text-secondary">Avisos no Mural</p>
                         </div>
                         <i class="bi bi-megaphone-fill fs-1 text-success-emphasis"></i>
@@ -44,11 +44,128 @@
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="alert alert-light border" role="alert">
-      <h4 class="alert-heading">Bem-vindo(a), {{ current_user.funcionario.nome }}!</h4>
-      <p>Este é o seu painel pessoal. Utilize o menu ao lado para navegar pelo sistema.</p>
-    </div>
+    <hr class="my-4">
     {% endif %}
 
+    <h3 class="h5 text-muted mb-3">Minhas Pendências</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Avisos para Leitura</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for aviso in dados.avisos_pendentes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            "{{ aviso.titulo }}"
+                            <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-sm btn-outline-primary">Ver no Mural</a>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhum aviso pendente.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-danger"></i> Documentos Solicitados</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for req in dados.requisicoes_pendentes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ req.tipo_documento }}
+                            <button class="btn btn-sm btn-brand btn-responder-doc" data-bs-toggle="modal" data-bs-target="#modal-responder-requisicao" data-req-id="{{ req.id }}" data-req-tipo="{{ req.tipo_documento }}">
+                                Enviar Documento
+                            </button>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhum documento solicitado.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content_after %}
+<div class="modal fade" id="modal-responder-requisicao" tabindex="-1" aria-labelledby="responderLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="responderLabel">Enviar Documento Solicitado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="form-responder-requisicao">
+          <div class="modal-body">
+            <p>Você está enviando o documento: <strong id="tipo-doc-modal"></strong></p>
+            <input type="hidden" id="req-id-modal" name="req_id">
+            <div class="mb-3">
+                <label for="arquivo-resposta" class="form-label">Selecione o arquivo</label>
+                <input class="form-control" type="file" id="arquivo-resposta" name="arquivo" required>
+            </div>
+            <div id="responder-feedback"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-brand">Enviar</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalResponderElement = document.getElementById('modal-responder-requisicao');
+    if (modalResponderElement) {
+        const modal = new bootstrap.Modal(modalResponderElement);
+        const tipoDocModal = document.getElementById('tipo-doc-modal');
+        const reqIdModal = document.getElementById('req-id-modal');
+        const formResponder = document.getElementById('form-responder-requisicao');
+        const responderFeedback = document.getElementById('responder-feedback');
+        const arquivoInput = document.getElementById('arquivo-resposta');
+
+        document.querySelectorAll('.btn-responder-doc').forEach(button => {
+            button.addEventListener('click', function() {
+                const reqId = this.dataset.reqId;
+                const reqTipo = this.dataset.reqTipo;
+                tipoDocModal.textContent = reqTipo;
+                reqIdModal.value = reqId;
+                responderFeedback.innerHTML = '';
+                formResponder.reset();
+            });
+        });
+
+        formResponder.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const reqId = reqIdModal.value;
+            const file = arquivoInput.files[0];
+            if (!file) {
+                responderFeedback.innerHTML = '<div class="alert alert-danger">Por favor, selecione um arquivo.</div>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('arquivo', file);
+            
+            responderFeedback.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+            fetch(`/documentos/requisicao/${reqId}/responder`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const alertClass = data.success ? 'alert-success' : 'alert-danger';
+                responderFeedback.innerHTML = `<div class="alert ${alertClass}">${data.message}</div>`;
+                if (data.success) {
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            })
+            .catch(error => {
+                responderFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

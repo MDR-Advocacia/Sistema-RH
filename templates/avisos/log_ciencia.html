@@ -21,7 +21,7 @@
         <h5 class="mb-0">Aviso: "{{ aviso.titulo }}"</h5>
     </div>
     <div class="card-body">
-        <p class="card-text">Publicado em: {{ aviso.data_publicacao.strftime('%d/%m/%Y %H:%M') }} por {{ aviso.autor.funcionario.nome }}</p>
+        <p class="card-text">Publicado em: {{ aviso.data_publicacao | localtime }} por {{ aviso.autor.funcionario.nome }}</p>
     </div>
 </div>
 
@@ -44,7 +44,7 @@
                             {% for log in logs %}
                             <tr>
                                 <td>{{ log.usuario.funcionario.nome }}</td>
-                                <td>{{ log.data_ciencia.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ log.data_ciencia | localtime }}</td>
                             </tr>
                             {% else %}
                             <tr><td colspan="2" class="text-center p-4">Ninguém deu ciência ainda.</td></tr>

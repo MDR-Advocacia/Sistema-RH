@@ -5,4 +5,5 @@ Flask-Cors
 python-dotenv
 psycopg2-binary
 Flask-Login
+pytz
 #pip install -r requirements.txt

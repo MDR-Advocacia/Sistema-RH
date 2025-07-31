@@ -25,6 +25,7 @@ def editar_perfil():
 
     if request.method == 'POST':
         # Atualiza os dados do formulário
+        funcionario.nome = request.form.get('nome') # <-- ADICIONE ESTA LINHA
         funcionario.apelido = request.form.get('apelido') # <-- ADICIONE ESTA LINHA
         funcionario.telefone = request.form.get('telefone')
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')

@@ -6,15 +6,24 @@
 <h1 class="h2 mb-4">Publicar Novo Aviso</h1>
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="POST" action="{{ url_for('main.criar_aviso') }}">
+        <form method="POST" action="{{ url_for('main.criar_aviso') }}" enctype="multipart/form-data">
+            
             <div class="mb-3">
                 <label for="titulo" class="form-label">Título do Aviso</label>
                 <input type="text" class="form-control" id="titulo" name="titulo" required>
             </div>
+            
             <div class="mb-3">
                 <label for="conteudo" class="form-label">Conteúdo do Aviso</label>
                 <textarea class="form-control" id="conteudo" name="conteudo" rows="8" required></textarea>
             </div>
+
+            <div class="mb-3">
+                <label for="anexos" class="form-label">Anexar Arquivos (Opcional)</label>
+                <input class="form-control" type="file" id="anexos" name="anexos" multiple>
+                <div class="form-text">Você pode selecionar múltiplos arquivos segurando Ctrl (ou Cmd).</div>
+            </div>
+            
             <div class="d-flex justify-content-end">
                 <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-secondary me-2">Cancelar</a>
                 <button type="submit" class="btn btn-brand">Publicar Aviso</button>
