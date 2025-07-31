@@ -1,52 +1,90 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Logs de Ciência</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style-funcionario.css') }}">
-    <style>
-        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
-        .aviso-info { background-color: var(--cor-superficie); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Logs de Ciência</h1>
-        <a href="{{ url_for('main.listar_avisos') }}">← Voltar para o Mural</a>
+{% extends "base.html" %}
 
-        <div class="aviso-info">
-            <h3>Aviso: "{{ aviso.titulo }}"</h3>
-            <p>Publicado em: {{ aviso.data_publicacao.strftime('%d/%m/%Y') }}</p>
-        </div>
+{% block title %}Logs de Ciência{% endblock %}
 
-        <h2>Colaboradores que deram ciência:</h2>
-
-        {% if logs %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Colaborador</th>
-                        <th>Email</th>
-                        <th>Setor</th>
-                        <th>Data e Hora da Ciência</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                    <tr>
-                        <td>{{ log.usuario.funcionario.nome }}</td>
-                        <td>{{ log.usuario.email }}</td>
-                        <td>{{ log.usuario.funcionario.setor }}</td>
-                        <td>{{ log.data_ciencia.strftime('%d/%m/%Y %H:%M:%S') }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>Nenhum colaborador deu ciência neste aviso ainda.</p>
-        {% endif %}
-
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">Logs de Ciência</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb bg-transparent p-0 mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.listar_avisos') }}">Mural de Avisos</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Logs</li>
+            </ol>
+        </nav>
     </div>
-</body>
-</html>
+</div>
+
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Aviso: "{{ aviso.titulo }}"</h5>
+    </div>
+    <div class="card-body">
+        <p class="card-text">Publicado em: {{ aviso.data_publicacao.strftime('%d/%m/%Y %H:%M') }} por {{ aviso.autor.funcionario.nome }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success-subtle text-success-emphasis">
+                <h5 class="mb-0"><i class="bi bi-check-circle-fill"></i> Colaboradores que Deram Ciência ({{ logs|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Colaborador</th>
+                                <th>Data e Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.usuario.funcionario.nome }}</td>
+                                <td>{{ log.data_ciencia.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center p-4">Ninguém deu ciência ainda.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning-subtle text-warning-emphasis">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Colaboradores Pendentes ({{ pendentes|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Colaborador</th>
+                                <th>Setor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for funcionario in pendentes %}
+                            <tr>
+                                <td>{{ funcionario.nome }}</td>
+                                <td>{{ funcionario.setor or 'N/A' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center p-4">Todos os colaboradores deram ciência!</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

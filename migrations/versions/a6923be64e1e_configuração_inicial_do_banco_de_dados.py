@@ -1,8 +1,8 @@
 """Configuração inicial do banco de dados
 
-Revision ID: 9c4b6f492d9e
+Revision ID: a6923be64e1e
 Revises: 
-Create Date: 2025-07-31 11:56:37.511091
+Create Date: 2025-07-31 12:11:10.160523
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9c4b6f492d9e'
+revision = 'a6923be64e1e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,6 +30,7 @@ def upgrade():
     sa.Column('contato_emergencia_nome', sa.String(length=120), nullable=True),
     sa.Column('contato_emergencia_telefone', sa.String(length=20), nullable=True),
     sa.Column('foto_perfil', sa.String(length=255), nullable=True),
+    sa.Column('apelido', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('cpf')
     )

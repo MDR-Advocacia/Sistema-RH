@@ -73,6 +73,7 @@ class Funcionario(db.Model):
     contato_emergencia_nome = db.Column(db.String(120))
     contato_emergencia_telefone = db.Column(db.String(20))
     foto_perfil = db.Column(db.String(255), nullable=True) # FOTO DE PERFIL
+    apelido = db.Column(db.String(50), nullable=True) # APELIDO
 
     # Relações
     sistemas = db.relationship('Sistema', secondary=funcionario_sistemas, lazy='subquery',

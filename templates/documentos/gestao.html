@@ -1,24 +1,28 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestão de Documentos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>Gestão de Documentos</h1>
-    <a href="{{ url_for('main.index') }}">← Voltar ao Painel</a>
+{% extends "base.html" %}
 
-    <div class="container" style="max-width: 700px; margin-top: 20px;">
-        <h2>Buscar Colaborador</h2>
-        <div class="form-group">
-            <input type="text" id="busca" placeholder="Digite o nome ou CPF do colaborador..." autocomplete="off">
-            <div id="resultados" class="resultado-busca"></div>
-        </div>
+{% block title %}Gestão de Documentos{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Gestão de Documentos</h1>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Buscar Colaborador</h5>
     </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="busca" class="form-label">Digite o nome ou CPF do colaborador:</label>
+            <input type="text" class="form-control" id="busca" autocomplete="off">
+        </div>
+        <div id="resultados" class="list-group">
+            </div>
+    </div>
+</div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-    // Script de busca de funcionários
     async function buscarColaboradores() {
         const termo = document.getElementById("busca").value.trim();
         const resultados = document.getElementById("resultados");
@@ -28,23 +32,24 @@
 
         const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
         const colaboradores = await res.json();
-
-        colaboradores.forEach(colab => {
-            const div = document.createElement("div");
-            div.innerHTML = `<strong>${colab.nome}</strong> - CPF: ${colab.cpf}`;
-            // Ao clicar, redireciona para a página de documentos daquele funcionário
-            div.onclick = () => {
-                window.location.href = `/documentos/funcionario/${colab.id}`;
-            };
-            resultados.appendChild(div);
-        });
+        
+        if (colaboradores.length > 0) {
+            colaboradores.forEach(colab => {
+                const link = document.createElement("a");
+                link.href = `/documentos/funcionario/${colab.id}`;
+                link.className = 'list-group-item list-group-item-action';
+                link.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
+                resultados.appendChild(link);
+            });
+        } else {
+            resultados.innerHTML = '<p class="text-center p-3">Nenhum colaborador encontrado.</p>';
+        }
     }
-    // Adiciona o listener para buscar enquanto digita (com um pequeno delay)
+    
     let searchTimeout;
     document.getElementById("busca").addEventListener("keyup", () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(buscarColaboradores, 300);
     });
 </script>
-</body>
-</html>
+{% endblock %}

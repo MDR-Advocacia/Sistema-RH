@@ -25,6 +25,7 @@ def editar_perfil():
 
     if request.method == 'POST':
         # Atualiza os dados do formulário
+        funcionario.apelido = request.form.get('apelido') # <-- ADICIONE ESTA LINHA
         funcionario.telefone = request.form.get('telefone')
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
@@ -53,6 +54,7 @@ def editar_perfil():
                 funcionario.foto_perfil = nome_unico
 
         db.session.commit()
+        db.session.refresh(funcionario)
         flash('Perfil atualizado com sucesso!', 'success')
         return redirect(url_for('perfil.editar_perfil'))
 

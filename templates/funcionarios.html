@@ -39,7 +39,7 @@
                     <tbody>
                         {% for f in funcionarios %}
                         <tr data-id="{{ f.id }}" style="cursor: pointer;">
-                            <td>{{ f.nome }}</td>
+                            <td>{{ f.apelido or f.nome }}</td>
                             <td>{{ f.cargo or 'N/A' }}</td>
                             <td>{{ f.setor or 'N/A' }}</td>
                             <td>{{ f.email }}</td>
@@ -69,13 +69,15 @@
         </div>
       </div>
       <div class="modal-footer">
+        <button type="button" id="modal-btn-remover" class="btn btn-danger me-auto">
+            <i class="bi bi-trash"></i> Remover Colaborador
+        </button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
         <a href="#" id="modal-link-alterar" class="btn btn-brand">Alterar Cadastro</a>
       </div>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -83,11 +85,14 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tabelaFuncionarios = document.getElementById('tabela-funcionarios');
     const modalElement = document.getElementById('modal-detalhes');
+    if (!modalElement) return;
+
     const modal = new bootstrap.Modal(modalElement);
     
     const modalNome = document.getElementById('modal-nome');
     const modalConteudo = document.getElementById('modal-conteudo');
     const modalLinkAlterar = document.getElementById('modal-link-alterar');
+    const modalBtnRemover = document.getElementById('modal-btn-remover');
 
     if (tabelaFuncionarios) {
         tabelaFuncionarios.addEventListener('click', function (event) {
@@ -104,7 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(response => response.json())
                 .then(data => {
                     modalNome.textContent = data.nome;
-                    modalLinkAlterar.href = `/alterar?cpf=${data.cpf}`;
+                    modalLinkAlterar.href = `/funcionario/${data.id}/editar`;
+                    modalBtnRemover.dataset.id = data.id;
 
                     let documentosHtml = '<li class="list-group-item">Nenhum documento encontrado.</li>';
                     if (data.documentos && data.documentos.length > 0) {
@@ -121,14 +127,12 @@ document.addEventListener('DOMContentLoaded', function () {
                             <li class="list-group-item">${p.descricao} <span class="badge bg-warning text-dark float-end">${p.status}</span></li>`).join('');
                     }
 
-                    // --- HTML DO CONTEÚDO DO MODAL REESTRUTURADO ---
                     modalConteudo.innerHTML = `
                         <h5><i class="bi bi-person-badge"></i> Informações Profissionais</h5>
                         <div class="row mb-3">
                             <div class="col-md-6"><strong>Cargo:</strong> ${data.cargo || 'N/A'}</div>
                             <div class="col-md-6"><strong>Setor:</strong> ${data.setor || 'N/A'}</div>
                         </div>
-
                         <h5><i class="bi bi-person-lines-fill"></i> Dados Pessoais</h5>
                         <div class="row mb-3">
                             <div class="col-md-6"><strong>CPF:</strong> ${data.cpf}</div>
@@ -136,18 +140,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             <div class="col-md-6"><strong>E-mail:</strong> ${data.email}</div>
                             <div class="col-md-6"><strong>Telefone:</strong> ${data.telefone || 'N/A'}</div>
                         </div>
-
                         <h5><i class="bi bi-telephone-fill"></i> Contato de Emergência</h5>
                         <div class="row mb-4">
                             <div class="col-md-6"><strong>Nome:</strong> ${data.contato_emergencia_nome}</div>
                             <div class="col-md-6"><strong>Telefone:</strong> ${data.contato_emergencia_telefone}</div>
                         </div>
-                        
                         <hr>
-
                         <h4><i class="bi bi-file-earmark-zip-fill"></i> Documentos</h4>
                         <ul class="list-group list-group-flush mb-4">${documentosHtml}</ul>
-
                         <h4><i class="bi bi-exclamation-triangle-fill"></i> Pendências</h4>
                         <ul class="list-group list-group-flush">${pendenciasHtml}</ul>
                     `;
@@ -158,6 +158,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    modalBtnRemover.addEventListener('click', function() {
+        const funcionarioId = this.dataset.id;
+        const nomeFuncionario = modalNome.textContent;
+
+        if (confirm(`Tem certeza que deseja remover "${nomeFuncionario}"?\n\nEsta ação é irreversível!`)) {
+            fetch(`/api/funcionario/${funcionarioId}/remover`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    modal.hide();
+                    document.querySelector(`tr[data-id='${funcionarioId}']`).remove();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na remoção:', error);
+                alert('Ocorreu um erro de comunicação. Tente novamente.');
+            });
+        }
+    });
 });
 </script>
 {% endblock %}
