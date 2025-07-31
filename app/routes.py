@@ -10,6 +10,9 @@ from .models import Funcionario, Sistema
 from io import TextIOWrapper, StringIO
 from . import db
 from flask_login import login_required
+from .models import Aviso, LogCienciaAviso
+from .decorators import permission_required
+from flask_login import current_user
 
 
 main = Blueprint('main', __name__)
@@ -186,6 +189,7 @@ def buscar_funcionarios():
     resultado = []
     for f in funcionarios:
         resultado.append({
+            "id": f.id, 
             "nome": f.nome,
             "cpf": f.cpf,
             "email": f.email,
@@ -251,3 +255,81 @@ def remover_funcionario():
     # Se preferir redirecionar, troque para redirect(url_for('main.deletar'))
     return redirect(url_for('main.deletar'))
 
+
+# --- ROTAS DO MURAL DE AVISOS ---
+
+@main.route('/avisos')
+@login_required
+def listar_avisos():
+    """Exibe o mural de avisos para o usuário logado."""
+    todos_avisos = Aviso.query.order_by(Aviso.data_publicacao.desc()).all()
+    
+    # Pega os IDs dos avisos que o usuário já deu ciência
+    avisos_lidos_ids = {log.aviso_id for log in current_user.logs_ciencia}
+
+    return render_template('avisos/listar_avisos.html', 
+                           avisos=todos_avisos, 
+                           avisos_lidos_ids=avisos_lidos_ids)
+
+@main.route('/avisos/novo', methods=['GET', 'POST'])
+@login_required
+@permission_required('admin_rh') # Apenas quem tem essa permissão pode acessar
+def criar_aviso():
+    """Formulário e lógica para criar um novo aviso."""
+    if request.method == 'POST':
+        titulo = request.form.get('titulo')
+        conteudo = request.form.get('conteudo')
+
+        if not titulo or not conteudo:
+            flash('Título e conteúdo são obrigatórios.')
+            return redirect(url_for('main.criar_aviso'))
+
+        novo_aviso = Aviso(
+            titulo=titulo,
+            conteudo=conteudo,
+            autor_id=current_user.id
+        )
+        db.session.add(novo_aviso)
+        db.session.commit()
+
+        flash('Aviso publicado com sucesso!')
+        return redirect(url_for('main.listar_avisos'))
+
+    return render_template('avisos/criar_aviso.html')
+
+@main.route('/avisos/<int:aviso_id>/ciencia', methods=['POST'])
+@login_required
+def dar_ciencia_aviso(aviso_id):
+    """Registra que o usuário deu ciência em um aviso."""
+    aviso = Aviso.query.get_or_404(aviso_id)
+    
+    # Verifica se já não existe um log de ciência para este usuário e aviso
+    ja_deu_ciencia = LogCienciaAviso.query.filter_by(
+        usuario_id=current_user.id,
+        aviso_id=aviso.id
+    ).first()
+
+    if not ja_deu_ciencia:
+        log = LogCienciaAviso(
+            usuario_id=current_user.id,
+            aviso_id=aviso.id
+        )
+        db.session.add(log)
+        db.session.commit()
+        flash(f'Ciência registrada para o aviso "{aviso.titulo}".')
+
+    return redirect(url_for('main.listar_avisos'))
+
+@main.route('/aviso/<int:aviso_id>/logs')
+@login_required
+@permission_required('admin_rh') # Apenas RH pode ver os logs
+def ver_logs_ciencia(aviso_id):
+    """
+    Exibe a lista de todos os usuários que deram ciência em um aviso específico.
+    """
+    aviso = Aviso.query.get_or_404(aviso_id)
+    
+    # Busca todos os logs associados a este aviso, ordenando pelo mais recente
+    logs = LogCienciaAviso.query.filter_by(aviso_id=aviso.id).order_by(LogCienciaAviso.data_ciencia.desc()).all()
+
+    return render_template('avisos/log_ciencia.html', aviso=aviso, logs=logs)

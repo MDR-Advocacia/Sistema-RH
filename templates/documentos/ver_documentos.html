@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Documentos de {{ funcionario.nome }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style-funcionario.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 900px;">
+        <h1>Documentos de: {{ funcionario.nome }}</h1>
+        <a href="{{ url_for('documentos.gestao_documentos') }}">← Voltar para a busca</a>
+
+        <form method="POST" action="{{ url_for('documentos.upload_documento', funcionario_id=funcionario.id) }}" enctype="multipart/form-data" style="margin-top: 20px; background-color: var(--cor-superficie); padding: 20px; border-radius: 8px;">
+            <h3>Enviar Novo Documento</h3>
+            <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div style="flex-grow: 1;">
+                    <label for="tipo_documento">Tipo de Documento</label>
+                    <input type="text" id="tipo_documento" name="tipo_documento" placeholder="Ex: Contrato, RG, Holerite" required>
+                </div>
+                <div style="flex-grow: 2;">
+                    <label for="arquivo">Selecione o arquivo</label>
+                    <input type="file" id="arquivo" name="arquivo" required>
+                </div>
+                <div>
+                    <button type="submit" class="primary-btn">Enviar</button>
+                </div>
+            </div>
+        </form>
+
+        <h2 style="margin-top: 30px;">Documentos Enviados</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome Original</th>
+                    <th>Tipo</th>
+                    <th>Data de Upload</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in funcionario.documentos|sort(attribute='data_upload', reverse=True) %}
+                <tr>
+                    <td>{{ doc.nome_arquivo }}</td>
+                    <td>{{ doc.tipo_documento }}</td>
+                    <td>{{ doc.data_upload.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('documentos.download_documento', filename=doc.path_armazenamento) }}" class="btn" style="background-color: #28a745;">Baixar</a>
+                        </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center;">Nenhum documento encontrado para este funcionário.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

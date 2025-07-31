@@ -41,4 +41,9 @@ def create_app():
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
+    # --- Registra o blueprint de documentos ---
+    from .documentos import documentos_bp
+    app.register_blueprint(documentos_bp, url_prefix='/documentos')
+
+
     return app

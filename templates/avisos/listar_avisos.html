@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mural de Avisos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        .aviso { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; background-color: var(--cor-superficie); }
+        .aviso h2 { margin-top: 0; }
+        .aviso-meta { font-size: 0.9em; color: var(--cor-texto-secundario); margin-bottom: 10px; }
+        .aviso-conteudo { white-space: pre-wrap; } /* Preserva quebras de linha */
+        .aviso-actions { margin-top: 15px; text-align: right; }
+        .status-lido { color: #28a745; font-weight: bold; }
+        .status-pendente { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mural de Avisos</h1>
+        <a href="{{ url_for('main.index') }}">← Voltar ao Painel</a>
+
+        {% if current_user.tem_permissao('admin_rh') %}
+            <a href="{{ url_for('main.criar_aviso') }}" class="primary-btn" style="float: right;">+ Novo Aviso</a>
+        {% endif %}
+
+        <br><br>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert-sucesso" style="background-color: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                {{ messages[0] }}
+            </div>
+        {% endif %}
+        {% endwith %}
+
+        {% for aviso in avisos %}
+            <div class="aviso">
+                <h2>{{ aviso.titulo }}</h2>
+                <div class="aviso-meta">
+                    Publicado por: {{ aviso.autor.funcionario.nome }} em {{ aviso.data_publicacao.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+                <div class="aviso-conteudo">
+                    {{ aviso.conteudo }}
+                </div>
+                    <div class="aviso-actions">
+                        
+                        {% if current_user.tem_permissao('admin_rh') %}
+                            <a href="{{ url_for('main.ver_logs_ciencia', aviso_id=aviso.id) }}" class="btn btn-azul" style="text-decoration: none; padding: 8px 12px; font-size: 0.9em; background-color: #3e4a63;">
+                                Ver Logs
+                            </a>
+                        {% endif %}
+                        {% if aviso.id in avisos_lidos_ids %}
+                            <span class="status-lido">✓ Ciência registrada</span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('main.dar_ciencia_aviso', aviso_id=aviso.id) }}" style="display: inline;">
+                                <button type="submit" class="secondary-btn">Estou Ciente</button>
+                            </form>
+                        {% endif %}
+                    </div>
+            </div>
+        {% else %}
+            <p>Nenhum aviso publicado no momento.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

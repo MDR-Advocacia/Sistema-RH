@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Documentos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Gestão de Documentos</h1>
+    <a href="{{ url_for('main.index') }}">← Voltar ao Painel</a>
+
+    <div class="container" style="max-width: 700px; margin-top: 20px;">
+        <h2>Buscar Colaborador</h2>
+        <div class="form-group">
+            <input type="text" id="busca" placeholder="Digite o nome ou CPF do colaborador..." autocomplete="off">
+            <div id="resultados" class="resultado-busca"></div>
+        </div>
+    </div>
+
+<script>
+    // Script de busca de funcionários
+    async function buscarColaboradores() {
+        const termo = document.getElementById("busca").value.trim();
+        const resultados = document.getElementById("resultados");
+        resultados.innerHTML = "";
+
+        if (termo.length < 2) return;
+
+        const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
+        const colaboradores = await res.json();
+
+        colaboradores.forEach(colab => {
+            const div = document.createElement("div");
+            div.innerHTML = `<strong>${colab.nome}</strong> - CPF: ${colab.cpf}`;
+            // Ao clicar, redireciona para a página de documentos daquele funcionário
+            div.onclick = () => {
+                window.location.href = `/documentos/funcionario/${colab.id}`;
+            };
+            resultados.appendChild(div);
+        });
+    }
+    // Adiciona o listener para buscar enquanto digita (com um pequeno delay)
+    let searchTimeout;
+    document.getElementById("busca").addEventListener("keyup", () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(buscarColaboradores, 300);
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Logs de Ciência</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style-funcionario.css') }}">
+    <style>
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        .aviso-info { background-color: var(--cor-superficie); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Logs de Ciência</h1>
+        <a href="{{ url_for('main.listar_avisos') }}">← Voltar para o Mural</a>
+
+        <div class="aviso-info">
+            <h3>Aviso: "{{ aviso.titulo }}"</h3>
+            <p>Publicado em: {{ aviso.data_publicacao.strftime('%d/%m/%Y') }}</p>
+        </div>
+
+        <h2>Colaboradores que deram ciência:</h2>
+
+        {% if logs %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Colaborador</th>
+                        <th>Email</th>
+                        <th>Setor</th>
+                        <th>Data e Hora da Ciência</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.usuario.funcionario.nome }}</td>
+                        <td>{{ log.usuario.email }}</td>
+                        <td>{{ log.usuario.funcionario.setor }}</td>
+                        <td>{{ log.data_ciencia.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Nenhum colaborador deu ciência neste aviso ainda.</p>
+        {% endif %}
+
+    </div>
+</body>
+</html>

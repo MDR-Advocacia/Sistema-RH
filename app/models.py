@@ -112,7 +112,7 @@ class LogCienciaAviso(db.Model):
     data_ciencia = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relações
-    usuario = db.relationship('Usuario')
+    usuario = db.relationship('Usuario', backref=db.backref('logs_ciencia', lazy='dynamic'))
 
 class Documento(db.Model):
     """
