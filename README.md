@@ -80,6 +80,10 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
     python -m venv venv
     # Windows
     venv\Scripts\activate
+
+    Obs: pode ser que o powershell bloqueie a execução e seja necessário rodar o comando abaixo antes de ativar o ambiente
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
     # macOS/Linux
     source venv/bin/activate
     ```
