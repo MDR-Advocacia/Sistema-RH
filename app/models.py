@@ -3,6 +3,7 @@
 from . import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean # Adicione Boolean
 from flask_login import UserMixin
 
 # --- Tabelas de Associação ---
@@ -83,6 +84,7 @@ class Aviso(db.Model):
     autor = db.relationship('Usuario')
     logs_ciencia = db.relationship('LogCienciaAviso', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
     anexos = db.relationship('AvisoAnexo', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
+    arquivado = db.Column(db.Boolean, default=False, nullable=False)
 
 class LogCienciaAviso(db.Model):
     __tablename__ = 'log_ciencia_aviso'

@@ -1,13 +1,13 @@
 import csv
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import TextIOWrapper, StringIO
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
                    url_for, flash, make_response, current_app, send_from_directory)
 from flask_login import login_required, current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, extract
 from werkzeug.utils import secure_filename
 
 from . import db, format_datetime_local
@@ -21,16 +21,47 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @login_required
 def index():
+    """
+    Exibe a dashboard principal, com pendências e o novo mural de aniversariantes.
+    """
     dados_dashboard = {}
     usuario = current_user
+    
+    # Lógica de pendências (existente)
     avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
-    dados_dashboard['avisos_pendentes'] = Aviso.query.filter(Aviso.id.notin_(avisos_lidos_ids)).all()
+    dados_dashboard['avisos_pendentes'] = Aviso.query.filter(
+        Aviso.arquivado == False,
+        Aviso.id.notin_(avisos_lidos_ids)
+    ).all()
     dados_dashboard['requisicoes_pendentes'] = RequisicaoDocumento.query.filter_by(
         destinatario_id=usuario.funcionario.id, status='Pendente'
     ).all()
+    
+    # Se for admin, busca dados gerais da empresa
     if usuario.tem_permissao('admin_rh'):
         dados_dashboard['total_funcionarios'] = Funcionario.query.count()
-        dados_dashboard['total_avisos'] = Aviso.query.count()
+        dados_dashboard['total_avisos'] = Aviso.query.filter_by(arquivado=False).count()
+
+    # --- LÓGICA PARA ANIVERSARIANTES DA SEMANA ---
+    hoje = datetime.utcnow().date()
+    # Encontra a segunda-feira desta semana (weekday() de segunda é 0)
+    inicio_semana = hoje - timedelta(days=hoje.weekday())
+    # Encontra o domingo desta semana
+    fim_semana = inicio_semana + timedelta(days=6)
+
+    # Filtra funcionários cuja data de nascimento (dia e mês) está no intervalo da semana
+    aniversariantes = Funcionario.query.filter(
+        extract('month', Funcionario.data_nascimento) >= inicio_semana.month,
+        extract('day', Funcionario.data_nascimento) >= inicio_semana.day,
+        extract('month', Funcionario.data_nascimento) <= fim_semana.month,
+        extract('day', Funcionario.data_nascimento) <= fim_semana.day
+    ).all()
+
+    # Adiciona os dados ao dicionário do dashboard
+    dados_dashboard['aniversariantes'] = sorted(aniversariantes, key=lambda f: (f.data_nascimento.month, f.data_nascimento.day))
+    dados_dashboard['periodo_semana'] = f"{inicio_semana.strftime('%d/%m')} - {fim_semana.strftime('%d/%m')}"
+    # --- FIM DA LÓGICA ---
+        
     return render_template('index.html', dados=dados_dashboard)
 
 
@@ -39,16 +70,13 @@ def index():
 @login_required
 @permission_required('admin_rh')
 def exibir_formulario_cadastro():
-    """Exibe o formulário de cadastro de novos funcionários."""
     permissoes = Permissao.query.all()
     return render_template('cadastrar.html', permissoes=permissoes)
-
 
 @main.route('/cadastrar', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
-    """Processa o formulário de cadastro de novos funcionários."""
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
     email = request.form.get('email')
@@ -91,7 +119,6 @@ def processar_cadastro():
     flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
     return redirect(url_for('main.listar_funcionarios'))
 
-
 @main.route('/funcionarios')
 @login_required
 @permission_required('admin_rh')
@@ -112,7 +139,6 @@ def listar_funcionarios():
         query = query.order_by(Funcionario.nome.asc())
     funcionarios = query.all()
     return render_template('funcionarios.html', funcionarios=funcionarios)
-
 
 @main.route('/funcionario/<int:funcionario_id>/editar', methods=['GET', 'POST'])
 @login_required
@@ -149,10 +175,10 @@ def editar_funcionario(funcionario_id):
 @main.route('/avisos')
 @login_required
 def listar_avisos():
-    todos_avisos = Aviso.query.order_by(Aviso.data_publicacao.desc()).all()
+    """Exibe o mural de avisos para o usuário logado, mostrando apenas avisos não arquivados."""
+    todos_avisos = Aviso.query.filter_by(arquivado=False).order_by(Aviso.data_publicacao.desc()).all()
     avisos_lidos_ids = {log.aviso_id for log in current_user.logs_ciencia}
     return render_template('avisos/listar_avisos.html', avisos=todos_avisos, avisos_lidos_ids=avisos_lidos_ids)
-
 
 @main.route('/avisos/novo', methods=['GET', 'POST'])
 @login_required
@@ -187,12 +213,10 @@ def criar_aviso():
         return redirect(url_for('main.listar_avisos'))
     return render_template('avisos/criar_aviso.html')
 
-
 @main.route('/avisos/anexo/<filename>')
 @login_required
 def download_anexo_aviso(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
-
 
 @main.route('/avisos/<int:aviso_id>/remover', methods=['POST'])
 @login_required
@@ -213,7 +237,6 @@ def remover_aviso(aviso_id):
         flash('Ocorreu um erro ao remover o aviso.', 'danger')
     return redirect(url_for('main.listar_avisos'))
 
-
 @main.route('/avisos/<int:aviso_id>/ciencia', methods=['POST'])
 @login_required
 def dar_ciencia_aviso(aviso_id):
@@ -226,7 +249,6 @@ def dar_ciencia_aviso(aviso_id):
         flash(f'Ciência registrada para o aviso "{aviso.titulo}".')
     return redirect(url_for('main.listar_avisos'))
 
-
 @main.route('/aviso/<int:aviso_id>/logs')
 @login_required
 @permission_required('admin_rh')
@@ -236,7 +258,6 @@ def ver_logs_ciencia(aviso_id):
     usuarios_com_ciencia_ids = {log.usuario_id for log in logs}
     funcionarios_pendentes = Funcionario.query.join(Usuario).filter(Usuario.id.notin_(usuarios_com_ciencia_ids)).all()
     return render_template('avisos/log_ciencia.html', aviso=aviso, logs=logs, pendentes=funcionarios_pendentes)
-
 
 # --- ROTAS DE API ---
 @main.route('/api/buscar_funcionarios')
@@ -256,7 +277,6 @@ def buscar_funcionarios():
     resultado = [{"id": f.id, "nome": f.nome, "cpf": f.cpf} for f in funcionarios]
     return jsonify(resultado)
 
-
 @main.route('/api/funcionario/<int:funcionario_id>')
 @login_required
 @permission_required('admin_rh')
@@ -266,13 +286,21 @@ def detalhes_funcionario(funcionario_id):
     pendencias_list = []
     if usuario:
         avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
-        avisos_pendentes = Aviso.query.filter(Aviso.id.notin_(avisos_lidos_ids)).all()
+        
+        avisos_pendentes = Aviso.query.filter(
+            Aviso.arquivado == False,
+            Aviso.id.notin_(avisos_lidos_ids)
+        ).all()
+
         for aviso in avisos_pendentes:
             pendencias_list.append({'id': f'aviso_{aviso.id}', 'descricao': f"Ciência pendente no aviso: '{aviso.titulo}'", 'status': 'Pendente'})
+    
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(destinatario_id=funcionario.id, status='Pendente').all()
     for req in requisicoes_pendentes:
         pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo_documento}'", 'status': 'Pendente'})
+    
     documentos_list = [{'id': doc.id, 'nome_arquivo': doc.nome_arquivo, 'tipo_documento': doc.tipo_documento, 'data_upload': format_datetime_local(doc.data_upload), 'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)} for doc in funcionario.documentos]
+    
     return jsonify({
         'id': funcionario.id, 'nome': funcionario.nome, 'cpf': funcionario.cpf, 'email': funcionario.email,
         'telefone': funcionario.telefone, 'cargo': funcionario.cargo, 'setor': funcionario.setor,
@@ -281,7 +309,6 @@ def detalhes_funcionario(funcionario_id):
         'contato_emergencia_telefone': funcionario.contato_emergencia_telefone or 'Não informado',
         'documentos': documentos_list, 'pendencias': pendencias_list
     })
-
 
 @main.route('/api/funcionario/<int:funcionario_id>/remover', methods=['DELETE'])
 @login_required
@@ -299,7 +326,6 @@ def remover_funcionario_api(funcionario_id):
         current_app.logger.error(f"Erro ao remover funcionário {funcionario_id}: {e}")
         return jsonify({'success': False, 'message': 'Erro ao remover o funcionário.'}), 500
 
-
 @main.route('/api/funcionarios/remover-em-lote', methods=['DELETE'])
 @login_required
 @permission_required(['admin_rh', 'admin_ti'])
@@ -316,7 +342,6 @@ def remover_funcionarios_lote():
         db.session.rollback()
         current_app.logger.error(f"Erro ao remover em lote: {e}")
         return jsonify({'success': False, 'message': 'Ocorreu um erro durante a remoção.'}), 500
-
 
 @main.route('/api/funcionarios/editar-em-lote', methods=['POST'])
 @login_required
@@ -339,7 +364,6 @@ def editar_funcionarios_lote():
         db.session.rollback()
         current_app.logger.error(f"Erro ao editar em lote: {e}")
         return jsonify({'success': False, 'message': 'Ocorreu um erro na atualização.'}), 500
-
 
 # --- ROTAS DE IMPORTAÇÃO/EXPORTAÇÃO ---
 @main.route('/importar_csv', methods=['POST'])
@@ -387,7 +411,6 @@ def importar_csv():
         current_app.logger.error(f"Erro ao processar CSV: {e}")
         return jsonify({'success': False, 'message': 'Ocorreu um erro ao processar o arquivo.'}), 500
 
-
 @main.route('/exportar_csv')
 @login_required
 @permission_required('admin_rh')
@@ -415,3 +438,35 @@ def exportar_csv():
     response.headers["Content-Disposition"] = "attachment; filename=funcionarios.csv"
     response.headers["Content-type"] = "text/csv"
     return response
+
+# --- ROTAS PARA ARQUIVAMENTO DE AVISOS ---
+
+@main.route('/aviso/<int:aviso_id>/arquivar', methods=['POST'])
+@login_required
+@permission_required(['admin_rh', 'admin_ti'])
+def arquivar_aviso(aviso_id):
+    """Marca um aviso como arquivado."""
+    aviso = Aviso.query.get_or_404(aviso_id)
+    aviso.arquivado = True
+    db.session.commit()
+    flash(f'Aviso "{aviso.titulo}" foi arquivado com sucesso.', 'success')
+    return redirect(url_for('main.listar_avisos'))
+
+@main.route('/aviso/<int:aviso_id>/desarquivar', methods=['POST'])
+@login_required
+@permission_required(['admin_rh', 'admin_ti'])
+def desarquivar_aviso(aviso_id):
+    """Restaura um aviso arquivado para o mural principal."""
+    aviso = Aviso.query.get_or_404(aviso_id)
+    aviso.arquivado = False
+    db.session.commit()
+    flash(f'Aviso "{aviso.titulo}" foi restaurado com sucesso.', 'success')
+    return redirect(url_for('main.avisos_arquivados'))
+
+@main.route('/avisos/arquivados')
+@login_required
+@permission_required(['admin_rh', 'admin_ti'])
+def avisos_arquivados():
+    """Exibe a lista de avisos que foram arquivados."""
+    avisos_arquivados = Aviso.query.filter_by(arquivado=True).order_by(Aviso.data_publicacao.desc()).all()
+    return render_template('avisos/avisos_arquivados.html', avisos=avisos_arquivados)

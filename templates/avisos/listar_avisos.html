@@ -5,8 +5,11 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">Mural de Avisos</h1>
-    {% if current_user.tem_permissao('admin_rh') %}
+    {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
     <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.avisos_arquivados') }}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-archive"></i> Ver Arquivados
+        </a>
         <a href="{{ url_for('main.criar_aviso') }}" class="btn btn-sm btn-brand">
             <i class="bi bi-plus-circle"></i> Novo Aviso
         </a>
@@ -70,6 +73,12 @@
                 <a href="{{ url_for('main.ver_logs_ciencia', aviso_id=aviso.id) }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-card-checklist"></i> Ver Logs
                 </a>
+                <!-- BOTÃO DE ARQUIVAR ADICIONADO AQUI -->
+                <form method="POST" action="{{ url_for('main.arquivar_aviso', aviso_id=aviso.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-archive"></i> Arquivar
+                    </button>
+                </form>
             {% endif %}
 
             {% if aviso.id not in avisos_lidos_ids %}

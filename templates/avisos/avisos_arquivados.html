@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Avisos Arquivados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">Avisos Arquivados</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb bg-transparent p-0 mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.listar_avisos') }}">Mural de Avisos</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Arquivados</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category or 'success' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+
+{% for aviso in avisos %}
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="card-title mb-1">{{ aviso.titulo }}</h5>
+                <small class="text-muted">
+                    Publicado por: {{ aviso.autor.funcionario.nome }} em {{ aviso.data_publicacao | localtime }}
+                </small>
+            </div>
+        </div>
+        <hr>
+        <p class="card-text" style="white-space: pre-wrap;">{{ aviso.conteudo }}</p>
+        
+        {% if aviso.anexos.all() %}
+        <hr>
+        <h6 class="card-subtitle mb-2 text-muted">Anexos:</h6>
+        <ul class="list-unstyled">
+            {% for anexo in aviso.anexos %}
+            <li>
+                <a href="{{ url_for('main.download_anexo_aviso', filename=anexo.path_armazenamento) }}">
+                    <i class="bi bi-paperclip"></i> {{ anexo.nome_arquivo_original }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        <div class="text-end">
+            <a href="{{ url_for('main.ver_logs_ciencia', aviso_id=aviso.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-card-checklist"></i> Ver Logs
+            </a>
+            <form method="POST" action="{{ url_for('main.desarquivar_aviso', aviso_id=aviso.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-box-arrow-up"></i> Restaurar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card shadow-sm">
+    <div class="card-body text-center">
+        <p class="mb-0">Nenhum aviso arquivado.</p>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

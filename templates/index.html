@@ -14,7 +14,7 @@
         {% endif %}
     </div>
 
-    {% if current_user.is_authenticated and current_user.tem_permissao('admin_rh') %}
+    {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
     <h3 class="h5 text-muted mb-3">Visão Geral da Empresa</h3>
     <div class="row">
         <div class="col-md-4">
@@ -50,7 +50,7 @@
     <h3 class="h5 text-muted mb-3">Minhas Pendências</h3>
     <div class="row">
         <div class="col-md-6">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Avisos para Leitura</h5></div>
                 <ul class="list-group list-group-flush">
                     {% for aviso in dados.avisos_pendentes %}
@@ -65,7 +65,7 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-danger"></i> Documentos Solicitados</h5></div>
                 <ul class="list-group list-group-flush">
                     {% for req in dados.requisicoes_pendentes %}
@@ -82,6 +82,42 @@
             </div>
         </div>
     </div>
+
+    {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
+    <!-- SEÇÃO DE ANIVERSARIANTES ADICIONADA AQUI -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-cake2-fill text-info"></i> Aniversariantes da Semana ({{ dados.periodo_semana }})</h5>
+        </div>
+        <div class="card-body">
+            {% if dados.aniversariantes %}
+                <div class="row">
+                    {% for funcionario in dados.aniversariantes %}
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div>
+                                {% if funcionario.foto_perfil %}
+                                    <img src="{{ url_for('perfil.uploaded_file', filename=funcionario.foto_perfil) }}" alt="Foto de Perfil" width="50" height="50" class="rounded-circle me-3" style="object-fit: cover;">
+                                {% else %}
+                                    <i class="bi bi-person-circle fs-1 me-3 text-secondary"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ funcionario.apelido or funcionario.nome }}</h6>
+                                <small class="text-muted">{{ funcionario.data_nascimento.strftime('%d/%m') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-center text-muted mb-0">Nenhum aniversariante esta semana.</p>
+            {% endif %}
+        </div>
+    </div>
+    <!-- FIM DA SEÇÃO DE ANIVERSARIANTES -->
+    {% endif %}
+
 {% endblock %}
 
 {% block content_after %}
