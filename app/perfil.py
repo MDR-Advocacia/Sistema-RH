@@ -1,8 +1,7 @@
-# app/perfil.py
-
 import os
 import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
+from flask import (Blueprint, render_template, request, redirect, url_for,
+                   flash, current_app, send_from_directory)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -25,8 +24,8 @@ def editar_perfil():
 
     if request.method == 'POST':
         # Atualiza os dados do formulário
-        funcionario.nome = request.form.get('nome') # <-- ADICIONE ESTA LINHA
-        funcionario.apelido = request.form.get('apelido') # <-- ADICIONE ESTA LINHA
+        funcionario.nome = request.form.get('nome')
+        funcionario.apelido = request.form.get('apelido')
         funcionario.telefone = request.form.get('telefone')
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
@@ -35,23 +34,25 @@ def editar_perfil():
         if 'foto_perfil' in request.files:
             file = request.files['foto_perfil']
             if file and file.filename != '' and allowed_file(file.filename):
-                # Gera um nome de arquivo único para evitar conflitos
                 filename_seguro = secure_filename(file.filename)
                 extensao = filename_seguro.rsplit('.', 1)[1]
                 nome_unico = f"{uuid.uuid4()}.{extensao}"
                 
-                # Deleta a foto antiga, se existir
                 if funcionario.foto_perfil:
                     try:
                         os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], FOTOS_PERFIL_FOLDER, funcionario.foto_perfil))
                     except OSError:
-                        pass # Ignora se o arquivo não for encontrado
+                        pass 
 
                 # Salva a nova foto
                 upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], FOTOS_PERFIL_FOLDER)
+                
+                # --- LINHA CORRIGIDA ---
+                # Garante que o diretório de upload exista
+                os.makedirs(upload_path, exist_ok=True)
+                
                 file.save(os.path.join(upload_path, nome_unico))
                 
-                # Atualiza o nome do arquivo no banco de dados
                 funcionario.foto_perfil = nome_unico
 
         db.session.commit()

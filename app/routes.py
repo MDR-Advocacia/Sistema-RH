@@ -1,121 +1,91 @@
 import csv
-import os # Garante que o módulo OS esteja disponível
+import os
 import uuid
-
-from . import format_datetime_local # <-- Linha correta
-from werkzeug.utils import secure_filename
 from datetime import datetime
 from io import TextIOWrapper, StringIO
+
 from flask import (Blueprint, request, jsonify, render_template, redirect,
-                   url_for, flash, make_response, current_app, send_from_directory) # Adiciona send_from_directory
+                   url_for, flash, make_response, current_app, send_from_directory)
 from flask_login import login_required, current_user
 from sqlalchemy import or_
+from werkzeug.utils import secure_filename
 
-from . import db
+from . import db, format_datetime_local
 from .decorators import permission_required
 from .models import (Funcionario, Permissao, Usuario, Aviso,
-                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo) # Adiciona AvisoAnexo
+                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo)
 
 main = Blueprint('main', __name__)
 
 # --- ROTAS PRINCIPAIS E DE DASHBOARD ---
-# ... (código existente da rota index) ...
 @main.route('/')
 @login_required
 def index():
-    """Exibe a dashboard principal, adaptada para admin ou colaborador."""
     dados_dashboard = {}
     usuario = current_user
-
-    # Dados que todos os usuários (incluindo admins) precisam para a dashboard pessoal
     avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
     dados_dashboard['avisos_pendentes'] = Aviso.query.filter(Aviso.id.notin_(avisos_lidos_ids)).all()
     dados_dashboard['requisicoes_pendentes'] = RequisicaoDocumento.query.filter_by(
-        destinatario_id=usuario.funcionario.id,
-        status='Pendente'
+        destinatario_id=usuario.funcionario.id, status='Pendente'
     ).all()
-
-    # Dados específicos para a dashboard do Admin
     if usuario.tem_permissao('admin_rh'):
         dados_dashboard['total_funcionarios'] = Funcionario.query.count()
         dados_dashboard['total_avisos'] = Aviso.query.count()
-
     return render_template('index.html', dados=dados_dashboard)
 
 
 # --- ROTAS DE GESTÃO DE FUNCIONÁRIOS (CRUD) ---
-# ... (código existente das rotas de funcionários) ...
-@main.route('/cadastrar', methods=['GET'])
+@main.route('/cadastrar', methods=['GET', 'POST'])
 @login_required
 @permission_required('admin_rh')
 def exibir_formulario_cadastro():
-    """Exibe o formulário de cadastro de novos funcionários."""
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cpf = request.form.get('cpf')
+        email = request.form.get('email')
+        telefone = request.form.get('telefone')
+        cargo = request.form.get('cargo')
+        setor = request.form.get('setor')
+        data_nascimento_str = request.form.get('data_nascimento')
+        contato_emergencia_nome = request.form.get('contato_emergencia_nome')
+        contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
+        password = request.form.get('password')
+        permissoes_selecionadas_ids = request.form.getlist('permissoes')
+        if not all([nome, cpf, email, password]):
+            flash('Nome, CPF, Email e Senha são obrigatórios.')
+            return redirect(url_for('main.exibir_formulario_cadastro'))
+        if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
+            flash('CPF ou Email já cadastrado no sistema.')
+            return redirect(url_for('main.exibir_formulario_cadastro'))
+        novo_funcionario = Funcionario(
+            nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
+            data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
+            contato_emergencia_nome=contato_emergencia_nome,
+            contato_emergencia_telefone=contato_emergencia_telefone
+        )
+        db.session.add(novo_funcionario)
+        db.session.commit()
+        novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
+        novo_usuario.set_password(password)
+        if permissoes_selecionadas_ids:
+            permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
+            novo_usuario.permissoes = permissoes_a_adicionar
+        db.session.add(novo_usuario)
+        db.session.commit()
+        flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
+        return redirect(url_for('main.listar_funcionarios'))
+    
     permissoes = Permissao.query.all()
     return render_template('cadastrar.html', permissoes=permissoes)
-
-
-@main.route('/cadastrar', methods=['POST'])
-@login_required
-@permission_required('admin_rh')
-def processar_cadastro():
-    """Processa o formulário de cadastro de novos funcionários."""
-    # Coleta de dados do funcionário
-    nome = request.form.get('nome')
-    cpf = request.form.get('cpf')
-    email = request.form.get('email')
-    telefone = request.form.get('telefone')
-    cargo = request.form.get('cargo')
-    setor = request.form.get('setor')
-    data_nascimento_str = request.form.get('data_nascimento')
-    contato_emergencia_nome = request.form.get('contato_emergencia_nome')
-    contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-
-    # Coleta de dados do usuário
-    password = request.form.get('password')
-    permissoes_selecionadas_ids = request.form.getlist('permissoes')
-
-    if not all([nome, cpf, email, password]):
-        flash('Nome, CPF, Email e Senha são obrigatórios.')
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-
-    if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
-        flash('CPF ou Email já cadastrado no sistema.')
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-
-    novo_funcionario = Funcionario(
-        nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
-        data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
-        contato_emergencia_nome=contato_emergencia_nome,
-        contato_emergencia_telefone=contato_emergencia_telefone
-    )
-    db.session.add(novo_funcionario)
-    db.session.commit()
-
-    novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
-    novo_usuario.set_password(password)
-    
-    if permissoes_selecionadas_ids:
-        permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
-        novo_usuario.permissoes = permissoes_a_adicionar
-
-    db.session.add(novo_usuario)
-    db.session.commit()
-
-    flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
-    return redirect(url_for('main.listar_funcionarios'))
 
 
 @main.route('/funcionarios')
 @login_required
 @permission_required('admin_rh')
 def listar_funcionarios():
-    """Exibe a lista de funcionários com filtros e ordenação."""
-    termo_busca = request.args.get('q') # Pega o termo de busca
+    termo_busca = request.args.get('q')
     sort_by = request.args.get('sort', 'nome_asc')
-
     query = Funcionario.query
-
-    # Lógica de Busca Aprimorada
     if termo_busca:
         termo_busca = termo_busca.strip()
         query = query.filter(or_(
@@ -123,15 +93,11 @@ def listar_funcionarios():
             Funcionario.cpf.ilike(f"%{termo_busca}%"),
             Funcionario.setor.ilike(f"%{termo_busca}%")
         ))
-
-    # Lógica de Ordenação
     if sort_by == 'nome_desc':
         query = query.order_by(Funcionario.nome.desc())
     else:
         query = query.order_by(Funcionario.nome.asc())
-        
     funcionarios = query.all()
-    
     return render_template('funcionarios.html', funcionarios=funcionarios)
 
 
@@ -139,11 +105,9 @@ def listar_funcionarios():
 @login_required
 @permission_required('admin_rh')
 def editar_funcionario(funcionario_id):
-    """Exibe e processa o formulário de edição de um funcionário."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
     permissoes = Permissao.query.all()
-
     if request.method == 'POST':
         funcionario.nome = request.form.get('nome')
         funcionario.cpf = request.form.get('cpf')
@@ -154,29 +118,24 @@ def editar_funcionario(funcionario_id):
         funcionario.data_nascimento = datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-        
         if usuario:
             permissoes_selecionadas_ids = request.form.getlist('permissoes')
             permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
             usuario.permissoes = permissoes_a_adicionar
-
         db.session.commit()
         flash(f'Dados de {funcionario.nome} atualizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
-
     permissoes_usuario_ids = {p.id for p in usuario.permissoes} if usuario else set()
-    return render_template('funcionarios/editar.html', 
-                           funcionario=funcionario, 
-                           permissoes=permissoes, 
+    return render_template('funcionarios/editar.html',
+                           funcionario=funcionario,
+                           permissoes=permissoes,
                            permissoes_usuario_ids=permissoes_usuario_ids)
 
 
 # --- ROTAS DO MURAL DE AVISOS ---
-
 @main.route('/avisos')
 @login_required
 def listar_avisos():
-    """Exibe o mural de avisos para o usuário logado."""
     todos_avisos = Aviso.query.order_by(Aviso.data_publicacao.desc()).all()
     avisos_lidos_ids = {log.aviso_id for log in current_user.logs_ciencia}
     return render_template('avisos/listar_avisos.html', avisos=todos_avisos, avisos_lidos_ids=avisos_lidos_ids)
@@ -186,66 +145,52 @@ def listar_avisos():
 @login_required
 @permission_required('admin_rh')
 def criar_aviso():
-    """Exibe e processa o formulário de criação de avisos com anexos."""
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         conteudo = request.form.get('conteudo')
         arquivos = request.files.getlist('anexos')
-
         if not titulo or not conteudo:
             flash('Título e conteúdo são obrigatórios.')
             return redirect(url_for('main.criar_aviso'))
-
         novo_aviso = Aviso(titulo=titulo, conteudo=conteudo, autor_id=current_user.id)
         db.session.add(novo_aviso)
         db.session.commit()
-
         for arquivo in arquivos:
             if arquivo and arquivo.filename != '':
                 filename_seguro = secure_filename(arquivo.filename)
                 extensao = filename_seguro.rsplit('.', 1)[1].lower()
                 nome_unico = f"{uuid.uuid4()}.{extensao}"
-                
                 upload_path = current_app.config['UPLOAD_FOLDER']
                 os.makedirs(upload_path, exist_ok=True)
                 arquivo.save(os.path.join(upload_path, nome_unico))
-
                 anexo = AvisoAnexo(
                     nome_arquivo_original=filename_seguro,
                     path_armazenamento=nome_unico,
                     aviso_id=novo_aviso.id
                 )
                 db.session.add(anexo)
-
         db.session.commit()
         flash('Aviso publicado com sucesso!', 'success')
         return redirect(url_for('main.listar_avisos'))
-
     return render_template('avisos/criar_aviso.html')
 
 
 @main.route('/avisos/anexo/<filename>')
 @login_required
 def download_anexo_aviso(filename):
-    """Serve os arquivos de anexo dos avisos para download."""
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 
-# --- ROTA NOVA DE EXCLUSÃO DE AVISO ---
 @main.route('/avisos/<int:aviso_id>/remover', methods=['POST'])
 @login_required
 @permission_required(['admin_rh', 'admin_ti'])
 def remover_aviso(aviso_id):
-    """Remove um aviso, seus anexos e logs de ciência."""
     aviso = Aviso.query.get_or_404(aviso_id)
     try:
-        # Remove os arquivos físicos dos anexos
         for anexo in aviso.anexos:
             caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], anexo.path_armazenamento)
             if os.path.exists(caminho_arquivo):
                 os.remove(caminho_arquivo)
-        
-        # O banco de dados removerá os anexos e logs em cascata
         db.session.delete(aviso)
         db.session.commit()
         flash(f'Aviso "{aviso.titulo}" removido com sucesso.', 'success')
@@ -253,30 +198,21 @@ def remover_aviso(aviso_id):
         db.session.rollback()
         current_app.logger.error(f"Erro ao remover aviso {aviso_id}: {e}")
         flash('Ocorreu um erro ao remover o aviso.', 'danger')
-        
     return redirect(url_for('main.listar_avisos'))
 
 
 @main.route('/avisos/<int:aviso_id>/ciencia', methods=['POST'])
 @login_required
 def dar_ciencia_aviso(aviso_id):
-    """Registra a ciência de um usuário em um aviso."""
     aviso = Aviso.query.get_or_404(aviso_id)
-    ja_deu_ciencia = LogCienciaAviso.query.filter_by(
-        usuario_id=current_user.id,
-        aviso_id=aviso.id
-    ).first()
-
+    ja_deu_ciencia = LogCienciaAviso.query.filter_by(usuario_id=current_user.id, aviso_id=aviso.id).first()
     if not ja_deu_ciencia:
-        log = LogCienciaAviso(
-            usuario_id=current_user.id,
-            aviso_id=aviso.id
-        )
+        log = LogCienciaAviso(usuario_id=current_user.id, aviso_id=aviso.id)
         db.session.add(log)
         db.session.commit()
         flash(f'Ciência registrada para o aviso "{aviso.titulo}".')
-    
     return redirect(url_for('main.listar_avisos'))
+
 
 @main.route('/aviso/<int:aviso_id>/logs')
 @login_required
@@ -289,14 +225,30 @@ def ver_logs_ciencia(aviso_id):
     return render_template('avisos/log_ciencia.html', aviso=aviso, logs=logs, pendentes=funcionarios_pendentes)
 
 
+# --- ROTAS DE API ---
 
-# --- ROTAS DE API (para JavaScript) ---
-# ... (código existente das APIs) ...
+@main.route('/api/buscar_funcionarios')
+@login_required
+@permission_required('admin_rh')
+def buscar_funcionarios():
+    termo = request.args.get('q', '').strip()
+    if not termo:
+        return jsonify([])
+    funcionarios = Funcionario.query.filter(
+        or_(
+            Funcionario.nome.ilike(f"%{termo}%"),
+            Funcionario.cpf.ilike(f"%{termo}%"),
+            Funcionario.setor.ilike(f"%{termo}%")
+        )
+    ).all()
+    resultado = [{"id": f.id, "nome": f.nome, "cpf": f.cpf} for f in funcionarios]
+    return jsonify(resultado)
+
+
 @main.route('/api/funcionario/<int:funcionario_id>')
 @login_required
 @permission_required('admin_rh')
 def detalhes_funcionario(funcionario_id):
-    """Retorna os dados detalhados de um funcionário para o modal."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
     pendencias_list = []
@@ -305,22 +257,10 @@ def detalhes_funcionario(funcionario_id):
         avisos_pendentes = Aviso.query.filter(Aviso.id.notin_(avisos_lidos_ids)).all()
         for aviso in avisos_pendentes:
             pendencias_list.append({'id': f'aviso_{aviso.id}', 'descricao': f"Ciência pendente no aviso: '{aviso.titulo}'", 'status': 'Pendente'})
-    
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(destinatario_id=funcionario.id, status='Pendente').all()
     for req in requisicoes_pendentes:
         pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo_documento}'", 'status': 'Pendente'})
-
-    documentos_list = [
-        {
-            'id': doc.id,
-            'nome_arquivo': doc.nome_arquivo,
-            'tipo_documento': doc.tipo_documento,
-            # --- LINHA MODIFICADA ---
-            'data_upload': format_datetime_local(doc.data_upload),
-            'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)
-        } for doc in funcionario.documentos
-    ]
-    
+    documentos_list = [{'id': doc.id, 'nome_arquivo': doc.nome_arquivo, 'tipo_documento': doc.tipo_documento, 'data_upload': format_datetime_local(doc.data_upload), 'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)} for doc in funcionario.documentos]
     return jsonify({
         'id': funcionario.id, 'nome': funcionario.nome, 'cpf': funcionario.cpf, 'email': funcionario.email,
         'telefone': funcionario.telefone, 'cargo': funcionario.cargo, 'setor': funcionario.setor,
@@ -333,9 +273,8 @@ def detalhes_funcionario(funcionario_id):
 
 @main.route('/api/funcionario/<int:funcionario_id>/remover', methods=['DELETE'])
 @login_required
-@permission_required(['admin_rh','admin_ti'])
+@permission_required(['admin_rh', 'admin_ti'])
 def remover_funcionario_api(funcionario_id):
-    """Remove um funcionário e seu usuário associado."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     try:
         if funcionario.usuario:
@@ -351,9 +290,8 @@ def remover_funcionario_api(funcionario_id):
 
 @main.route('/api/funcionarios/remover-em-lote', methods=['DELETE'])
 @login_required
-@permission_required(['admin_rh','admin_ti'])
+@permission_required(['admin_rh', 'admin_ti'])
 def remover_funcionarios_lote():
-    """Remove múltiplos funcionários selecionados."""
     ids_para_remover = request.get_json().get('ids')
     if not ids_para_remover:
         return jsonify({'success': False, 'message': 'Nenhum funcionário selecionado.'}), 400
@@ -372,7 +310,6 @@ def remover_funcionarios_lote():
 @login_required
 @permission_required('admin_rh')
 def editar_funcionarios_lote():
-    """Altera o cargo e/ou setor de múltiplos funcionários."""
     data = request.get_json()
     ids, novo_cargo, novo_setor = data.get('ids'), data.get('cargo'), data.get('setor')
     if not ids:
@@ -392,14 +329,11 @@ def editar_funcionarios_lote():
         return jsonify({'success': False, 'message': 'Ocorreu um erro na atualização.'}), 500
 
 
-
 # --- ROTAS DE IMPORTAÇÃO/EXPORTAÇÃO ---
-# ... (código existente de import/export)
 @main.route('/importar_csv', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def importar_csv():
-    """Processa o upload de um arquivo CSV para criar funcionários em lote."""
     if 'arquivo' not in request.files:
         return jsonify({'success': False, 'message': 'Nenhum arquivo enviado.'}), 400
     arquivo = request.files['arquivo']
@@ -411,14 +345,12 @@ def importar_csv():
             permissao_colaborador = Permissao(nome='colaborador', descricao='Permissões básicas')
             db.session.add(permissao_colaborador)
             db.session.commit()
-
         leitor = csv.DictReader(TextIOWrapper(arquivo, encoding='utf-8'))
         adicionados = 0
         for linha in leitor:
             cpf, email = linha.get('CPF'), linha.get('E-mail')
             if not (cpf and email) or Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
                 continue
-            
             novo_funcionario = Funcionario(
                 nome=linha.get('Nome Completo', ''), cpf=cpf, email=email, telefone=linha.get('Telefone', ''),
                 cargo=linha.get('Cargo', ''), setor=linha.get('Setor', ''),
@@ -428,15 +360,12 @@ def importar_csv():
             )
             db.session.add(novo_funcionario)
             db.session.commit()
-
             novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id, senha_provisoria=True)
             novo_usuario.set_password('Mudar@123')
             novo_usuario.permissoes.append(permissao_colaborador)
             db.session.add(novo_usuario)
             adicionados += 1
-        
         db.session.commit()
-        
         if adicionados > 0:
             return jsonify({'success': True, 'message': f'{adicionados} novos funcionários importados com sucesso!'})
         else:
@@ -451,7 +380,6 @@ def importar_csv():
 @login_required
 @permission_required('admin_rh')
 def exportar_csv():
-    """Gera um arquivo CSV com os dados dos funcionários."""
     termo_busca = request.args.get('q', '').strip()
     query = Funcionario.query
     if termo_busca:
@@ -461,7 +389,6 @@ def exportar_csv():
             Funcionario.setor.ilike(f"%{termo_busca}%")
         ))
     funcionarios = query.all()
-
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow(['Nome Completo', 'CPF', 'E-mail', 'Telefone', 'Cargo', 'Setor', 'Data de Nascimento', 'Contato de Emergencia (Nome)', 'Contato de Emergencia (Telefone)'])
