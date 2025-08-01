@@ -35,48 +35,61 @@ def index():
 
 
 # --- ROTAS DE GESTÃO DE FUNCIONÁRIOS (CRUD) ---
-@main.route('/cadastrar', methods=['GET', 'POST'])
+@main.route('/cadastrar', methods=['GET'])
 @login_required
 @permission_required('admin_rh')
 def exibir_formulario_cadastro():
-    if request.method == 'POST':
-        nome = request.form.get('nome')
-        cpf = request.form.get('cpf')
-        email = request.form.get('email')
-        telefone = request.form.get('telefone')
-        cargo = request.form.get('cargo')
-        setor = request.form.get('setor')
-        data_nascimento_str = request.form.get('data_nascimento')
-        contato_emergencia_nome = request.form.get('contato_emergencia_nome')
-        contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-        password = request.form.get('password')
-        permissoes_selecionadas_ids = request.form.getlist('permissoes')
-        if not all([nome, cpf, email, password]):
-            flash('Nome, CPF, Email e Senha são obrigatórios.')
-            return redirect(url_for('main.exibir_formulario_cadastro'))
-        if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
-            flash('CPF ou Email já cadastrado no sistema.')
-            return redirect(url_for('main.exibir_formulario_cadastro'))
-        novo_funcionario = Funcionario(
-            nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
-            data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
-            contato_emergencia_nome=contato_emergencia_nome,
-            contato_emergencia_telefone=contato_emergencia_telefone
-        )
-        db.session.add(novo_funcionario)
-        db.session.commit()
-        novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
-        novo_usuario.set_password(password)
-        if permissoes_selecionadas_ids:
-            permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
-            novo_usuario.permissoes = permissoes_a_adicionar
-        db.session.add(novo_usuario)
-        db.session.commit()
-        flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
-        return redirect(url_for('main.listar_funcionarios'))
-    
+    """Exibe o formulário de cadastro de novos funcionários."""
     permissoes = Permissao.query.all()
     return render_template('cadastrar.html', permissoes=permissoes)
+
+
+@main.route('/cadastrar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def processar_cadastro():
+    """Processa o formulário de cadastro de novos funcionários."""
+    nome = request.form.get('nome')
+    cpf = request.form.get('cpf')
+    email = request.form.get('email')
+    telefone = request.form.get('telefone')
+    cargo = request.form.get('cargo')
+    setor = request.form.get('setor')
+    data_nascimento_str = request.form.get('data_nascimento')
+    contato_emergencia_nome = request.form.get('contato_emergencia_nome')
+    contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
+    password = request.form.get('password')
+    permissoes_selecionadas_ids = request.form.getlist('permissoes')
+
+    if not all([nome, cpf, email, password]):
+        flash('Nome, CPF, Email e Senha são obrigatórios.')
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+
+    if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
+        flash('CPF ou Email já cadastrado no sistema.')
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+
+    novo_funcionario = Funcionario(
+        nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
+        data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
+        contato_emergencia_nome=contato_emergencia_nome,
+        contato_emergencia_telefone=contato_emergencia_telefone
+    )
+    db.session.add(novo_funcionario)
+    db.session.commit()
+
+    novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
+    novo_usuario.set_password(password)
+    
+    if permissoes_selecionadas_ids:
+        permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
+        novo_usuario.permissoes = permissoes_a_adicionar
+
+    db.session.add(novo_usuario)
+    db.session.commit()
+
+    flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
+    return redirect(url_for('main.listar_funcionarios'))
 
 
 @main.route('/funcionarios')
@@ -226,7 +239,6 @@ def ver_logs_ciencia(aviso_id):
 
 
 # --- ROTAS DE API ---
-
 @main.route('/api/buscar_funcionarios')
 @login_required
 @permission_required('admin_rh')
