@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime, timedelta
 from io import TextIOWrapper, StringIO
 
-from flask import (Blueprint, request, jsonify, render_template, redirect,
+from flask import (Blueprint, request, jsonify, render_template, redirect, # type: ignore
                    url_for, flash, make_response, current_app, send_from_directory)
-from flask_login import login_required, current_user
-from sqlalchemy import or_, extract, func
-from werkzeug.utils import secure_filename
+from flask_login import login_required, current_user # type: ignore
+from sqlalchemy import or_, extract, func # type: ignore
+from werkzeug.utils import secure_filename # type: ignore
 
 from . import db, format_datetime_local
 from .decorators import permission_required

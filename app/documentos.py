@@ -2,10 +2,10 @@ import os
 import uuid
 from datetime import datetime
 
-from flask import (Blueprint, render_template, request, redirect, url_for,
+from flask import (Blueprint, render_template, request, redirect, url_for, # type: ignore
                    flash, current_app, send_from_directory, jsonify)
-from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
+from flask_login import login_required, current_user # type: ignore
+from werkzeug.utils import secure_filename # type: ignore
 
 from . import db
 from .decorators import permission_required
@@ -223,7 +223,7 @@ def aprovar_documento(documento_id):
 @login_required
 @permission_required('admin_rh')
 def reprovar_documento(documento_id):
-    """Reprova um documento e devolve a pendência ao funcionário."""
+    """Reprova um documento, exclui o arquivo e devolve a pendência ao funcionário."""
     documento = Documento.query.get_or_404(documento_id)
     motivo = request.form.get('motivo_reprovacao')
 
@@ -231,17 +231,29 @@ def reprovar_documento(documento_id):
         flash('O motivo da reprovação é obrigatório.', 'danger')
         return redirect(url_for('documentos.revisao_documentos'))
 
-    documento.status = 'Reprovado'
-    documento.revisor_id = current_user.id
-    documento.data_revisao = datetime.utcnow()
-    documento.observacao_revisao = motivo
-    
-    if documento.requisicao_id:
-        requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
-        if requisicao:
-            requisicao.status = 'Pendente' 
-            requisicao.observacao = motivo 
+    try:
+        # Caminho do arquivo para exclusão
+        caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.path_armazenamento)
 
-    db.session.commit()
-    flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi reprovado.', 'warning')
+        # Devolve a pendência para o usuário, se houver uma requisição vinculada
+        if documento.requisicao_id:
+            requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
+            if requisicao:
+                requisicao.status = 'Pendente' 
+                requisicao.observacao = motivo
+
+        # Exclui o registro do documento do banco de dados
+        db.session.delete(documento)
+        
+        # Exclui o arquivo físico do servidor
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+
+        db.session.commit()
+        flash(f'Documento de {documento.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash('Ocorreu um erro ao processar a reprovação.', 'danger')
+        current_app.logger.error(f"Erro ao reprovar documento {documento_id}: {e}")
+
     return redirect(url_for('documentos.revisao_documentos'))

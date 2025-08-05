@@ -2,9 +2,9 @@
 
 from . import db
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean # Adicione Boolean
-from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean # type: ignore # Adicione Boolean
+from flask_login import UserMixin # type: ignore
 
 # --- Tabelas de Associação ---
 
