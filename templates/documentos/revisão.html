@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Revisão de Documentos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Revisão de Documentos</h1>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Documentos Pendentes de Revisão</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Funcionário</th>
+                        <th>Tipo do Documento</th>
+                        <th>Data de Envio</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documentos %}
+                    <tr>
+                        <td>{{ doc.funcionario.nome }}</td>
+                        <td>
+                            <a href="{{ url_for('documentos.download_documento', filename=doc.path_armazenamento) }}" target="_blank">
+                                <i class="bi bi-file-earmark-text me-2"></i>{{ doc.tipo_documento }}
+                            </a>
+                        </td>
+                        <td>{{ doc.data_upload | localtime }}</td>
+                        <td class="text-end">
+                            <form action="{{ url_for('documentos.aprovar_documento', documento_id=doc.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Aprovar">
+                                    <i class="bi bi-check-lg"></i> Aprovar
+                                </button>
+                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-reprovar-{{ doc.id }}" title="Reprovar">
+                                <i class="bi bi-x-lg"></i> Reprovar
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center p-4">Nenhum documento pendente de revisão.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modais de Reprovação -->
+{% for doc in documentos %}
+<div class="modal fade" id="modal-reprovar-{{ doc.id }}" tabindex="-1" aria-labelledby="reprovarLabel-{{ doc.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reprovarLabel-{{ doc.id }}">Reprovar Documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('documentos.reprovar_documento', documento_id=doc.id) }}" method="POST">
+          <div class="modal-body">
+            <p>Você está reprovando o documento <strong>{{ doc.tipo_documento }}</strong> de <strong>{{ doc.funcionario.nome }}</strong>. Por favor, informe o motivo abaixo para que o colaborador possa corrigir.</p>
+            <div class="mb-3">
+                <label for="motivo-{{ doc.id }}" class="form-label">Motivo da Reprovação</label>
+                <textarea class="form-control" id="motivo-{{ doc.id }}" name="motivo_reprovacao" rows="3" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar Reprovação</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

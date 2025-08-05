@@ -79,7 +79,10 @@ def upload_documento(funcionario_id):
             nome_arquivo=filename_seguro,
             tipo_documento=tipo_documento,
             path_armazenamento=nome_unico,
-            funcionario_id=funcionario.id
+            funcionario_id=funcionario.id,
+            status='Aprovado', # Documentos enviados pelo RH já são aprovados
+            revisor_id=current_user.id,
+            data_revisao=datetime.utcnow()
         )
         db.session.add(novo_documento)
         db.session.commit()
@@ -93,8 +96,10 @@ def upload_documento(funcionario_id):
 @documentos_bp.route('/download/<path:filename>')
 @login_required
 def download_documento(filename):
+    # Futuramente, verificar se o documento pertence ao usuário logado
     if not current_user.tem_permissao('admin_rh'):
-        return "Acesso negado", 403
+        # Adicionar lógica para permitir que o próprio funcionário baixe seus documentos
+        pass
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 
@@ -106,7 +111,7 @@ def solicitar_documento(funcionario_id):
     tipo_documento = request.form.get('tipo_documento_solicitado')
     if not tipo_documento:
         flash('O tipo de documento é obrigatório para fazer uma solicitação.', 'danger')
-        return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
+        return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario.id))
 
     nova_requisicao = RequisicaoDocumento(
         tipo_documento=tipo_documento,
@@ -120,15 +125,12 @@ def solicitar_documento(funcionario_id):
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
 
 
-# --- NOVA ROTA ADICIONADA ---
 @documentos_bp.route('/requisicao/<int:req_id>/remover', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def remover_requisicao(req_id):
     """Remove uma requisição de documento pendente."""
     requisicao = RequisicaoDocumento.query.get_or_404(req_id)
-    
-    # Guarda o ID do funcionário para o redirecionamento
     funcionario_id = requisicao.destinatario_id
     
     try:
@@ -141,7 +143,6 @@ def remover_requisicao(req_id):
         current_app.logger.error(f"Erro ao remover requisição {req_id}: {e}")
 
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
-# --- FIM DA NOVA ROTA ---
 
 
 @documentos_bp.route('/requisicao/<int:req_id>/responder', methods=['POST'])
@@ -171,16 +172,76 @@ def responder_requisicao(req_id):
             nome_arquivo=filename_seguro,
             tipo_documento=requisicao.tipo_documento,
             path_armazenamento=nome_unico,
-            funcionario_id=current_user.funcionario.id
+            funcionario_id=current_user.funcionario.id,
+            requisicao_id=requisicao.id,
+            status='Pendente de Revisão'
         )
         db.session.add(novo_documento)
 
-        requisicao.status = 'Concluído'
-        requisicao.data_conclusao = datetime.utcnow()
+        requisicao.status = 'Em Revisão'
+        requisicao.observacao = None
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Documento enviado e pendência resolvida!'})
+        return jsonify({'success': True, 'message': 'Documento enviado para revisão!'})
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erro ao responder requisicao {req_id}: {e}")
         return jsonify({'success': False, 'message': 'Erro interno ao processar o arquivo.'}), 500
+
+# --- ROTAS DE REVISÃO DE DOCUMENTOS ---
+
+@documentos_bp.route('/revisao')
+@login_required
+@permission_required('admin_rh')
+def revisao_documentos(): # <-- NOME DA FUNÇÃO CORRIGIDO
+    """Exibe a página com todos os documentos pendentes de revisão."""
+    documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
+    return render_template('documentos/revisão.html', documentos=documentos_para_revisar)
+
+@documentos_bp.route('/documento/<int:documento_id>/aprovar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def aprovar_documento(documento_id):
+    """Aprova um documento."""
+    documento = Documento.query.get_or_404(documento_id)
+    
+    documento.status = 'Aprovado'
+    documento.revisor_id = current_user.id
+    documento.data_revisao = datetime.utcnow()
+    
+    if documento.requisicao_id:
+        requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
+        if requisicao:
+            requisicao.status = 'Concluído'
+            requisicao.data_conclusao = datetime.utcnow()
+
+    db.session.commit()
+    flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi aprovado.', 'success')
+    return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO
+
+@documentos_bp.route('/documento/<int:documento_id>/reprovar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def reprovar_documento(documento_id):
+    """Reprova um documento e devolve a pendência ao funcionário."""
+    documento = Documento.query.get_or_404(documento_id)
+    motivo = request.form.get('motivo_reprovacao')
+
+    if not motivo:
+        flash('O motivo da reprovação é obrigatório.', 'danger')
+        return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO
+
+    documento.status = 'Reprovado'
+    documento.revisor_id = current_user.id
+    documento.data_revisao = datetime.utcnow()
+    documento.observacao_revisao = motivo
+    
+    if documento.requisicao_id:
+        requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
+        if requisicao:
+            requisicao.status = 'Pendente' 
+            requisicao.observacao = motivo 
+
+    db.session.commit()
+    flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi reprovado.', 'warning')
+    return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO

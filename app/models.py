@@ -41,6 +41,8 @@ class Usuario(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def tem_permissao(self, nome_permissao):
+        if isinstance(nome_permissao, list):
+            return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)
 
 class Permissao(db.Model):
@@ -80,7 +82,7 @@ class Aviso(db.Model):
     conteudo = db.Column(db.Text, nullable=False)
     data_publicacao = db.Column(db.DateTime, default=datetime.utcnow)
     autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    status = db.Column(db.String(50), default='Ativo', nullable=False) # <-- ADICIONE ESTA LINHA
+    
     autor = db.relationship('Usuario')
     logs_ciencia = db.relationship('LogCienciaAviso', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
     anexos = db.relationship('AvisoAnexo', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
@@ -110,8 +112,17 @@ class Documento(db.Model):
     path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
     data_upload = db.Column(db.DateTime, default=datetime.utcnow)
+    requisicao_id = db.Column(db.Integer, db.ForeignKey('requisicao_documento.id'), nullable=True)
+
+    # --- CAMPOS ADICIONADOS PARA O FLUXO DE REVISÃO ---
+    status = db.Column(db.String(50), default='Pendente de Revisão', nullable=False)
+    revisor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    data_revisao = db.Column(db.DateTime, nullable=True)
+    observacao_revisao = db.Column(db.Text, nullable=True)
 
     funcionario = db.relationship('Funcionario', backref='documentos')
+    revisor = db.relationship('Usuario', foreign_keys=[revisor_id])
+    # ----------------------------------------------------
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
@@ -132,6 +143,7 @@ class RequisicaoDocumento(db.Model):
     status = db.Column(db.String(50), default='Pendente', nullable=False)
     data_requisicao = db.Column(db.DateTime, default=datetime.utcnow)
     data_conclusao = db.Column(db.DateTime, nullable=True)
+    observacao = db.Column(db.Text, nullable=True) 
     
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     destinatario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)

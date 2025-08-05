@@ -15,160 +15,200 @@
     </div>
 
     {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
-        
-        <ul class="nav nav-tabs mb-3">
-            <li class="nav-item">
-                <a class="nav-link active" data-bs-toggle="tab" href="#visao-pessoal">Minha Visão</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#visao-gestao">Visão de Gestão</a>
-            </li>
-        </ul>
-
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="visao-pessoal">
-                <h3 class="h5 text-muted mb-3">Minhas Pendências</h3>
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Avisos para Leitura</h5></div>
-                            <ul class="list-group list-group-flush">
-                                {% for aviso in dados.avisos_pendentes %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        "{{ aviso.titulo }}"
-                                        <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-sm btn-outline-primary">Ver no Mural</a>
-                                    </li>
-                                {% else %}
-                                    <li class="list-group-item text-center text-muted">Nenhum aviso pendente.</li>
-                                {% endfor %}
-                            </ul>
+    <h3 class="h5 text-muted mb-3">Visão Geral da Empresa</h3>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="fw-bold">{{ dados.total_funcionarios }}</h3>
+                            <p class="mb-0 text-secondary">Colaboradores Ativos</p>
                         </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-danger"></i> Documentos Solicitados</h5></div>
-                            <ul class="list-group list-group-flush">
-                                {% for req in dados.requisicoes_pendentes %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        {{ req.tipo_documento }}
-                                        <button class="btn btn-sm btn-brand btn-responder-doc" data-bs-toggle="modal" data-bs-target="#modal-responder-requisicao" data-req-id="{{ req.id }}" data-req-tipo="{{ req.tipo_documento }}">
-                                            Enviar Documento
-                                        </button>
-                                    </li>
-                                {% else %}
-                                    <li class="list-group-item text-center text-muted">Nenhum documento solicitado.</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="visao-gestao">
-                <h3 class="h5 text-muted mb-3">Visão Geral da Empresa</h3>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h3 class="fw-bold">{{ dados.total_funcionarios }}</h3>
-                                        <p class="mb-0 text-secondary">Colaboradores Ativos</p>
-                                    </div>
-                                    <i class="bi bi-people-fill fs-1 text-primary-emphasis"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                         <div class="card shadow-sm mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h3 class="fw-bold">{{ dados.total_avisos }}</h3>
-                                        <p class="mb-0 text-secondary">Avisos no Mural</p>
-                                    </div>
-                                    <i class="bi bi-megaphone-fill fs-1 text-success-emphasis"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-cake2-fill text-info"></i> Aniversariantes da Semana ({{ dados.periodo_semana }})</h5>
-                    </div>
-                    <div class="card-body">
-                         {% if dados.aniversariantes %}
-                            <div class="row">
-                                {% for funcionario in dados.aniversariantes %}
-                                <div class="col-md-4 mb-3">
-                                    <div class="d-flex align-items-center">
-                                        <div>
-                                            {% if funcionario.foto_perfil %}
-                                                <img src="{{ url_for('perfil.uploaded_file', filename=funcionario.foto_perfil) }}" alt="Foto" width="50" height="50" class="rounded-circle me-3" style="object-fit: cover;">
-                                            {% else %}
-                                                <i class="bi bi-person-circle fs-1 me-3 text-secondary"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">{{ funcionario.apelido or funcionario.nome }}</h6>
-                                            <small class="text-muted">{{ funcionario.data_nascimento.strftime('%d/%m') }}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-center text-muted mb-0">Nenhum aniversariante esta semana.</p>
-                        {% endif %}
+                        <i class="bi bi-people-fill fs-1 text-primary-emphasis"></i>
                     </div>
                 </div>
             </div>
         </div>
-    
-    {% else %}
-        <h3 class="h5 text-muted mb-3">Minhas Pendências</h3>
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Avisos para Leitura</h5></div>
-                    <ul class="list-group list-group-flush">
-                        {% for aviso in dados.avisos_pendentes %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                "{{ aviso.titulo }}"
-                                <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-sm btn-outline-primary">Ver no Mural</a>
-                            </li>
-                        {% else %}
-                            <li class="list-group-item text-center text-muted">Nenhum aviso pendente.</li>
-                        {% endfor %}
-                    </ul>
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-3">
+                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="fw-bold">{{ dados.total_avisos }}</h3>
+                            <p class="mb-0 text-secondary">Avisos no Mural</p>
+                        </div>
+                        <i class="bi bi-megaphone-fill fs-1 text-success-emphasis"></i>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-danger"></i> Documentos Solicitados</h5></div>
-                    <ul class="list-group list-group-flush">
-                        {% for req in dados.requisicoes_pendentes %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ req.tipo_documento }}
+        </div>
+    </div>
+    <hr class="my-4">
+    {% endif %}
+
+    <h3 class="h5 text-muted mb-3">Minhas Pendências</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Avisos para Leitura</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for aviso in dados.avisos_pendentes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            "{{ aviso.titulo }}"
+                            <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-sm btn-outline-primary">Ver no Mural</a>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhum aviso pendente.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-danger"></i> Documentos Solicitados</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for req in dados.requisicoes_pendentes %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ req.tipo_documento }}</span>
                                 <button class="btn btn-sm btn-brand btn-responder-doc" data-bs-toggle="modal" data-bs-target="#modal-responder-requisicao" data-req-id="{{ req.id }}" data-req-tipo="{{ req.tipo_documento }}">
                                     Enviar Documento
                                 </button>
-                            </li>
-                        {% else %}
-                            <li class="list-group-item text-center text-muted">Nenhum documento solicitado.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                            </div>
+                            {% if req.observacao %}
+                            <small class="d-block text-danger mt-1">
+                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação:</strong> {{ req.observacao }}
+                            </small>
+                            {% endif %}
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhum documento solicitado.</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
+    </div>
+
+    {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
+    <!-- SEÇÃO DE ANIVERSARIANTES ADICIONADA AQUI -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-cake2-fill text-info"></i> ANIVERSARIANTES DA SEMANA ({{ dados.periodo_semana }})</h5>
+        </div>
+        <div class="card-body">
+            {% if dados.aniversariantes %}
+                <div class="row">
+                    {% for funcionario in dados.aniversariantes %}
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div>
+                                {% if funcionario.foto_perfil %}
+                                    <img src="{{ url_for('perfil.uploaded_file', filename=funcionario.foto_perfil) }}" alt="Foto de Perfil" width="50" height="50" class="rounded-circle me-3" style="object-fit: cover;">
+                                {% else %}
+                                    <i class="bi bi-person-circle fs-1 me-3 text-secondary"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ funcionario.apelido or funcionario.nome }}</h6>
+                                <small class="text-muted">{{ funcionario.data_nascimento.strftime('%d/%m') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-center text-muted mb-0">Nenhum aniversariante esta semana.</p>
+            {% endif %}
+        </div>
+    </div>
+    <!-- FIM DA SEÇÃO DE ANIVERSARIANTES -->
     {% endif %}
 
 {% endblock %}
 
 {% block content_after %}
+<div class="modal fade" id="modal-responder-requisicao" tabindex="-1" aria-labelledby="responderLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="responderLabel">Enviar Documento Solicitado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="form-responder-requisicao">
+          <div class="modal-body">
+            <p>Você está enviando o documento: <strong id="tipo-doc-modal"></strong></p>
+            <input type="hidden" id="req-id-modal" name="req_id">
+            <div class="mb-3">
+                <label for="arquivo-resposta" class="form-label">Selecione o arquivo</label>
+                <input class="form-control" type="file" id="arquivo-resposta" name="arquivo" required>
+            </div>
+            <div id="responder-feedback"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-brand">Enviar</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalResponderElement = document.getElementById('modal-responder-requisicao');
+    if (modalResponderElement) {
+        const modal = new bootstrap.Modal(modalResponderElement);
+        const tipoDocModal = document.getElementById('tipo-doc-modal');
+        const reqIdModal = document.getElementById('req-id-modal');
+        const formResponder = document.getElementById('form-responder-requisicao');
+        const responderFeedback = document.getElementById('responder-feedback');
+        const arquivoInput = document.getElementById('arquivo-resposta');
+
+        document.querySelectorAll('.btn-responder-doc').forEach(button => {
+            button.addEventListener('click', function() {
+                const reqId = this.dataset.reqId;
+                const reqTipo = this.dataset.reqTipo;
+                tipoDocModal.textContent = reqTipo;
+                reqIdModal.value = reqId;
+                responderFeedback.innerHTML = '';
+                formResponder.reset();
+            });
+        });
+
+        formResponder.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const reqId = reqIdModal.value;
+            const file = arquivoInput.files[0];
+            if (!file) {
+                responderFeedback.innerHTML = '<div class="alert alert-danger">Por favor, selecione um arquivo.</div>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('arquivo', file);
+            
+            responderFeedback.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+            fetch(`/documentos/requisicao/${reqId}/responder`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const alertClass = data.success ? 'alert-success' : 'alert-danger';
+                responderFeedback.innerHTML = `<div class="alert ${alertClass}">${data.message}</div>`;
+                if (data.success) {
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            })
+            .catch(error => {
+                responderFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
+            });
+        });
+    }
+});
+</script>
 {% endblock %}
