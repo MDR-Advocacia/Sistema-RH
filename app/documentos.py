@@ -111,7 +111,7 @@ def solicitar_documento(funcionario_id):
     tipo_documento = request.form.get('tipo_documento_solicitado')
     if not tipo_documento:
         flash('O tipo de documento é obrigatório para fazer uma solicitação.', 'danger')
-        return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario.id))
+        return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
 
     nova_requisicao = RequisicaoDocumento(
         tipo_documento=tipo_documento,
@@ -193,7 +193,7 @@ def responder_requisicao(req_id):
 @documentos_bp.route('/revisao')
 @login_required
 @permission_required('admin_rh')
-def revisao_documentos(): # <-- NOME DA FUNÇÃO CORRIGIDO
+def revisao_documentos():
     """Exibe a página com todos os documentos pendentes de revisão."""
     documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
     return render_template('documentos/revisão.html', documentos=documentos_para_revisar)
@@ -217,7 +217,7 @@ def aprovar_documento(documento_id):
 
     db.session.commit()
     flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi aprovado.', 'success')
-    return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO
+    return redirect(url_for('documentos.revisao_documentos'))
 
 @documentos_bp.route('/documento/<int:documento_id>/reprovar', methods=['POST'])
 @login_required
@@ -229,7 +229,7 @@ def reprovar_documento(documento_id):
 
     if not motivo:
         flash('O motivo da reprovação é obrigatório.', 'danger')
-        return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO
+        return redirect(url_for('documentos.revisao_documentos'))
 
     documento.status = 'Reprovado'
     documento.revisor_id = current_user.id
@@ -244,4 +244,4 @@ def reprovar_documento(documento_id):
 
     db.session.commit()
     flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi reprovado.', 'warning')
-    return redirect(url_for('documentos.revisao_documentos')) # <-- REDIRECT CORRIGIDO
+    return redirect(url_for('documentos.revisao_documentos'))
