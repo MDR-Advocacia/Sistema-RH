@@ -12,7 +12,7 @@
 <body>
     <div class="d-flex flex-column flex-shrink-0 sidebar">
         <div class="sidebar-header">
-            MDRH
+            <h2>MDRH</h2>
         </div>
         <ul class="nav nav-pills flex-column mb-auto">
             <li class="nav-item">
@@ -21,12 +21,12 @@
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('main.listar_avisos') }}" class="nav-link {% if 'aviso' in request.endpoint %}active{% endif %}">
+                <a href="{{ url_for('main.listar_avisos') }}" class="nav-link {% if 'listar_avisos' in request.endpoint or 'avisos_arquivados' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-megaphone-fill"></i> Mural de Avisos
                 </a>
             </li>
             
-            {% if current_user.is_authenticated and current_user.tem_permissao('admin_rh') %}
+            {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
             <hr class="text-secondary">
             <li class="nav-item">
                 <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if 'listar_funcionarios' in request.endpoint %}active{% endif %}">

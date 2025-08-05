@@ -55,18 +55,27 @@
                                     <th>Documento Solicitado</th>
                                     <th>Data da Solicitação</th>
                                     <th>Solicitante</th>
+                                    <th class="text-end">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for req in pendentes %}
                                 <tr>
                                     <td><i class="bi bi-file-earmark-arrow-up me-2"></i>{{ req.tipo_documento }}</td>
-                                    <td>{{ req.data_requisicao.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <!-- CORREÇÃO APLICADA AQUI -->
+                                    <td>{{ req.data_requisicao | localtime }}</td>
                                     <td>{{ req.solicitante.funcionario.apelido or req.solicitante.funcionario.nome }}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ url_for('documentos.remover_requisicao', req_id=req.id) }}" onsubmit="return confirm('Tem certeza que deseja remover esta solicitação?');" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover Solicitação">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="3" class="text-center p-4">Nenhuma requisição pendente para este funcionário.</td>
+                                    <td colspan="4" class="text-center p-4">Nenhuma requisição pendente para este funcionário.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

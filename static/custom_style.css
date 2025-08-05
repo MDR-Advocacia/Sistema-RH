@@ -26,10 +26,13 @@ body {
 
 .sidebar .sidebar-header {
     padding: 1.5rem 1rem;
-    font-size: 1.5rem;
-    font-weight: 600;
     text-align: center;
-    color: #fff;
+}
+
+/* ESTILO PARA A LOGO DA SIDEBAR */
+.sidebar-logo {
+    max-width: 150px; /* Ajuste o tamanho conforme necessário */
+    height: auto;
 }
 
 .sidebar .nav-link {
@@ -124,6 +127,12 @@ body {
     align-items: center;
     padding: 40px;
     text-align: center;
+}
+
+/* ESTILO PARA A LOGO DO LOGIN */
+.login-logo {
+    max-width: 200px; /* Ajuste o tamanho conforme necessário */
+    height: auto;
 }
 
 .login-branding-side h1 {

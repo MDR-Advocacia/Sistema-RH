@@ -38,8 +38,6 @@ def ver_documentos_funcionario(funcionario_id):
     """Exibe os documentos e as requisições pendentes de um funcionário."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     
-    # --- ADICIONE ESTA LINHA ---
-    # Busca todas as requisições com status 'Pendente' para este funcionário
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(
         destinatario_id=funcionario.id, 
         status='Pendente'
@@ -47,7 +45,7 @@ def ver_documentos_funcionario(funcionario_id):
 
     return render_template('documentos/ver_documentos.html', 
                            funcionario=funcionario, 
-                           pendentes=requisicoes_pendentes) # <-- Passe a lista para o template
+                           pendentes=requisicoes_pendentes)
 
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>/upload', methods=['POST'])
@@ -95,9 +93,7 @@ def upload_documento(funcionario_id):
 @documentos_bp.route('/download/<path:filename>')
 @login_required
 def download_documento(filename):
-    # Adicionada verificação de permissão
     if not current_user.tem_permissao('admin_rh'):
-        # Futuramente, verificar se o documento pertence ao usuário logado
         return "Acesso negado", 403
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
@@ -122,6 +118,30 @@ def solicitar_documento(funcionario_id):
 
     flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
+
+
+# --- NOVA ROTA ADICIONADA ---
+@documentos_bp.route('/requisicao/<int:req_id>/remover', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def remover_requisicao(req_id):
+    """Remove uma requisição de documento pendente."""
+    requisicao = RequisicaoDocumento.query.get_or_404(req_id)
+    
+    # Guarda o ID do funcionário para o redirecionamento
+    funcionario_id = requisicao.destinatario_id
+    
+    try:
+        db.session.delete(requisicao)
+        db.session.commit()
+        flash('Solicitação removida com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Erro ao remover a solicitação.', 'danger')
+        current_app.logger.error(f"Erro ao remover requisição {req_id}: {e}")
+
+    return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
+# --- FIM DA NOVA ROTA ---
 
 
 @documentos_bp.route('/requisicao/<int:req_id>/responder', methods=['POST'])
