@@ -31,7 +31,8 @@ def index():
     avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
     dados_dashboard['avisos_pendentes'] = Aviso.query.filter(
         Aviso.arquivado == False,
-        Aviso.id.notin_(avisos_lidos_ids)
+        Aviso.id.notin_(avisos_lidos_ids),
+        Aviso.status == 'Ativo'  # <-- ADICIONE ESTE FILTRO
     ).all()
     dados_dashboard['requisicoes_pendentes'] = RequisicaoDocumento.query.filter_by(
         destinatario_id=usuario.funcionario.id, status='Pendente'
@@ -289,7 +290,8 @@ def detalhes_funcionario(funcionario_id):
         
         avisos_pendentes = Aviso.query.filter(
             Aviso.arquivado == False,
-            Aviso.id.notin_(avisos_lidos_ids)
+            Aviso.id.notin_(avisos_lidos_ids),
+            Aviso.status == 'Ativo' # <-- ADICIONE ESTE FILTRO
         ).all()
 
         for aviso in avisos_pendentes:
@@ -470,3 +472,43 @@ def avisos_arquivados():
     """Exibe a lista de avisos que foram arquivados."""
     avisos_arquivados = Aviso.query.filter_by(arquivado=True).order_by(Aviso.data_publicacao.desc()).all()
     return render_template('avisos/avisos_arquivados.html', avisos=avisos_arquivados)
+
+
+@main.route('/funcionario/<int:funcionario_id>/perfil')
+@login_required
+@permission_required('admin_rh')
+def perfil_funcionario(funcionario_id):
+    """Exibe a página de perfil completa de um funcionário."""
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+    usuario = funcionario.usuario
+    
+    pendencias_list = []
+    if usuario:
+        # Busca avisos pendentes (usando a mesma lógica do modal)
+        avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
+        avisos_pendentes = Aviso.query.filter(
+            Aviso.id.notin_(avisos_lidos_ids),
+            Aviso.arquivado == False  # Garante que o aviso não foi arquivado
+        ).all()
+        for aviso in avisos_pendentes:
+            pendencias_list.append({
+                'id': f'aviso_{aviso.id}',
+                'descricao': f"Ciência pendente no aviso: '{aviso.titulo}'",
+                'status': 'Pendente'
+            })
+
+    # Busca requisições de documentos com status 'Pendente'
+    requisicoes_pendentes = RequisicaoDocumento.query.filter_by(
+        destinatario_id=funcionario.id,
+        status='Pendente'
+    ).all()
+    for req in requisicoes_pendentes:
+        pendencias_list.append({
+            'id': f'requisicao_{req.id}',
+            'descricao': f"Envio pendente do documento: '{req.tipo_documento}'",
+            'status': 'Pendente'
+        })
+        
+    return render_template('funcionarios/perfil.html', 
+                           funcionario=funcionario, 
+                           pendencias=pendencias_list)

@@ -155,7 +155,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             fetch(`/api/funcionario/${funcionarioId}`).then(res => res.json()).then(data => {
                 modalNome.textContent = data.nome;
-                modalLinkAlterar.href = `/funcionario/${data.id}/editar`;
+                modalLinkAlterar.href = `/funcionario/${data.id}/perfil`;
+                modalLinkAlterar.textContent = 'Ver Perfil Completo'; // Também mudamos o texto do botão
                 modalBtnRemover.dataset.id = data.id;
                 
                 let docsHtml = data.documentos.length > 0 ? data.documentos.map(doc => `<li class="list-group-item d-flex justify-content-between align-items-center"><div><i class="bi bi-file-earmark-text me-2"></i><strong>${doc.tipo_documento}:</strong> ${doc.nome_arquivo}</div><a href="${doc.url_download}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Baixar</a></li>`).join('') : '<li class="list-group-item">Nenhum documento encontrado.</li>';

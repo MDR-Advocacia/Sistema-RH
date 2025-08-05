@@ -80,7 +80,7 @@ class Aviso(db.Model):
     conteudo = db.Column(db.Text, nullable=False)
     data_publicacao = db.Column(db.DateTime, default=datetime.utcnow)
     autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-
+    status = db.Column(db.String(50), default='Ativo', nullable=False) # <-- ADICIONE ESTA LINHA
     autor = db.relationship('Usuario')
     logs_ciencia = db.relationship('LogCienciaAviso', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
     anexos = db.relationship('AvisoAnexo', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
