@@ -2,10 +2,10 @@ import os
 import uuid
 from datetime import datetime
 
-from flask import (Blueprint, render_template, request, redirect, url_for, # type: ignore
+from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, send_from_directory, jsonify)
-from flask_login import login_required, current_user # type: ignore
-from werkzeug.utils import secure_filename # type: ignore
+from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 
 from . import db
 from .decorators import permission_required
@@ -27,8 +27,9 @@ def allowed_file(filename):
 @login_required
 @permission_required('admin_rh')
 def gestao_documentos():
-    """Página principal da gestão de documentos, com busca de funcionários."""
-    return render_template('documentos/gestao.html')
+    """Página unificada para gestão, consulta e revisão de documentos."""
+    documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
+    return render_template('documentos/gestao.html', documentos_para_revisar=documentos_para_revisar)
 
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>')
@@ -188,15 +189,7 @@ def responder_requisicao(req_id):
         current_app.logger.error(f"Erro ao responder requisicao {req_id}: {e}")
         return jsonify({'success': False, 'message': 'Erro interno ao processar o arquivo.'}), 500
 
-# --- ROTAS DE REVISÃO DE DOCUMENTOS ---
-
-@documentos_bp.route('/revisao')
-@login_required
-@permission_required('admin_rh')
-def revisao_documentos():
-    """Exibe a página com todos os documentos pendentes de revisão."""
-    documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
-    return render_template('documentos/revisão.html', documentos=documentos_para_revisar)
+# --- ROTAS DE REVISÃO DE DOCUMENTOS (AGORA PARTE DA GESTÃO) ---
 
 @documentos_bp.route('/documento/<int:documento_id>/aprovar', methods=['POST'])
 @login_required
@@ -217,7 +210,7 @@ def aprovar_documento(documento_id):
 
     db.session.commit()
     flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi aprovado.', 'success')
-    return redirect(url_for('documentos.revisao_documentos'))
+    return redirect(url_for('documentos.gestao_documentos'))
 
 @documentos_bp.route('/documento/<int:documento_id>/reprovar', methods=['POST'])
 @login_required
@@ -229,23 +222,19 @@ def reprovar_documento(documento_id):
 
     if not motivo:
         flash('O motivo da reprovação é obrigatório.', 'danger')
-        return redirect(url_for('documentos.revisao_documentos'))
+        return redirect(url_for('documentos.gestao_documentos'))
 
     try:
-        # Caminho do arquivo para exclusão
         caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.path_armazenamento)
 
-        # Devolve a pendência para o usuário, se houver uma requisição vinculada
         if documento.requisicao_id:
             requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
             if requisicao:
                 requisicao.status = 'Pendente' 
                 requisicao.observacao = motivo
 
-        # Exclui o registro do documento do banco de dados
         db.session.delete(documento)
         
-        # Exclui o arquivo físico do servidor
         if os.path.exists(caminho_arquivo):
             os.remove(caminho_arquivo)
 
@@ -256,4 +245,4 @@ def reprovar_documento(documento_id):
         flash('Ocorreu um erro ao processar a reprovação.', 'danger')
         current_app.logger.error(f"Erro ao reprovar documento {documento_id}: {e}")
 
-    return redirect(url_for('documentos.revisao_documentos'))
+    return redirect(url_for('documentos.gestao_documentos'))

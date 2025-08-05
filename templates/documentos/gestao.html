@@ -5,24 +5,124 @@
 {% block content %}
 <h1 class="h2 mb-4">Gestão de Documentos</h1>
 
-<div class="card shadow-sm">
-    <div class="card-header">
-        <h5 class="mb-0">Buscar Colaborador</h5>
-    </div>
-    <div class="card-body">
-        <div class="mb-3">
-            <label for="busca" class="form-label">Digite o nome ou CPF do colaborador:</label>
-            <input type="text" class="form-control" id="busca" autocomplete="off">
-        </div>
-        <div id="resultados" class="list-group">
+<!-- Abas de Navegação -->
+<ul class="nav nav-tabs" id="gestaoTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="revisao-tab" data-bs-toggle="tab" data-bs-target="#revisao" type="button" role="tab" aria-controls="revisao" aria-selected="true">
+            Revisão de Documentos
+            {% if documentos_para_revisar %}
+                <span class="badge rounded-pill bg-danger">{{ documentos_para_revisar|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="consulta-tab" data-bs-toggle="tab" data-bs-target="#consulta" type="button" role="tab" aria-controls="consulta" aria-selected="false">
+            Consultar Documentos
+        </button>
+    </li>
+</ul>
+
+<!-- Conteúdo das Abas -->
+<div class="tab-content" id="gestaoTabContent">
+    
+    <!-- Aba de Revisão -->
+    <div class="tab-pane fade show active" id="revisao" role="tabpanel" aria-labelledby="revisao-tab">
+        <div class="card shadow-sm card-tab">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Documentos Pendentes de Revisão</h5>
             </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Funcionário</th>
+                                <th>Tipo do Documento</th>
+                                <th>Data de Envio</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documentos_para_revisar %}
+                            <tr>
+                                <td>{{ doc.funcionario.nome }}</td>
+                                <td>
+                                    <a href="{{ url_for('documentos.download_documento', filename=doc.path_armazenamento) }}" target="_blank" title="Baixar para visualizar">
+                                        <i class="bi bi-file-earmark-text me-2"></i>{{ doc.tipo_documento }}
+                                    </a>
+                                </td>
+                                <td>{{ doc.data_upload | localtime }}</td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('documentos.aprovar_documento', documento_id=doc.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Aprovar">
+                                            <i class="bi bi-check-lg"></i> Aprovar
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-reprovar-{{ doc.id }}" title="Reprovar">
+                                        <i class="bi bi-x-lg"></i> Reprovar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center p-4">Nenhum documento pendente de revisão.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aba de Consulta -->
+    <div class="tab-pane fade" id="consulta" role="tabpanel" aria-labelledby="consulta-tab">
+        <div class="card shadow-sm card-tab">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-search"></i> Buscar Colaborador</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="busca" class="form-label">Digite o nome ou CPF do colaborador para ver seus documentos:</label>
+                    <input type="text" class="form-control" id="busca" autocomplete="off">
+                </div>
+                <div id="resultados" class="list-group"></div>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Modais de Reprovação (necessários para a aba de revisão) -->
+{% for doc in documentos_para_revisar %}
+<div class="modal fade" id="modal-reprovar-{{ doc.id }}" tabindex="-1" aria-labelledby="reprovarLabel-{{ doc.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reprovarLabel-{{ doc.id }}">Reprovar Documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('documentos.reprovar_documento', documento_id=doc.id) }}" method="POST">
+          <div class="modal-body">
+            <p>Você está reprovando o documento <strong>{{ doc.tipo_documento }}</strong> de <strong>{{ doc.funcionario.nome }}</strong>. Por favor, informe o motivo abaixo para que o colaborador possa corrigir.</p>
+            <div class="mb-3">
+                <label for="motivo-{{ doc.id }}" class="form-label">Motivo da Reprovação</label>
+                <textarea class="form-control" id="motivo-{{ doc.id }}" name="motivo_reprovacao" rows="3" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar Reprovação</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Script de busca de funcionários para a aba de consulta
     async function buscarColaboradores() {
         const termo = document.getElementById("busca").value.trim();
         const resultados = document.getElementById("resultados");
