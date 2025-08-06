@@ -143,6 +143,8 @@ def remover_requisicao(req_id):
         flash('Erro ao remover a solicitação.', 'danger')
         current_app.logger.error(f"Erro ao remover requisição {req_id}: {e}")
 
+    # --- LINHA CORRIGIDA ---
+    # A variável correta é 'funcionario_id', que foi definida acima.
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
 
 
