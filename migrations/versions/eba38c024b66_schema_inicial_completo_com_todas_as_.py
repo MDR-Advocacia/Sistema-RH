@@ -1,8 +1,8 @@
-"""Configuração inicial do banco de dados
+"""Schema inicial completo com todas as tabelas
 
-Revision ID: a6923be64e1e
+Revision ID: eba38c024b66
 Revises: 
-Create Date: 2025-07-31 12:11:10.160523
+Create Date: 2025-08-08 13:05:52.636922
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a6923be64e1e'
+revision = 'eba38c024b66'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -48,17 +48,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('nome')
     )
-    op.create_table('documento',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('nome_arquivo', sa.String(length=255), nullable=False),
-    sa.Column('tipo_documento', sa.String(length=100), nullable=False),
-    sa.Column('path_armazenamento', sa.String(length=512), nullable=False),
-    sa.Column('funcionario_id', sa.Integer(), nullable=False),
-    sa.Column('data_upload', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['funcionario_id'], ['funcionario.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('path_armazenamento')
-    )
     op.create_table('funcionario_sistemas',
     sa.Column('funcionario_id', sa.Integer(), nullable=False),
     sa.Column('sistema_id', sa.Integer(), nullable=False),
@@ -85,6 +74,7 @@ def upgrade():
     sa.Column('conteudo', sa.Text(), nullable=False),
     sa.Column('data_publicacao', sa.DateTime(), nullable=True),
     sa.Column('autor_id', sa.Integer(), nullable=False),
+    sa.Column('arquivado', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['autor_id'], ['usuario.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -105,6 +95,63 @@ def upgrade():
     sa.ForeignKeyConstraint(['usuario_id'], ['usuario.id'], ),
     sa.PrimaryKeyConstraint('usuario_id', 'permissao_id')
     )
+    op.create_table('ponto',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('data_ajuste', sa.Date(), nullable=False),
+    sa.Column('justificativa', sa.Text(), nullable=True),
+    sa.Column('path_assinado', sa.String(length=512), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('data_solicitacao', sa.DateTime(), nullable=True),
+    sa.Column('data_upload', sa.DateTime(), nullable=True),
+    sa.Column('observacao_rh', sa.Text(), nullable=True),
+    sa.Column('funcionario_id', sa.Integer(), nullable=False),
+    sa.Column('solicitante_id', sa.Integer(), nullable=True),
+    sa.Column('revisor_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['funcionario_id'], ['funcionario.id'], ),
+    sa.ForeignKeyConstraint(['revisor_id'], ['usuario.id'], ),
+    sa.ForeignKeyConstraint(['solicitante_id'], ['usuario.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('requisicao_documento',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('tipo_documento', sa.String(length=100), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('data_requisicao', sa.DateTime(), nullable=True),
+    sa.Column('data_conclusao', sa.DateTime(), nullable=True),
+    sa.Column('observacao', sa.Text(), nullable=True),
+    sa.Column('solicitante_id', sa.Integer(), nullable=False),
+    sa.Column('destinatario_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['destinatario_id'], ['funcionario.id'], ),
+    sa.ForeignKeyConstraint(['solicitante_id'], ['usuario.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('aviso_anexo',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('nome_arquivo_original', sa.String(length=255), nullable=False),
+    sa.Column('path_armazenamento', sa.String(length=512), nullable=False),
+    sa.Column('aviso_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['aviso_id'], ['aviso.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('path_armazenamento')
+    )
+    op.create_table('documento',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('nome_arquivo', sa.String(length=255), nullable=False),
+    sa.Column('tipo_documento', sa.String(length=100), nullable=False),
+    sa.Column('path_armazenamento', sa.String(length=512), nullable=False),
+    sa.Column('funcionario_id', sa.Integer(), nullable=False),
+    sa.Column('data_upload', sa.DateTime(), nullable=True),
+    sa.Column('requisicao_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('revisor_id', sa.Integer(), nullable=True),
+    sa.Column('data_revisao', sa.DateTime(), nullable=True),
+    sa.Column('observacao_revisao', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['funcionario_id'], ['funcionario.id'], ),
+    sa.ForeignKeyConstraint(['requisicao_id'], ['requisicao_documento.id'], ),
+    sa.ForeignKeyConstraint(['revisor_id'], ['usuario.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('path_armazenamento')
+    )
     op.create_table('log_ciencia_aviso',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('aviso_id', sa.Integer(), nullable=False),
@@ -120,12 +167,15 @@ def upgrade():
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('log_ciencia_aviso')
+    op.drop_table('documento')
+    op.drop_table('aviso_anexo')
+    op.drop_table('requisicao_documento')
+    op.drop_table('ponto')
     op.drop_table('permissoes_usuarios')
     op.drop_table('feedback')
     op.drop_table('aviso')
     op.drop_table('usuario')
     op.drop_table('funcionario_sistemas')
-    op.drop_table('documento')
     op.drop_table('sistema')
     op.drop_table('permissao')
     op.drop_table('funcionario')

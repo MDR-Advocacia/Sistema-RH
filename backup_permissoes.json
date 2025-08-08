@@ -1,0 +1,17 @@
+[
+    {
+        "id": 1,
+        "nome": "admin_rh",
+        "descricao": "Permissão de admin_rh"
+    },
+    {
+        "id": 2,
+        "nome": "admin_ti",
+        "descricao": "Permissão de admin_ti"
+    },
+    {
+        "id": 3,
+        "nome": "colaborador",
+        "descricao": "Permissão de colaborador"
+    }
+]

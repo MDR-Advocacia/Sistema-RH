@@ -150,3 +150,27 @@ class RequisicaoDocumento(db.Model):
 
     solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
     destinatario = db.relationship('Funcionario', backref='requisicoes')
+
+
+## Modelo de pontos
+class Ponto(db.Model):
+    __tablename__ = 'ponto'
+    id = db.Column(db.Integer, primary_key=True)
+    data_ajuste = db.Column(db.Date, nullable=False)
+    justificativa = db.Column(db.Text, nullable=True) # Justificativa do colaborador
+    path_assinado = db.Column(db.String(512), nullable=True)
+    status = db.Column(db.String(50), default='Pendente', nullable=False)
+    data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
+    data_upload = db.Column(db.DateTime, nullable=True)
+    
+    # ADICIONE ESTA LINHA
+    observacao_rh = db.Column(db.Text, nullable=True) # Motivo da reprovação pelo RH
+
+    # Relacionamentos
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    revisor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    
+    funcionario = db.relationship('Funcionario', backref='pontos')
+    solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
+    revisor = db.relationship('Usuario', foreign_keys=[revisor_id])

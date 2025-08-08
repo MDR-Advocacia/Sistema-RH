@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 from . import db, format_datetime_local
 from .decorators import permission_required
 from .models import (Funcionario, Permissao, Usuario, Aviso,
-                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo)
+                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto)
 
 main = Blueprint('main', __name__)
 
@@ -32,6 +32,11 @@ def index():
     
     dados_dashboard['requisicoes_pendentes'] = RequisicaoDocumento.query.filter_by(
         destinatario_id=usuario.funcionario.id, status='Pendente'
+    ).all()
+
+    # Adiciona a busca por pendências de ponto
+    dados_dashboard['pontos_pendentes'] = Ponto.query.filter_by(
+        funcionario_id=usuario.funcionario.id, status='Pendente'
     ).all()
 
     if usuario.tem_permissao('admin_rh') or usuario.tem_permissao('admin_ti'):
@@ -173,7 +178,6 @@ def editar_funcionario(funcionario_id):
 @login_required
 @permission_required('admin_rh')
 def perfil_funcionario(funcionario_id):
-    # (código existente para ver perfil)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
     pendencias_list = []
@@ -189,11 +193,14 @@ def perfil_funcionario(funcionario_id):
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(destinatario_id=funcionario.id, status='Pendente').all()
     for req in requisicoes_pendentes:
         pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo_documento}'", 'status': 'Pendente'})
+    
+    # Adiciona a busca pelo histórico de pontos
+    pontos = Ponto.query.filter_by(funcionario_id=funcionario.id).order_by(Ponto.data_ajuste.desc()).all()
         
     return render_template('funcionarios/perfil.html', 
                            funcionario=funcionario, 
-                           pendencias=pendencias_list)
-
+                           pendencias=pendencias_list,
+                           pontos=pontos) # Passa a variável 'pontos' para o template
 
 # --- ROTAS DO MURAL DE AVISOS ---
 # (código existente para avisos)

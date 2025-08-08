@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Ponto{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Gestão de Ponto</h1>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Pontos Pendentes de Revisão</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Funcionário</th>
+                        <th>Data do Ajuste</th>
+                        <th>Data de Envio</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ponto in pontos_para_revisar %}
+                    <tr>
+                        <td>{{ ponto.funcionario.nome }}</td>
+                        <td>{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ ponto.data_upload | localtime }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('ponto.download_ponto_assinado', filename=ponto.path_assinado) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Baixar Ponto Assinado">
+                                <i class="bi bi-download"></i> Visualizar
+                            </a>
+                            <form action="{{ url_for('ponto.aprovar_ponto', ponto_id=ponto.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Aprovar">
+                                    <i class="bi bi-check-lg"></i> Aprovar
+                                </button>
+                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-reprovar-ponto-{{ ponto.id }}" title="Reprovar">
+                                <i class="bi bi-x-lg"></i> Reprovar
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center p-4">Nenhum ponto pendente de revisão.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% for ponto in pontos_para_revisar %}
+<div class="modal fade" id="modal-reprovar-ponto-{{ ponto.id }}" tabindex="-1" aria-labelledby="reprovarPontoLabel-{{ ponto.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reprovarPontoLabel-{{ ponto.id }}">Reprovar Ajuste de Ponto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('ponto.reprovar_ponto', ponto_id=ponto.id) }}" method="POST">
+          <div class="modal-body">
+            <p>Você está reprovando o ajuste de <strong>{{ ponto.funcionario.nome }}</strong> para a data <strong>{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}</strong>. Por favor, informe o motivo abaixo.</p>
+            <div class="mb-3">
+                <label for="motivo-{{ ponto.id }}" class="form-label">Motivo da Reprovação</label>
+                <textarea class="form-control" id="motivo-{{ ponto.id }}" name="motivo_reprovacao" rows="3" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar Reprovação</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

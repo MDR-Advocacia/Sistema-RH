@@ -29,7 +29,6 @@
             {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
             <hr class="text-secondary">
             <li class="nav-item">
-                <!-- LÓGICA CORRIGIDA AQUI -->
                 <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if request.endpoint.startswith('main.') and 'funcionario' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-people-fill"></i> Funcionários
                 </a>
@@ -39,7 +38,11 @@
                     <i class="bi bi-file-earmark-zip-fill"></i> Gestão de Documentos
                 </a>
             </li>
-            <!-- O link de revisão foi removido daqui -->
+            <li>
+                <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-clock-history"></i> Gestão de Ponto
+                </a>
+            </li>
             {% endif %}
         </ul>
         <hr class="text-secondary">

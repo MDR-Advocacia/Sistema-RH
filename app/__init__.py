@@ -61,6 +61,9 @@ def create_app():
     from .perfil import perfil_bp
     app.register_blueprint(perfil_bp, url_prefix='/perfil')
 
+    from .ponto import ponto_bp
+    app.register_blueprint(ponto_bp, url_prefix='/ponto')
+
     # --- Verificação de Senha Provisória ---
     @app.before_request
     def check_for_temporary_password():

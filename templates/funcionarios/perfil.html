@@ -39,6 +39,9 @@
                 <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab">Documentos</button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ponto-tab" data-bs-toggle="tab" data-bs-target="#ponto" type="button" role="tab">Controle de Ponto</button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pendencias-tab" data-bs-toggle="tab" data-bs-target="#pendencias" type="button" role="tab">Pendências <span class="badge rounded-pill bg-danger">{{ pendencias|length }}</span></button>
             </li>
         </ul>
@@ -84,6 +87,64 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="ponto" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-5">
+                        <h5 class="mb-3"><i class="bi bi-send-plus-fill"></i> Solicitar Ajuste de Ponto</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                 <form method="POST" action="{{ url_for('ponto.solicitar_ponto', funcionario_id=funcionario.id) }}">
+                                    <div class="mb-3">
+                                        <label for="data_ajuste" class="form-label">Data do Ajuste</label>
+                                        <input type="date" class="form-control" id="data_ajuste" name="data_ajuste" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-brand w-100">Criar Pendência</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <h5 class="mb-3"><i class="bi bi-list-check"></i> Histórico de Ajustes</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in pontos %}
+                                    <tr>
+                                        <td>{{ p.data_ajuste.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            {% if p.status == 'Pendente' %}
+                                                <span class="badge bg-warning text-dark">{{ p.status }}</span>
+                                            {% elif p.status == 'Em Revisão' %}
+                                                <span class="badge bg-info">{{ p.status }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ p.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if p.path_assinado %}
+                                                <a href="{{ url_for('ponto.download_ponto_assinado', filename=p.path_assinado) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> Baixar</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center p-3">Nenhum registro de ponto.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 

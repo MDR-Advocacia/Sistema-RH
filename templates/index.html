@@ -88,10 +88,34 @@
                 </ul>
             </div>
         </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-fill text-info"></i> Folhas de Ponto Pendentes</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for ponto in dados.pontos_pendentes %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Ajuste de Ponto: <strong>{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}</strong></span>
+                                <button class="btn btn-sm btn-info text-white btn-responder-ponto" data-bs-toggle="modal" data-bs-target="#modal-responder-ponto" data-ponto-id="{{ ponto.id }}" data-data-ajuste="{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}">
+                                    Preencher e Enviar
+                                </button>
+                            </div>
+                            {% if ponto.observacao_rh %}
+                            <small class="d-block text-danger mt-1">
+                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação anterior:</strong> {{ ponto.observacao_rh }}
+                            </small>
+                            {% endif %}
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-center text-muted">Nenhuma folha de ponto pendente.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     </div>
 
     {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
-    <!-- SEÇÃO DE ANIVERSARIANTES ADICIONADA AQUI -->
     <div class="card shadow-sm mt-4">
         <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-cake2-fill text-info"></i> ANIVERSARIANTES DA SEMANA ({{ dados.periodo_semana }})</h5>
@@ -122,7 +146,6 @@
             {% endif %}
         </div>
     </div>
-    <!-- FIM DA SEÇÃO DE ANIVERSARIANTES -->
     {% endif %}
 
 {% endblock %}
@@ -153,11 +176,58 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="modal-responder-ponto" tabindex="-1" aria-labelledby="pontoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pontoLabel">Ajuste de Ponto: <span id="data-ajuste-modal"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="form-responder-ponto">
+          <div class="modal-body">
+            <p><strong>Instruções:</strong></p>
+            <ol>
+                <li>Preencha a justificativa para o ajuste no campo abaixo.</li>
+                <li>Clique em "Baixar Modelo" para obter o PDF.</li>
+                <li>Assine o documento digitalmente (Ex: Assinador GOV.BR).</li>
+                <li>Anexe o arquivo PDF assinado e envie.</li>
+            </ol>
+            <hr>
+            
+            <input type="hidden" id="ponto-id-modal" name="ponto_id">
+            
+            <div class="mb-3">
+                <label for="justificativa" class="form-label"><strong>Justificativa do Ajuste</strong></label>
+                <textarea class="form-control" id="justificativa" name="justificativa" rows="4" placeholder="Ex: Atestado médico anexo / Esquecimento de registro de saída." required></textarea>
+                <div class="form-text">Esta informação será salva e constará no PDF.</div>
+            </div>
+
+            <div class="mb-3">
+                <a href="{{ url_for('ponto.download_modelo_ponto') }}" class="btn btn-secondary w-100"><i class="bi bi-download"></i> Baixar Modelo para Assinatura</a>
+            </div>
+
+            <div class="mb-3">
+                <label for="arquivo-assinado" class="form-label"><strong>Anexar Ponto Assinado (PDF)</strong></label>
+                <input class="form-control" type="file" id="arquivo-assinado" name="arquivo_assinado" required accept=".pdf">
+            </div>
+            
+            <div id="ponto-feedback"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-brand">Enviar para Revisão</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Script para o modal de DOCUMENTOS
     const modalResponderElement = document.getElementById('modal-responder-requisicao');
     if (modalResponderElement) {
         const modal = new bootstrap.Modal(modalResponderElement);
@@ -206,6 +276,61 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 responderFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
+            });
+        });
+    }
+
+    // Script para o modal de PONTO
+    const modalPontoElement = document.getElementById('modal-responder-ponto');
+    if (modalPontoElement) {
+        const modalPonto = new bootstrap.Modal(modalPontoElement);
+        const dataAjusteModal = document.getElementById('data-ajuste-modal');
+        const pontoIdModal = document.getElementById('ponto-id-modal');
+        const formResponderPonto = document.getElementById('form-responder-ponto');
+        const pontoFeedback = document.getElementById('ponto-feedback');
+        const arquivoAssinadoInput = document.getElementById('arquivo-assinado');
+
+        document.querySelectorAll('.btn-responder-ponto').forEach(button => {
+            button.addEventListener('click', function() {
+                const pontoId = this.dataset.pontoId;
+                const dataAjuste = this.dataset.dataAjuste;
+                
+                dataAjusteModal.textContent = dataAjuste;
+                pontoIdModal.value = pontoId;
+                
+                pontoFeedback.innerHTML = '';
+                formResponderPonto.reset();
+            });
+        });
+
+        formResponderPonto.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const pontoId = pontoIdModal.value;
+            const file = arquivoAssinadoInput.files[0];
+            if (!file) {
+                pontoFeedback.innerHTML = '<div class="alert alert-danger">Por favor, selecione o arquivo assinado.</div>';
+                return;
+            }
+
+            const formData = new FormData(this);
+            // O campo 'arquivo_assinado' já está no form, então não precisa de append.
+            
+            pontoFeedback.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+            fetch(`/ponto/${pontoId}/responder`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const alertClass = data.success ? 'alert-success' : 'alert-danger';
+                pontoFeedback.innerHTML = `<div class="alert ${alertClass}">${data.message}</div>`;
+                if (data.success) {
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            })
+            .catch(error => {
+                pontoFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
             });
         });
     }

@@ -1,0 +1,1323 @@
+[
+    {
+        "id": 1,
+        "email": "pedro@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$R0P4TZfKXOGWVxeh$a256d68b1063c48b205c81aa6dc271fffa26d5b9b13106e49aac51ed2de48435490768354730cc5af16b2c2c094b21ab12419d3722161b1b24b8ded919efb546",
+        "funcionario_id": 1,
+        "senha_provisoria": false,
+        "permissoes": [
+            "admin_rh",
+            "admin_ti"
+        ]
+    },
+    {
+        "id": 2,
+        "email": "eliezer.souza@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$oPYfA2WVKrUPA2DH$ed331454562fcf0442c2a804249b4a2b06750399584306b20bf793e1e8066d8a5aab37dba4ce9ba1b0e355bff23addbae6c057d86771501635769baefe84e75a",
+        "funcionario_id": 2,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 3,
+        "email": "rodrigocavalcanti@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$lsVlv0WoRdit8uny$9cce84de0db86f29cfd26eaaf7ed3788dcd78663d64f825f24e64a42be3b26d36cec84f3da86984eea96f9f43491d2d72dd5f0c8a7f90aed45caa7f75b966d0d",
+        "funcionario_id": 3,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 4,
+        "email": "shirley.linhares@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$b4wlRW2G5pKWKr8R$2174cdecc7f11d06b5f2670956d93b12773cd27d4c96d9829fd075fc4ad836775fcf30b722a96cb34af4ace988d1a61357c6efce30dcce613e536199c29bf914",
+        "funcionario_id": 4,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 5,
+        "email": "geovanna.bezerra@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$nQv5Dd2PGqUIrpCH$0be14f334a0aa6e6b3bbcb613f3e6c24acbe1ae79b3893df942dc8fe9fb7d0f1eb45f23948884c1d27fb5ab1890607ca08da488dcacff9d0586e3c3f8c32f882",
+        "funcionario_id": 5,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 6,
+        "email": "jesebel.batista@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Xm68r74SnO3DY6JO$8a6eed98cc67604109d471804dda289beec15aeb2df910c27105866ab2005aa0414e57e1c7a103a800eabc1972b2427afe6f01caf4f066ea113782fdd7dccc6a",
+        "funcionario_id": 6,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 7,
+        "email": "landi.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$GhZe8hhHvE3xuXMQ$da31fa883230b4979b19bb28198aebebb392abc03fa7f2035863537102aebda3c63cec4fdebcf90af91f761fe8083e79199768942217d81a6856f6533ecd4d4b",
+        "funcionario_id": 7,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 8,
+        "email": "wilton.lima@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$ykK9z556I5Q9cnQv$d257edab94cd3965bd4e447368989d7737d96afc564b4cdd661b1956407479270855e76a86d295db7ee2fd1de42b83e235b5761eb981b9fd32a9fb66fff14e3b",
+        "funcionario_id": 8,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 9,
+        "email": "christianeserejo@mdradvocacia.com.br",
+        "password_hash": "scrypt:32768:8:1$4xzzHxFnRc0W2m5O$87556dd79eb81a09b1a628e97deccc7a7e5c146b22590acdb987133ce6df300ea115de845dc1fea67db95496e71931a958c54b84a165240d87b9bdb2e7339990",
+        "funcionario_id": 9,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 10,
+        "email": "hellennivea84@gmail.com",
+        "password_hash": "scrypt:32768:8:1$noXMJWUxoylLTZ23$343bdeabe16868827649ebc0d4be052be5d74791c7b60db855e57a574eb5cd41921b43e08438ec57e4b614180e61607d55b410d814dd329bd87ddb797da37a7b",
+        "funcionario_id": 10,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 11,
+        "email": "luanaaraujo.alves@hotmail.com",
+        "password_hash": "scrypt:32768:8:1$In4oXWW5uJ1FUl3v$0dd6ad9baa75c1949bd97badeb768a1af73ca39fcd8be0bc58fcd9688d4e3c38a45a9a6a9f141cae7f22fb5e0f13bbc78668147c6f0065f2e3593c5dcd112982",
+        "funcionario_id": 11,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 12,
+        "email": "aalves.arthur@gmail.com",
+        "password_hash": "scrypt:32768:8:1$A9p20qTNSaIr2AwT$6bfa24e4c3bec2fd163a2ba1c2b88d104da72e26a07792930f20588d6b420d6074bedae09f6d9456e6b804ec79ac349a0b6209f035369f7ed5d0c4b0d07b4196",
+        "funcionario_id": 12,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 13,
+        "email": "apoiomdradv@gmail.com",
+        "password_hash": "scrypt:32768:8:1$rYiTi2v6nf0rd9Hz$863dbb76e1c2e6b4a5389d10a88fab8e675adc38a6dbc7393bcade290b270ea529802b3c78b131c11f2620d26aa4ae96a4663e3e6300a437c88597226bf28e51",
+        "funcionario_id": 13,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 14,
+        "email": "nayarasxavierr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$6CqUmtBCqJaBoPhV$705dfe897711edb92592fa3c81c779f723b5a77c8fe144c1b90ac1e20969743c0be1641c2db6b0530de14c7636412bd5e1179aae31c296a1a9e348aaadf1e6bd",
+        "funcionario_id": 14,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 15,
+        "email": "luana@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$BatdWdjHCB5y35XT$89e2a6904bf306e3cd2944de49ab72950a362a77c43737060dea37ecceb91b572da61b75bed414a022693f4c5378888f711f942f85d96e200e1a6f5f8dc24346",
+        "funcionario_id": 15,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 16,
+        "email": "rildon@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$qCBL2q89vnhY01iP$00ae8725f471106ac1f0b7acc38536dfcba4cd9ec35a0d152506a12c2808baa1b8b90cd2e29ebfe6d65d32aa28b440b57045e085abf0fbcbb70e0f8031d80e4a",
+        "funcionario_id": 16,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 17,
+        "email": "jonilsonvilela@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$OwuJi4H1G6f89oq4$f24d40078d7ee2ba858c781ba83ca256ba5099809cb07101e99523aff5f53b8b8344c92d2d939bbced64f4ad14675c05be0761e847510bdf3569a70ca3bc7ebc",
+        "funcionario_id": 17,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 18,
+        "email": "diego.nascimento@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Yqrh6qLVuPPzNukk$ea61ca97ccaec13026e8f0e5b1ac0f7dd1dc025143e0f47c53a43d54ca8e5f178eb6eb87c63c738f60ec0c90fc765a49563464fe28aed7f30a5a4d0ece72864a",
+        "funcionario_id": 18,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 19,
+        "email": "mari.melo15@hotmail.com",
+        "password_hash": "scrypt:32768:8:1$F4tR3DrPOWD3eAVq$848f8accc11047d9ebd1dc6a6860be49fc4dcac5a268dddb96df9afd622ff57fb38f4528a8eb1221d151a9714d577ed1df20e8d1898da134bd531bf7245a0a65",
+        "funcionario_id": 19,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 20,
+        "email": "daniellecostaalves.adv@gmail.com",
+        "password_hash": "scrypt:32768:8:1$qiPvuz7refcmKxY8$be9967b68fc4d4ab054443939257aa10989b6cec3529d3f7d4d1f20231950a14be17a67233fbba86d89d81f2ff1f23d74e72f221666560300c4cec66a83ac93b",
+        "funcionario_id": 20,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 21,
+        "email": "pedro.costa@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$1Ro2Ame2AJYumrFo$bc64fa7f894d51820c02a02ed03a309d51f193a39a35021188e4308a348cd1aac6aa1b70264916331212b38e8ebe0a318f6a4697e6e22591ebc4f4129fe31e96",
+        "funcionario_id": 21,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 22,
+        "email": "gustavo.abdias@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$lUBPg8KkAiqZe61t$77e896300ac8bcc962c750518f54ee5186a8e74d0966278b7984dee0881a857e8c32d0a0f7b1308e342c53eaa0efea89df55bfc52e23aca3021e54209e6fe77e",
+        "funcionario_id": 22,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 23,
+        "email": "luanasilva.proge@gmail.com",
+        "password_hash": "scrypt:32768:8:1$lp5V0AtRoWpOPsht$ea2ae9a841aba7a63813a4b66774a3a4a403351643f1b58ebb64bee49c924979f4a0d8791dec2c74706bf4af43fc8206f567e8f5706d7bff77e837515e1cf5d1",
+        "funcionario_id": 23,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 25,
+        "email": "ssmcamilla@gmail.com",
+        "password_hash": "scrypt:32768:8:1$uROJqFj8JOwnSU1V$976098b488c13a080b4abbda1bb795808cfbbc4ae58e80dcecc4853372bca57444d464374c4a1998edf6d8089c1a9ae1d6d2f88084d2b1ddb72a2b7961ac93c4",
+        "funcionario_id": 25,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 26,
+        "email": "cartonilhopriscila@gmail.com",
+        "password_hash": "scrypt:32768:8:1$vmtyekK6hi9svOeo$6a7c42a558928561eefa993aa171907fe78b318c601b1023e0d66810216f88760c024d1c86057b40ab5251e31837b8c0feed0a88a728955619cbbfbb5da331a7",
+        "funcionario_id": 26,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 27,
+        "email": "andressa.baranoski@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$6DfK0LhwNQfld7QP$9cee74b5aab9cb9795870365a730eca34219f2579f6a8c6d9e9a2294385e65aa23b8d73a620274c6beb194e476356cad0284c0af41526e9deba6174461f72fc3",
+        "funcionario_id": 27,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 28,
+        "email": "tathianna.adv@gmail.com",
+        "password_hash": "scrypt:32768:8:1$eLlh2Gs25KdfhoUJ$e46e2087fd062350ea6d83e61fe8583cbfc6d510a9acbc5f8e259792b876c8781c85f28501c7688d1fccf5fb1cb407c9e5ed4e4c45aad7d03aae2656df6fdb4b",
+        "funcionario_id": 28,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 29,
+        "email": "alvaro.alves@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$TOjwoFzzlXopd61S$edf343e669a6cbf3b343270a56510b3f80de0db2aeb3344439a3864c53e243172cfdeb8c1db8ee9994eab17167fa838b2ae088da214c2444455bbdad9b4f718f",
+        "funcionario_id": 29,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 30,
+        "email": "luna.almeida@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$iR2vboNqmzIppzHm$aa91750ef06bb95d899bf18cfa6b7530963641f0ea94ce92d2ee0c052da04f7984c9c74b935607f468a2cef2042e65fbe9dc4087e5be807d4415b69d396aaa49",
+        "funcionario_id": 30,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 31,
+        "email": "advgeorgiabezerra@gmail.com",
+        "password_hash": "scrypt:32768:8:1$Zw7NXQPk42d9seip$3c4c718fbb155c7c104cebe1e33a9970c7b5a46c72fc51cf5457eaee9c4489164a122559b74f4d6389c8f397ebcadd8383b46d1890875def500f8df8bb646a68",
+        "funcionario_id": 31,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 32,
+        "email": "arlisson.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$euEYBoDv3d3pRcUx$a4c3faf8454c6ff51efcfedaa67c95825d9cd980d5b974ddd87f5f74681fccef42ba8072930bc588c4b49138ad6f98b28fdf9b4b0d8050524f381c7de366b9b0",
+        "funcionario_id": 32,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 33,
+        "email": "antonio.carvalho@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$1UvjNiOhRjx3kRhT$fb40da71e9c556faaeabbbed48c34fb070e79c639f454562784c6700338859581a3376e984af6c1c84a2f4d79e6ced5184772587d6b13f0f9c719a34f6b0d889",
+        "funcionario_id": 33,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 34,
+        "email": "vitoriasouzahss@gmail.com",
+        "password_hash": "scrypt:32768:8:1$wt1cxa1PRvR828Qx$3a75095fb643ac21bd905364b5523d334d6ae6b4ab8fe7ae67a70b5186f9f4a97305f13a07c8be845a09208081f702fa2dd776164b37981882a26f1e4c8f4d8b",
+        "funcionario_id": 34,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 35,
+        "email": "ingrid.quirino@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$s5EYRLdt296rWD6W$3191b51848e30eaf30ce56e98023299042ea2c7949eca2c34fae115235be8e002b82a2b4f165638cefebe4efb195bace7e9e6e98d27943e76ae8a078c65f3194",
+        "funcionario_id": 35,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 36,
+        "email": "ana.nascimento@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$eXB8Yc4rTLJjMrZ7$dabf7f0db897cf15efad0cb201be880c42241248bdf1a2d5b5e23a76ba368ef7b75aa23331ec3a9796e46ce8cb43b0d705844a5ff272a38c64b2f1b2ad3223ff",
+        "funcionario_id": 36,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 37,
+        "email": "algacyjunior@gmail.com",
+        "password_hash": "scrypt:32768:8:1$pBptpZDBxctYtFaI$076c4f3f58b9a85a7839bd5ae8fe2de0ecc734850f4325a6d43e8995ae696fdaf7aefa592edf7330720b9b1dee9d1324cd51f4aade53e01662177ef1e66546a4",
+        "funcionario_id": 37,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 38,
+        "email": "Leonardo.araujo@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$OIuuld0Pby3Cd3A4$ea59ac033d2524ddf71b9726738e565ca9d5100db3440f6d62618c99df3260dfebb0faeba4e01558231b5d0923052a4e2aa639df3b100101c0a538b0c46617a8",
+        "funcionario_id": 38,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 39,
+        "email": "diarkelangelo@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$eTQUmLt83QdbTgHM$551bcb2bf40ca57faf430b1f91efeeb665643da563ba7f2bcccecf368836738574f41489142bec2ca1e97f5a3bb0fb7702fa6da9c738093b6c24f6d63bc07779",
+        "funcionario_id": 39,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 40,
+        "email": "vitoria.domingo@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$x4ZMtiyaT9GrE38L$e9e4fafe42444db6cac5d05918edc406998d20d7e5efd7e62ab72f6ac8431ff78330c06daf9495b0b4ab84c17d4e3eddb43b49885e831d2a959be2397cb60870",
+        "funcionario_id": 40,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 41,
+        "email": "leonardojales.adv@gmail.com",
+        "password_hash": "scrypt:32768:8:1$n6qZE9inctUIfmOs$c5662718beeb468beb9f49a261f2e7aa2fe0ad832522e11249c8574be0c033d4c365a1319d873a69a01a18ec09d837bbf1c0237a5576bb7da27d96fd5d3f253e",
+        "funcionario_id": 41,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 42,
+        "email": "neto@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$QBFQ7yT4CZBcEmYv$8ec6bfa9f647de227d95286099e72b0669e0866cc668135f4bb0a7e8955372a4d1e3c5091c006f77443ae7dc19546c824341f51892880c0e8148a9827774b3c7",
+        "funcionario_id": 42,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 43,
+        "email": "sthefanie.queiroz@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$v6KMTqXjjfCKA9xi$78c667068b3da1a3d4eaf4e42ebc1f6d491c5cbea46740566e81f7e3da89ac6e823db19127983ec113e301d755c94836e44e24ac0c78df144b282523ff69e543",
+        "funcionario_id": 43,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 44,
+        "email": "joao.lopes@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$EWmNYLuCKMRKRXNi$c29fdeb042fb4daad794f774cf8fcaf985a6fa0d667427da5fd08ee5fb67bf3b6de96bd14f4a443f565e33e67b92fc07f63f1aca7fae721259994d9cc2c30d87",
+        "funcionario_id": 44,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 45,
+        "email": "victoriakarolliny532@gmail.com",
+        "password_hash": "scrypt:32768:8:1$AsLHG16q4IMLczEH$63d4054380ee4d0e6babf7fcd058219cab383eb4fb0445e18d58075742f860f68929458458e2d8652e36464a2798fcfe19cfd7cb7c30da708c3e478e3bd0040a",
+        "funcionario_id": 45,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 46,
+        "email": "adsonnathan2@gmail.com",
+        "password_hash": "scrypt:32768:8:1$YDHIN1xFmoX7gR3S$a51983740590d481e7f3905d35200c7ae8a3d7b36e180ed8ed4872ba0645693c13bc1c199ab6cc8bb34a356e682d45ca8e19fa2e279d3934776101dc73cfaa70",
+        "funcionario_id": 46,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 47,
+        "email": "rafael.bezerra@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$9kh95SVzIKlcwHbu$ca78a072680573a2d5f91b8112e3075802d45dd692c13c79c55d6923ece082852513a71f78f8873bc48ee158fb94dbf70efdb8044764f40b1a7d1c4e2408327a",
+        "funcionario_id": 47,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 48,
+        "email": "adv.joaovitor22512@outlook.com",
+        "password_hash": "scrypt:32768:8:1$S6HXkvMQqdyrucPK$c181dfc4e6b3edcb5d4d5dbc44ff1c136d1440a271c99ecbb7f55925510ae88418425f256bd056e55d676a2585f6425f1d4c5b1f5162707281a93b28581b3ac9",
+        "funcionario_id": 48,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 49,
+        "email": "viniciusvictorvasil@outlook.com",
+        "password_hash": "scrypt:32768:8:1$otMB1pljnwDo6AFq$ed5fe0c124897f9edc7870ef1ac42c387a7cf53aa544498136ae429e12a406b22b3edda7cca82c72a3f4328c1e830cab5d233ff93d832aa9293e1bff954c7e65",
+        "funcionario_id": 49,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 50,
+        "email": "afonso.souza@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$aVBF1OKCArwhDsOf$71e77bd52ec47619448af7dc2f4c20e6f9b8d49330bdfaac6c7ac879400be3fff1dc17cd97839fe32927cdc9b61cc1822a50e0d62965a752bb316b3fc8986ec9",
+        "funcionario_id": 50,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 51,
+        "email": "joaolucas_dantass@hotmail.com",
+        "password_hash": "scrypt:32768:8:1$PQEDQuAmgy0qB0Vj$a65d2a5d931e027b83154757eb0d28f6ef17112cfc363325c2b3e82241054ebaf05fbdbbc50e1341868d997fbcc7b6bbc525060a9b6d96b6d460ead8cbecc30a",
+        "funcionario_id": 51,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 52,
+        "email": "gabriel.oliveira@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$wmpBTy0hqBRMmUg4$62b9720f05e8e648923475f49c9b6c5961c21c36b8edd608be7033a735454573d7282ac911b3a97315cad25b098026679fbfc001f5b3bcbb42e838aea0da1278",
+        "funcionario_id": 52,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 53,
+        "email": "mgabriellysr1999@gmail.com",
+        "password_hash": "scrypt:32768:8:1$EsK9UEEkv64ktFvN$d8bb2e84163e26a9746257cfbaa499c14f0bef6a343ab553630b400214c6f4558c8da3180a21a81a7c43c25969cc44a8cfb3f1c31dcd5f7e47df08e73a2e04be",
+        "funcionario_id": 53,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 54,
+        "email": "alexia.fernandes@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$n2uJixVOogPEU1JK$c1befcfd21732bea72fd11b1c5e92020fb69dcbac24125869a4f14573814a1e416e24097b4b4b308a317b8c7af48461f957124d7aed6db0dab8f2cea704b5ae6",
+        "funcionario_id": 54,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 55,
+        "email": "bruno.pinheiro@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$ivq9KIwqIu7TjVdN$d32a813f33215cb1fbd8827b5ce9afcac71e06d143e0f5cd161b1ac5d0ad13fbfbfe9a6043e6b15107090ec05b5300e47bcf74ecc5e75148865abd1d226b0122",
+        "funcionario_id": 55,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 56,
+        "email": "melissa.cristine10@gmail.com",
+        "password_hash": "scrypt:32768:8:1$EXWh5JIhGlE09pU5$b33b4f597c9bde03c7e4d14a012732e81b0c899287878d78939331dc321e9b43f4bb3b65f868dfcb56afdc17755c902e7f8f66c0e9377abe1306d16472b74e88",
+        "funcionario_id": 56,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 57,
+        "email": "giovane.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$fUW6f0vP61s7lf6k$a74e93004f7c141c93ec78a3ec5385ef094fd19d959e4cab38e298916a87e47aa4cc22ad6262be61d1bb3fb1f1c6a4ef5fb5d116c531ee05ff33ebdfe3d24667",
+        "funcionario_id": 57,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 58,
+        "email": "enzopbc@gmail.com",
+        "password_hash": "scrypt:32768:8:1$T2FsqiMelvoDCo1r$996355f9f7e0531de48800fda8b2e8e65bb26d7ddee1c56710d376851deb9efb83ed7d2928afc504af65ab851265bc0f5cfed6b5fcc291f0a42eaac2a1641c29",
+        "funcionario_id": 58,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 59,
+        "email": "yasmin.dantas@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$TffRF2csqqDDBxER$fcc517d06c3ca2af029a2a0260165af7edb2668216e3ea85546cc35ea7f3ca3958988157d19eea5c8d2c3ca3cd8281270edecdfcd34aa0821caa4c28472f41e4",
+        "funcionario_id": 59,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 60,
+        "email": "ana.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$XXuE2dv69U29p7lt$160f08a083b8508099ebae99b5fa887a3cd49e169eedf5248163eb5549b5b0a6aea6b7ffda3b7daecd2ff14d4b077e7a7b381d294703e8092c8ad6dd8ffbd95a",
+        "funcionario_id": 60,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 61,
+        "email": "alberto.veloso@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Tkq0fHVMqHeM8dnP$c8a5be7d432dba119fcb802a85c5a132b8edb8cacf13de71be97b61995cb0d654415b5751b1702044432bca6b8583a381540ec6bf71712aa4101e2f8cab20dcf",
+        "funcionario_id": 61,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 62,
+        "email": "denize.medeiros@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$49yTO1UxMTwVkH2I$60ac67b59771866fc5f7d08cf50b4b610d7641b958e3e8c98d5054d0e317dab22d65f072f0d02781a448bdd551ddfbdb10f5ed8bb8c8d46e795f5b6c13d6d01f",
+        "funcionario_id": 62,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 63,
+        "email": "felipa.saraiva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$5eSMVG16ceug6V8G$349dea4a2c9774c17333d5a9d19b8ba641407f66333cda6e08693afde12c6cd8e789cb5d0443f80865cfdcac0813c9bc9c9fbf9b6f57d2dab8062320de2d78ed",
+        "funcionario_id": 63,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 64,
+        "email": "leticia.baptista@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$kFyhsXwdZVywKH2n$7f5003eefd39f769742c8236e22daad6f73c0ad38917d5fe5d469813f1a4b19bae07018a07e7b1e2e15d76f88c69bc704bac7717fc2835279f512d82b0e0cd93",
+        "funcionario_id": 64,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 65,
+        "email": "marcelligomes51@gmail.com",
+        "password_hash": "scrypt:32768:8:1$w4ZgADyaaEZShCEp$dd440cc00940cd8180caa1c25729d851be87c2452bcf235be7c6cd3fb25772d5fa68fb0485ef9a0fdea014495469a3cabba09e7d8f808b3ad84f1d87fe8451a7",
+        "funcionario_id": 65,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 66,
+        "email": "MLUISAFERREIRADV@GMAIL.COM",
+        "password_hash": "scrypt:32768:8:1$4oZ6zq2GA6uQZ1Ml$50e6bf02fd950c02b8034c013ab1f1317b6d949cbb3291fafc8b9d59d15818262ae598dfbed50345e91447df599d542c1c864099ee840f46ffb445633599d37f",
+        "funcionario_id": 66,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 67,
+        "email": "axel.brito@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$eUy6IiPssaa6ilRV$e18339a595b018459df648d8526ab7d428d39525b3181cf2034b32b62a4a1fc394c7a911fb4164608f726868853578e5fd80d8c77b206baee5756c5c24eb5558",
+        "funcionario_id": 67,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 68,
+        "email": "sanziadja@gmail.com",
+        "password_hash": "scrypt:32768:8:1$iMfAQJUX2PkalQxV$3bb0d37ee37da56e9d2c06153354a70f1cc95a53298d73eea2ee527878b8f8070b013c513d85a4e99d3b9614ce82d2d5ec6c2c83297fc88ec9d89417c43afb3a",
+        "funcionario_id": 68,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 69,
+        "email": "jenniferrodrigues@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Y3jVCf6xNp6ivXR6$aa46bc8cb08ddeb38b79e4c0ac0fa859c4e3ae1fccbbe8d530288b0b982a792b1882349dbda6c1846e4d2a9e3adae684fa126015922d50e78e97bf0794dc1877",
+        "funcionario_id": 69,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 70,
+        "email": "nicholas.braga.mdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$RPRMpcCwxWVm6Xla$e30e0b5e3b5c226106a5f8ec8e2e963dcbef5d068f8e121008a8fa8026d08fe80ddc7d4886a89d9f3e9750caa8beb905385909f047388c6ad927f3b84403473f",
+        "funcionario_id": 70,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 71,
+        "email": "brigida.oliveira@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$J9E4hqYu9hdSjksd$8b58e82b8b4c67675133ddc331c729a9193297a810738db4b346eb871a4c814bbad2148fa62e7efde0ab9bc3ed20b3f17c244dc8a99bbbd152a80ff629c40c60",
+        "funcionario_id": 71,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 72,
+        "email": "alexandrevictor397@gmail.com",
+        "password_hash": "scrypt:32768:8:1$acOfrHGQB9hehtMm$ffad3b49d6777fe46e34b836b065d5ec01ca57df7edc384b3b1cddcf55a35a58515bdebfc731a41dcc327c0ac5c8200473a75662b9a055c3457f957fa41616bc",
+        "funcionario_id": 72,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 73,
+        "email": "cicera.andrade@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$q7Oe9cbdtxzSAKuv$8577cd00583847567d06c7d499569fd09be3678b59ba93bb9fafdcf49fddef80cfbfda15c0af1937a67bf5275e5409f8be2171b44fb9f9daf85e4956a7e688e0",
+        "funcionario_id": 73,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 74,
+        "email": "medeirosb209@gmail.com",
+        "password_hash": "scrypt:32768:8:1$XnYtFcJvzX5NCD0t$7776458601196287b8e364d6810cc3a9c9c0ead5c6d6f190f247320bbf8bee3d7c00a1cb7f421596ad32bb37db8b691877fa56763cf1c0603f1ae4d2408bfeb5",
+        "funcionario_id": 74,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 75,
+        "email": "sueniabeatriz.direito1@gmail.com",
+        "password_hash": "scrypt:32768:8:1$WSkX1fRr9wbWmlXz$d3a960291854cdeb6f76ac84d79ddf90549ac36b3a98aa3e6c988e1f6e720e7f8195b39ced4329afb6f4a1ecf51c5f4f2261847d45a2d1f2041a7313694e00de",
+        "funcionario_id": 75,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 76,
+        "email": "andrielly.faroas@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$DDlg18Iiuv9mUuNZ$82b00c3b9eedd2770effbe1ac27df771f6125e31cbe35ce74d905845c1c881b80ef77f4522df412e9cd1cc6368a5306b1c3a8e2f5def1d5336918d37c742c039",
+        "funcionario_id": 76,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 77,
+        "email": "yasminfalcao12@icloud.com",
+        "password_hash": "scrypt:32768:8:1$G00YHt0zk5tn8TwI$1996d2911ca746723abf472d57126788b496ac523aaf9ad3ea45e6edde06a90a45fa2b6b71d013498a447f8e931d8fbe8e329f68901b024c95b3f148499e4d1d",
+        "funcionario_id": 77,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 78,
+        "email": "lorena.moraes97@gmail.com",
+        "password_hash": "scrypt:32768:8:1$X3OQjphm1nXXjkWK$99ca3c324dac0bfec2cf14c42e159c65d02c6cdc0a2033f417a9d340a5b346725a6eb2514ed9a74d6679ce121e3c914378e8989a5dd4ccca3b93aaef23c08837",
+        "funcionario_id": 78,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 79,
+        "email": "yannatal2002@gmail.com",
+        "password_hash": "scrypt:32768:8:1$jUnuxln7WmKQCDkN$fd33cf61f24db488a0d60d6c2a6c3eae917bf4913922b6a796e48f277011847542faf9fbf4edea278314607ce0ff6e942e9f2948a98b1f1079776edd65602217",
+        "funcionario_id": 79,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 80,
+        "email": "cinthiammdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$NcdlySfRNBDnDGry$9479fd7e4add3fa17b405aa70e98e4b08425b14a7c2538e9626e4d0f94faff3bcc7fce68d5a3a131552fe9cd3c42652bf1ccf309dac46466ad7e58a94a351319",
+        "funcionario_id": 80,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 81,
+        "email": "pedro.almeida@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$mX6zdg15VtF8RyPD$07770b5a3f05e887947f95e8d9a968a22e750511fda0dfd61c8847ecd8fb1e95f8c9d33cd2f82808cdc59bc1ab8e082cf7e85be604f2d344d1f87810936faa8b",
+        "funcionario_id": 81,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 82,
+        "email": "allan.soares@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$PPIfQ7n35J8rLEzN$e9da98811d88e6a16d20a92b56709dfb864e88576e8afb05a66d419491988389a6a1dea1546901066108eff5ccef02414799c7356c4bc70718d3a20bcc68e7b0",
+        "funcionario_id": 82,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 83,
+        "email": "eduardo.oliveira@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$1Rx2TchNSzNAoZcv$9453e6f95ef8ba511486215c48d1405f7a110ee2a0c8b31f48321458e9d8b38e80c52b1c05f45f34cf65808e78e9db8d0f539baa06a5025082cf6d7a3ee03619",
+        "funcionario_id": 83,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 84,
+        "email": "mateusrodb@outlook.com",
+        "password_hash": "scrypt:32768:8:1$IDUB7PFHC9UNMekJ$1b82e307bcea13a9b293a976e40cf89c93237fc9440cb7a201117b7c86d0d7fd5cde82a831261b8fecfaedd6f6b4f3408178ed21c685c312aa5f79d98fbc2f64",
+        "funcionario_id": 84,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 85,
+        "email": "pauloalmeidamdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$pWZJXGzgl4PZrknQ$fcbb022fe8b4754d0b0148db11cfe8341b1c7e3d0b524084e2cf34c615cdee9330e65ff815daffa2480f6fcd1d7e68609f71d992be84432413201e76863630f4",
+        "funcionario_id": 85,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 86,
+        "email": "fernanda.romano@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$dYMUZEhNHxzZRbh5$dcbb017d67b23bf3c795354ac1746444a7bfc8ff724219105595de270d3829943c24dcce0d12034910f05978958c4f4d23f9140d1832b84945d2d9e3685b0c3a",
+        "funcionario_id": 86,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 87,
+        "email": "luiseduardo849@gmail.com",
+        "password_hash": "scrypt:32768:8:1$LvebmpC48csH7WGg$674bf0d03da3e7a5efd50fa997155dea241b0e07a9f3fce8a271d88ea51bd631f9fdfd5ccf00d8d2ced8038401b8fb37610d5c43b1c47eadfb4a0caca973adcf",
+        "funcionario_id": 87,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 88,
+        "email": "deborahregina135@gmail.com",
+        "password_hash": "scrypt:32768:8:1$DgWt7bKwHTI3p8v4$79474e62bd896fcffefc31ae1f11ca9fead56a072667247cca847f2db09d20561647dc58809a47ee9decf3c43eeafd5e5122a35546a037131a3355af1e11136c",
+        "funcionario_id": 88,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 89,
+        "email": "fernandogabrielnoronha@gmail.com",
+        "password_hash": "scrypt:32768:8:1$xnqbwva1bvbcHtTg$4c260dce4f6e70d08b46ce72a53dfceadf2f1f845d42b0c5e614d54f15ea3f49d9c8180c6036f5c2b69210d0818df996ef5ed21991bdb0682a3953389d377616",
+        "funcionario_id": 89,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 90,
+        "email": "luiz.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$jN5Lq0PY5yTiogCS$a93f4c752ac595c464f89b4bf119381d2a2695c4ca65f77bc8039c2cb3b8292b999266d3c7658940f1bff6546cadbfe71ada4f1aaa86cc579630854e8cc04cab",
+        "funcionario_id": 90,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 91,
+        "email": "luise.rodrigues@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$AlWtur7xPcRquqpr$4aafdc32b0fe0f376dfe932a2e417061b19a695bc8a87209f09462df9201f8fc2dc5c7ec3123ed25b21f465df07ab626b4ea2c096c0bff13249a7055d5948384",
+        "funcionario_id": 91,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 92,
+        "email": "raphael.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$kYA1j3DNjktDgSpq$e32b6cc92e4b5ad3ab755b052e785ffdc9e464f23eeaa18d78244fe0c7435c0d6c3ccf2c0e16bb2eead7ba03f9404ce74d29bfdb2dd8feeff00a9af334618f73",
+        "funcionario_id": 92,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 93,
+        "email": "carlos.bezerra@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$CkJvYHRFVn3Wiuyj$738529007e052f2ea160145668c16af5d144c8d05b7b0a50ef7542d65eb5cc440bb04514767626282c52d72860dac554cfd12398947ced50e55df12e0ff33dfd",
+        "funcionario_id": 93,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 94,
+        "email": "iuryanne.medeiros@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$D2EOhBLrFBminGrN$6cacd8233aa7a476ae1cebd9d71150991b43ede8d8c4795c80734190d822ce27f37fc9ede882bdfe27e54e7d1d18adbdcc90e7ffe3838e284cb569f05823a17d",
+        "funcionario_id": 94,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 95,
+        "email": "endrew.ferreira@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$wmeJxp3Ss15wUHYQ$d34749d6fcb023e06ed017baf182265f06241e1f8af58cd3768f26d28413631d6134cef47d8cba1f59e0bbfdecc1064725ad6e74f26d4bed0603766c05973148",
+        "funcionario_id": 95,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 96,
+        "email": "anne.carol@hotmail.com.br",
+        "password_hash": "scrypt:32768:8:1$PAndF2GHPK5ewVmD$b28ca1c853d6645c96af0ea6f6a2f6b2a92490916934c4cb9bb5e72270d9f7686db744a55fe886271cd5ae2893eb86e9aac80d1c1e7d33afd43e9ed7d474ad4e",
+        "funcionario_id": 96,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 97,
+        "email": "eloizaellen79@gmail.com",
+        "password_hash": "scrypt:32768:8:1$NOiFhqQUOzZ7FkBM$e241de5b722070d36055e3eb68d627db8484cca9f888cbb22e4c9211d8d1b683d3231ae3cea0b4a588c920d2626dd8da9f5741c0675dcdd3b30528ccf3dc7ea6",
+        "funcionario_id": 97,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 98,
+        "email": "marcusvfg64@gmail.com",
+        "password_hash": "scrypt:32768:8:1$kXGnwXwXeff8wx8e$1876ee758f1d13427b743d38e987c0d592b05addb03abc3684930aee47f35a63c6fbfd0eda4e35673f35cf5b49c73429da5eb68f85a04cd877a87a24ede12e9f",
+        "funcionario_id": 98,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 99,
+        "email": "eduardo.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$1ff1m7SSQ2AxS69L$3fab778a7d3a08e78763e97ea1d8dd2e860a9a371da8f3324578f1711bc817a9994ca434e1abe2d3dd7d2db20fa5eeefcd5075f614a47d36e114a66d2df6dcb3",
+        "funcionario_id": 99,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 100,
+        "email": "vitor.fernandes@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$TVb1HoppjjwWEMxz$ec12a9fd710e08179b2eef21d21c0e024e7250b53704699a8c0c03df7c86f4dc282ac582f6521caea00ccbffd4eeec69a82021010e11c7dcce2fbb02c5d01508",
+        "funcionario_id": 100,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 101,
+        "email": "carvalhodennis10@gmail.com",
+        "password_hash": "scrypt:32768:8:1$ImPpAUXX2VxltVg7$8b1230303676e09c4145d8409a5ac696ad05e9881cb76545148b8935ccbbee8e0846dfbf3e2ee0b7bc624d76484fab5e4037839b3886f43efe742de2581d3f09",
+        "funcionario_id": 101,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 102,
+        "email": "melfernandes778@gmail.com",
+        "password_hash": "scrypt:32768:8:1$XrbCaZ4SYXHgIOo4$f7bfb1f42cb715d605f930454b608c66761db2d025629f1b8a4f14ab85a1a54222c501d75d4febb455cdee48f2f40a0fb1b48d2b6ca2de21fd9453463d66b0d5",
+        "funcionario_id": 102,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 103,
+        "email": "marialuizadeoliveiraaraujo@gmail.com",
+        "password_hash": "scrypt:32768:8:1$ye7DHQ9nInMnRWa1$54c4ba41f3667e1ad14950974dc35f7a1abae5c7a1a6b3fea8b9eace5c63b3c0ee6d5c3ac5b8a4ee7104a7f0b5879787a796774f7dcf7e990d0e049f597e1451",
+        "funcionario_id": 103,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 104,
+        "email": "gabrielcurriculo7@gmail.com",
+        "password_hash": "scrypt:32768:8:1$tIbjeYfW2yypf2rU$1df85ad2c5150a6ce58064439d2495c764d72031d723e18ee0d8d4b1ad37e8dbcc3a3942097461ff912d6fb88cbcbdca1ed9ee6e185a088babf7b9acef215b64",
+        "funcionario_id": 104,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 105,
+        "email": "ana.freitas@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Ql4hQEn6ejfsrxxC$1873a316c6d70c5b6e87731930ead305153e195cdbd884c84e32aded579dd8c169ca4042319ab3741466c3032f38f76311e97cccd1b5db19f6f25d36f2d18d68",
+        "funcionario_id": 105,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 106,
+        "email": "bernardo.lima@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$J5BUHFetvNQ9nlWz$0f8eae74a459d095aec3b13c3b7a979ff6878fcbe29b67c59eda68dd9d39ebb1ce5eefe582bf614a560ca677b20b7569c2dcd5e25392579197cc5ec2bdbf47f2",
+        "funcionario_id": 106,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 107,
+        "email": "caio.galvao@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$Smwkv64V996bbMPj$dc26a66ff87a79bffaa615773e53db5473d1c6fb8bf3e15b2e6bd57f7325cc71e3c00e24724865717555a874c92e9eb4e92e12f1e3c5e0a30a1e092fbf6a52cb",
+        "funcionario_id": 107,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 108,
+        "email": "study.leticia28@gmail.com",
+        "password_hash": "scrypt:32768:8:1$Znfbo408rHBQGmYU$50e4063d095d6294a730b11256a39a1e72f49d789c0c99c1b7f82bc552f0ee4c002d837ff8da0708c638c6aaab407581bcab5bc0756538f05b569d52bfb12f38",
+        "funcionario_id": 108,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 109,
+        "email": "tayna.csouza1@gmail.com",
+        "password_hash": "scrypt:32768:8:1$mG6ESFE0McjBeEK2$e9e4977ee1a22b3aacdae6e8483d1f6871026164d9a4d062980311252b84f74e02370d4e8e9cf616e2108fa22fcbcaa766952288116b0e85a7e3df1569314db7",
+        "funcionario_id": 109,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 110,
+        "email": "celiocaeira@gmail.com",
+        "password_hash": "scrypt:32768:8:1$eqlImARoGAUJpXZ7$b90eb11cf580eb5e9075e68fda566f9d413cc3c6b29525821b6f55ad0ac08101fe21a565d42566794e31f55707e643ca778b4ad675693a8cb31280c852ef2025",
+        "funcionario_id": 110,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 111,
+        "email": "ligia.lima@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$ES6JZnmpqqnRKtd5$8c49cc255e4d3d162171c07354582cec7e0e3574d99367272323a93766c09d96c56d14b9f54ca64871a9076f89c0b131594b1ffc18897343dbb61400b07ec588",
+        "funcionario_id": 111,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 112,
+        "email": "davigomesnetto@gmail.com",
+        "password_hash": "scrypt:32768:8:1$4cmlhaz5GjbCaNXU$0a05fee57cba55a75ef5fc4a5a794d26a8ccc8c84d5b7c5418cf67854017521ece3b547b35d5d17cb5cc655dc8130b918c86f4520152fa8aa9ca826b1ce0caed",
+        "funcionario_id": 112,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 113,
+        "email": "yasmindebritosc@gmail.com",
+        "password_hash": "scrypt:32768:8:1$km8Nsd9aFpWjOwa9$3e52ef1b939d900cacccbe391efd56f08b83dce2041be6ef4fb3a1ad5db7c67797b0dca18c5130ddf0dbb425a1888d3c91b0020b760267683afb69f645f1c5cb",
+        "funcionario_id": 113,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 114,
+        "email": "eduardamedeiroscaldas@gmail.com",
+        "password_hash": "scrypt:32768:8:1$HmyFty1M01tWrxKM$69010d8bebf685f2ef3228b5ec7b09b4db56b2acd9b77d9cb42eb93c44697fd6cb89770b3bec32edc73357be019cb4ea016d21f37830f50e3bbd683e60c78979",
+        "funcionario_id": 114,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 115,
+        "email": "amanda.simoes2005@gmail.com",
+        "password_hash": "scrypt:32768:8:1$QHpjB2jB674abfzL$db4f3f4a1350e280ee9a4f48cddeb7e4dd7b4554be1ce4ff3d692655baa7e0790b3742bf6006f4dd800333f436a70886bd65b13054be0afd0d24f629af64c7b6",
+        "funcionario_id": 115,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 116,
+        "email": "cardosomariaflavia6@gmail.com",
+        "password_hash": "scrypt:32768:8:1$CxI0ju86bwZze8Nr$8504174f92462c9ea445494ba16ff32016e85d940a222a6b35fc672b81cb477e27934dea64c1ea30e49fc7c7f71b608f1289789d381e93ee9ea854359b41b876",
+        "funcionario_id": 116,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 117,
+        "email": "pedro.goncalves@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$jH3EeOwY4xtDlyYz$dea116bf4c82e59862a0bc990d33c57a76d8d4992383db6933454e40c3ee7458a0e8aac510bedf5c7fa2683399083f9e465e0ddbc302793a1f903bbed5105adb",
+        "funcionario_id": 117,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 118,
+        "email": "ymimk.2005@gmail.com",
+        "password_hash": "scrypt:32768:8:1$L5BJGIXTtPiGdHgk$3aed8096c3568cf2ce85eff3c8ae9672cfd95a8f4630499a7a31d63664455fe0acee7b63e6951f696335bbd0b7def8fc89000a24b0a555cebbbe4cde5ab8ad92",
+        "funcionario_id": 118,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 119,
+        "email": "dudagc08@gmail.com",
+        "password_hash": "scrypt:32768:8:1$zlBSBsHiJqaRTbai$ee34aa76139d9e5fed3c294a958263be7e15d9fd6e8465ca2f3989ca8f5a7c94e42aac84dd54997f23fb151f106fed21c137baf5fe1d9823c82d1205f561a34d",
+        "funcionario_id": 119,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 120,
+        "email": "joaquimsilvamdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$gjAGVaLaqI0sc5EL$ad104a3ebf9d0937ec80884c1f45d3678f85ecbecfb4dfaffac99e55114c69f80d4d871b57d7c993d3bc8aae62a96a26c713e5716acd053f5fca6c9784e7ff3f",
+        "funcionario_id": 120,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 121,
+        "email": "luis.martins.mdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$2QGNWeVvfagp03yd$2624de70c6b6536a54590361d41501f366e94d9df4f789bd909be869811927ae6ba5fc996173f36196edf2b9c39e298ee84ebcce85ec2b09e8fb08982e31d85b",
+        "funcionario_id": 121,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 122,
+        "email": "Antoniofelipe0409@gmail.com",
+        "password_hash": "scrypt:32768:8:1$PURROwgVLPnTvpg4$3ab5836e1818155d786484fa4413a2bd9446baae4e51466945d57483707f19285287523b78a03563cbf51e202344c72c39a439074d6b736fe675ef5f61ce0795",
+        "funcionario_id": 122,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 123,
+        "email": "karolliny.cavalcanti@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$GZ0YykE0LwaQxc8m$4540219d8ef63d8cf0bdc1e383b864f667fe17e0bf8c53631c9ff197855963175fc022d94b5ef865d0aa625e3c0d0dbcc3ed04aa11942f10e380dfcb97068eb9",
+        "funcionario_id": 123,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 124,
+        "email": "rebecachianca1234@gmail.com",
+        "password_hash": "scrypt:32768:8:1$6pOhSGTE1FAiDBoV$e5d90a97ec69f08e33492af87a99b0c6a8cffffa87d0fc7471156e65301ad0b56b703acf57b749e8d7d2ef61464f3dd294c32ab657cf2cbed5a0a73c39e49ac7",
+        "funcionario_id": 124,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 125,
+        "email": "inesglenda07@gmail.com",
+        "password_hash": "scrypt:32768:8:1$vaDsjfTgYge8hH5E$8a3876903a4e2932222ef52510bcede0c1f7922ee06ba4bbb58f6b4e348f5e12e132151170cc9c64262c6ac591c3de0ec08a7c41bb7d9d9c6af115857717aa6d",
+        "funcionario_id": 125,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 126,
+        "email": "paulonetoreis04@gmail.com",
+        "password_hash": "scrypt:32768:8:1$ZX1ENhgUAuZRotjX$31f53284e4495f2f24ee0ce33b2e80183ad9d360540367391a7543543d6a8498133e0c64250e14ae0b3848a6f460d33a1196c9dcec3e58af8e0df79406a75f80",
+        "funcionario_id": 126,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 127,
+        "email": "evandro.barbosa@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$LsXS5ciFs9SB4L7K$a2fe9be20270d19b6b78395f8aef39b80f42951db97c2e7f382d9552fafa0648bdba5f2b398837a2ab8d2416cf7268878b32ea2651a6f31b110ed2a1726f8c46",
+        "funcionario_id": 127,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 128,
+        "email": "jessica.silva@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$GAxuyGgWI2BI7r21$2557dbf1dc18cbd628ebe2baf76fc794770b04abcb1e3acc237b2ebec6866a48cb1f3f6d32a0a4bece336b0068506a6bf6febe0e12baa564aee2687789027727",
+        "funcionario_id": 128,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 129,
+        "email": "gabrielandrademdr@gmail.com",
+        "password_hash": "scrypt:32768:8:1$V0D6aY7TbvgJ39Ge$f4d09c7650746f8f121e2d90a6111c4ef8568d7bfa0fb254525c2a6c4104f4224ca2df4211a7624ae0a9da18f55a6c047ed7c566d24848127df8494350c6525c",
+        "funcionario_id": 129,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 130,
+        "email": "marcos.vini.cruz@outlook.com",
+        "password_hash": "scrypt:32768:8:1$gOvQ93SKUrgs6542$397ab1f4019993d31ba6f844dfdbf819aa5c3c3ee5e36adb75833e60005475285a03be5187f9a53e82b769d49306e8d09299c49b883ef8ba6cdadb02a7bceed5",
+        "funcionario_id": 130,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 131,
+        "email": "araujoana660@gmail.com",
+        "password_hash": "scrypt:32768:8:1$Ymjbo5ULe1Q7IMRC$9c3e489a5700ea41ae584bb33d341d453dda83e7c13db2d46fdf0f2f193057415d346fe75d3b65c424007aeeaad0ab63fd5c35a1f7a27553fdfe36c8f0fcdafa",
+        "funcionario_id": 131,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 132,
+        "email": "brunaivyna@gmail.com",
+        "password_hash": "scrypt:32768:8:1$ubsdIglCGl4OTOtB$257c7129b53cf44f7a92d9f4d9a06015a49f56a97620a52336f83330f3641ccd5e635a0a3d925a3bee9ebb80a0051afdebd78b61b74f26e1cd6b40d90110baa5",
+        "funcionario_id": 132,
+        "senha_provisoria": true,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 133,
+        "email": "teste@teste.com",
+        "password_hash": "scrypt:32768:8:1$atoGmh25JJw2tO4F$854e5bded796489e40c19c81ecce48d47fc48a43ebf23145ca4c2c4ad32b46e4be8a74239d27d3b6a3d4ed5d2b29ed1213203dba553bff4a74db0e47a6c1b416",
+        "funcionario_id": 133,
+        "senha_provisoria": false,
+        "permissoes": [
+            "colaborador"
+        ]
+    }
+]
