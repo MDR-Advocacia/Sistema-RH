@@ -157,6 +157,7 @@ class Ponto(db.Model):
     __tablename__ = 'ponto'
     id = db.Column(db.Integer, primary_key=True)
     data_ajuste = db.Column(db.Date, nullable=False)
+    tipo_ajuste = db.Column(db.String(50), nullable=False) # Ex: 'Entrada', 'Saída Almoço', etc.
     justificativa = db.Column(db.Text, nullable=True) # Justificativa do colaborador
     path_assinado = db.Column(db.String(512), nullable=True)
     status = db.Column(db.String(50), default='Pendente', nullable=False)

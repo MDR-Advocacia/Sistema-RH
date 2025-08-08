@@ -101,6 +101,17 @@
                                         <label for="data_ajuste" class="form-label">Data do Ajuste</label>
                                         <input type="date" class="form-control" id="data_ajuste" name="data_ajuste" required>
                                     </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="tipo_ajuste" class="form-label">Tipo de Ajuste</label>
+                                        <select class="form-select" id="tipo_ajuste" name="tipo_ajuste" required>
+                                            <option value="" selected disabled>Selecione o tipo...</option>
+                                            <option value="Entrada no escritório">Entrada no escritório</option>
+                                            <option value="Saída para o intervalo">Saída para o intervalo</option>
+                                            <option value="Volta do intervalo">Volta do intervalo</option>
+                                            <option value="Saída do escritório">Saída do escritório</option>
+                                        </select>
+                                    </div>
                                     <button type="submit" class="btn btn-brand w-100">Criar Pendência</button>
                                 </form>
                             </div>
@@ -113,6 +124,7 @@
                                 <thead>
                                     <tr>
                                         <th>Data</th>
+                                        <th>Tipo</th>
                                         <th>Status</th>
                                         <th class="text-end">Ação</th>
                                     </tr>
@@ -121,6 +133,7 @@
                                     {% for p in pontos %}
                                     <tr>
                                         <td>{{ p.data_ajuste.strftime('%d/%m/%Y') }}</td>
+                                        <td>{{ p.tipo_ajuste }}</td>
                                         <td>
                                             {% if p.status == 'Pendente' %}
                                                 <span class="badge bg-warning text-dark">{{ p.status }}</span>
@@ -138,7 +151,7 @@
                                     </tr>
                                     {% else %}
                                     <tr>
-                                        <td colspan="3" class="text-center p-3">Nenhum registro de ponto.</td>
+                                        <td colspan="4" class="text-center p-3">Nenhum registro de ponto.</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

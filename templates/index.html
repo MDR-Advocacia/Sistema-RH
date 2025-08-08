@@ -96,19 +96,24 @@
                     {% for ponto in dados.pontos_pendentes %}
                         <li class="list-group-item">
                             <div class="d-flex justify-content-between align-items-center">
-                                <span>Ajuste de Ponto: <strong>{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}</strong></span>
-                                <button class="btn btn-sm btn-info text-white btn-responder-ponto" data-bs-toggle="modal" data-bs-target="#modal-responder-ponto" data-ponto-id="{{ ponto.id }}" data-data-ajuste="{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}">
-                                    Preencher e Enviar
+                                {# ALTERADO para mostrar data e tipo #}
+                                <div>
+                                    Ajuste de <strong>{{ ponto.tipo_ajuste }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                <button class="btn btn-sm btn-info text-white btn-responder-ponto" data-bs-toggle="modal" data-bs-target="#modal-responder-ponto" data-ponto-id="{{ ponto.id }}" data-data-ajuste="{{ ponto.data_ajuste.strftime('%d/%m/%Y') }}" data-tipo-ajuste="{{ ponto.tipo_ajuste }}">
+                                    Responder
                                 </button>
                             </div>
                             {% if ponto.observacao_rh %}
                             <small class="d-block text-danger mt-1">
-                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação anterior:</strong> {{ ponto.observacao_rh }}
+                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação:</strong> {{ ponto.observacao_rh }}
                             </small>
                             {% endif %}
                         </li>
                     {% else %}
-                        <li class="list-group-item text-center text-muted">Nenhuma folha de ponto pendente.</li>
+                        <li class="list-group-item text-center text-muted">Nenhum ajuste de ponto pendente.</li>
                     {% endfor %}
                 </ul>
             </div>
