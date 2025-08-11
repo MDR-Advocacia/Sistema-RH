@@ -14,13 +14,21 @@
 
     <div class="card shadow-sm">
         <div class="card-header bg-light p-3">
-            <div class="d-flex justify-content-between">
-                <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" class="flex-grow-1 me-3">
+            <form method="GET" action="{{ url_for('main.listar_funcionarios') }}" class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1 me-3">
                     <div class="input-group">
                         <input type="text" class="form-control" name="q" placeholder="Buscar por nome, CPF ou setor..." value="{{ request.args.get('q', '') }}">
+                        
+                        {# NOVO FILTRO DE STATUS #}
+                        <select name="status" class="form-select" style="max-width: 150px;">
+                            <option value="ativos" {% if status_filter == 'ativos' %}selected{% endif %}>Ativos</option>
+                            <option value="suspensos" {% if status_filter == 'suspensos' %}selected{% endif %}>Suspensos</option>
+                            <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Todos</option>
+                        </select>
+                        
                         <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Buscar</button>
                     </div>
-                </form>
+                </div>
                 <div id="bulk-actions" class="btn-group d-none">
                     <button id="btn-alterar-lote" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-editar-lote"><i class="bi bi-pencil-square"></i> Alterar</button>
                     <button id="btn-remover-lote" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Remover</button>
@@ -33,7 +41,7 @@
                         <i class="bi bi-file-earmark-spreadsheet"></i> Exportar
                     </a>
                 </div>
-            </div>
+            </form>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">

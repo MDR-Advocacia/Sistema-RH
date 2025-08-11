@@ -13,9 +13,23 @@
             </ol>
         </nav>
     </div>
-    <a href="{{ url_for('main.editar_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-brand">
-        <i class="bi bi-pencil-square"></i> Editar Cadastro
-    </a>
+    <div class="btn-toolbar">
+        <form method="POST" action="{{ url_for('main.toggle_status', funcionario_id=funcionario.id) }}" class="me-2">
+            {% if funcionario.status == 'Ativo' %}
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Tem certeza que deseja suspender este usuário? Ele não poderá mais acessar o sistema.');">
+                    <i class="bi bi-person-fill-slash"></i> Suspender
+                </button>
+            {% else %}
+                <button type="submit" class="btn btn-outline-success" onclick="return confirm('Tem certeza que deseja reativar este usuário?');">
+                    <i class="bi bi-person-fill-check"></i> Reativar
+                </button>
+            {% endif %}
+        </form>
+
+        <a href="{{ url_for('main.editar_funcionario', funcionario_id=funcionario.id) }}" class="btn btn-brand">
+            <i class="bi bi-pencil-square"></i> Editar Cadastro
+        </a>
+    </div>
 </div>
 
 <div class="card shadow-sm">
@@ -147,6 +161,11 @@
                                             {% if p.path_assinado %}
                                                 <a href="{{ url_for('ponto.download_ponto_assinado', filename=p.path_assinado) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i> Baixar</a>
                                             {% endif %}
+                                            <form method="POST" action="{{ url_for('ponto.remover_ponto', ponto_id=p.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover esta solicitação de ajuste? Esta ação é irreversível.');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover Solicitação">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                     {% else %}

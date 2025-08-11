@@ -126,7 +126,19 @@ def processar_cadastro():
 def listar_funcionarios():
     termo_busca = request.args.get('q')
     sort_by = request.args.get('sort', 'nome_asc')
+    # NOVO: Lógica do filtro de status
+    status_filter = request.args.get('status', 'ativos') # Padrão para 'ativos'
+
     query = Funcionario.query
+
+    if status_filter == 'ativos':
+        query = query.filter_by(status='Ativo')
+        
+    elif status_filter == 'suspensos':
+        query = query.filter_by(status='Suspenso')
+        
+    # Se for 'todos', nenhum filtro de status é aplicado
+
     if termo_busca:
         termo_busca = termo_busca.strip()
         query = query.filter(or_(
@@ -523,3 +535,32 @@ def exportar_csv():
     response.headers["Content-Disposition"] = "attachment; filename=funcionarios.csv"
     response.headers["Content-type"] = "text/csv"
     return response
+
+
+## REDEFINIÇÃO DE SENHA
+@main.route('/funcionario/<int:funcionario_id>/reset-password', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def reset_password(funcionario_id):
+    """Marca a senha do usuário como provisória, forçando a alteração no próximo login."""
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+    if funcionario.usuario:
+        funcionario.usuario.senha_provisoria = True
+        db.session.commit()
+        flash(f'A senha de {funcionario.nome} foi redefinida. O usuário deverá criar uma nova senha no próximo login.', 'success')
+    else:
+        flash('Este funcionário não possui um usuário de sistema para redefinir a senha.', 'danger')
+    return redirect(url_for('main.editar_funcionario', funcionario_id=funcionario_id))
+
+## ALTERAR STATUS DO FUNCIONARIO (ATIVO/SUSPENSO)
+@main.route('/funcionario/<int:funcionario_id>/toggle-status', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def toggle_status(funcionario_id):
+    """Alterna o status do funcionário entre Ativo e Suspenso."""
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+    novo_status = 'Suspenso' if funcionario.status == 'Ativo' else 'Ativo'
+    funcionario.status = novo_status
+    db.session.commit()
+    flash(f'O status de {funcionario.nome} foi alterado para {novo_status}.', 'success')
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))

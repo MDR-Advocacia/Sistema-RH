@@ -23,6 +23,11 @@ def login_post():
     if not user or not user.check_password(password):
         flash('Por favor, verifique seus dados de login e tente novamente.')
         return redirect(url_for('auth.login')) # Recarrega a página de login
+    
+    # Verificação de usuario suspenso
+    if user.funcionario and user.funcionario.status == 'Suspenso':
+        flash('Este usuário está suspenso e não pode acessar o sistema.', 'danger')
+        return redirect(url_for('auth.login'))
 
     # Se tudo estiver correto, loga o usuário
     login_user(user)

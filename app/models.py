@@ -55,6 +55,7 @@ class Funcionario(db.Model):
     __tablename__ = 'funcionario'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(50), default='Ativo', nullable=False)
     cpf = db.Column(db.String(14), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
     telefone = db.Column(db.String(20))
