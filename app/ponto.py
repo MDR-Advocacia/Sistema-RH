@@ -1,9 +1,9 @@
 import os
 import uuid
 from datetime import datetime
-
+from fpdf import FPDF
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, current_app, send_from_directory, jsonify)
+                   flash, current_app, send_from_directory, jsonify, after_this_request)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -108,13 +108,36 @@ def responder_ponto(ponto_id):
         current_app.logger.error(f"Erro ao responder ponto {ponto_id}: {e}")
         return jsonify({'success': False, 'message': 'Erro interno ao processar o arquivo.'}), 500
 
-@ponto_bp.route('/download_modelo')
+# Em app/ponto.py
+
+# REMOVA a rota antiga "download_modelo_ponto" e SUBSTITUA por esta:
+@ponto_bp.route('/<int:ponto_id>/gerar_pdf')
 @login_required
-def download_modelo_ponto():
-    """Fornece o modelo de PDF para download."""
-    # O arquivo 'modelo_ponto.pdf' deve estar na pasta 'static'
-    return send_from_directory(os.path.join(current_app.root_path, 'static'), 
-                               'modelo_ponto.pdf', as_attachment=True)
+def gerar_e_baixar_ponto(ponto_id):
+    """Gera o PDF preenchido e o envia para download."""
+    ponto = Ponto.query.get_or_404(ponto_id)
+    
+    # Verifica se o usuário logado é o dono do ponto
+    if ponto.funcionario_id != current_user.funcionario.id:
+        flash("Acesso não autorizado.", "danger")
+        return redirect(url_for('main.index'))
+
+    # Pega a justificativa do formulário do modal (assumindo que foi salva antes)
+    ponto.justificativa = request.args.get('justificativa', 'Nenhuma justificativa fornecida.')
+
+    # Gera o PDF
+    pasta, nome_arquivo = gerar_pdf_ajuste(ponto)
+    
+    # Envia para download e depois apaga o arquivo temporário
+    @after_this_request
+    def cleanup(response):
+        try:
+            os.remove(os.path.join(pasta, nome_arquivo))
+        except Exception as e:
+            current_app.logger.error(f"Erro ao limpar o arquivo de ponto gerado: {e}")
+        return response
+
+    return send_from_directory(pasta, nome_arquivo, as_attachment=True)
 
 @ponto_bp.route('/download_assinado/<filename>')
 @login_required
@@ -175,3 +198,131 @@ def reprovar_ponto(ponto_id):
     db.session.commit()
     flash(f'Ajuste de {ponto.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
     return redirect(url_for('ponto.gestao_ponto'))
+
+## PREENCHIMENTO DO PDF
+
+
+def gerar_pdf_ajuste(ponto):
+    """
+    Gera um PDF de ajuste de ponto preenchido, replicando o layout do modelo
+    e posicionando o texto em coordenadas específicas para garantir o espaçamento.
+    """
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font("helvetica", size=10)
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # --- CABEÇALHO ---
+    # Logo (se existir)
+    logo_path = os.path.join(current_app.root_path, 'static/img/logo-MDR-branca.png')
+    if os.path.exists(logo_path):
+         pdf.image(logo_path, x=10, y=10, w=45)
+
+    # Título Principal
+    pdf.set_xy(0, 25)
+    pdf.set_font("helvetica", "B", size=14)
+    pdf.cell(210, 10, "JUSTIFICATIVA DE AJUSTE DE PONTO", 0, 1, 'C')
+    pdf.ln(10)
+
+    # --- CORPO DO FORMULÁRIO ---
+    # Usaremos set_xy para posicionamento absoluto e multi_cell para texto com quebra de linha
+    y_pos = 45
+    
+    # Empresa e CNPJ
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(25, 6, "Empresa:", 0, 0)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.cell(0, 6, "MDR ADVOCACIA", 0, 1)
+    y_pos += 7
+
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(25, 6, "CNPJ:", 0, 0)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.cell(0, 6, "21.949.880/0001-17", 0, 1)
+    y_pos += 7
+
+    # Colaborador (com quebra de linha)
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(25, 6, "Colaborador:", 0, 0)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.set_xy(35, y_pos)
+    pdf.multi_cell(165, 6, ponto.funcionario.nome, 0, 'L')
+    y_pos += 14 # Aumenta o espaço para nomes longos
+
+    # Cargo
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(25, 6, "Cargo:", 0, 0)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.set_xy(35, y_pos)
+    pdf.multi_cell(165, 6, ponto.funcionario.cargo or "N/A", 0, 'L')
+    y_pos += 7
+
+    # Data
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(25, 6, "Data:", 0, 0)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.cell(0, 6, ponto.data_ajuste.strftime('%d/%m/%Y'), 0, 1)
+    y_pos += 15
+
+    # Justificativa (com quebra de linha)
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "B", size=11)
+    pdf.cell(0, 6, "Justificativa:", 0, 1)
+    y_pos += 8
+    pdf.set_xy(10, y_pos)
+    pdf.set_font("helvetica", "", size=11)
+    pdf.multi_cell(190, 6, ponto.justificativa, border=1, align='L')
+    y_pos += 40 # Ajuste o espaçamento conforme necessário
+
+    # --- TEXTO DE DECLARAÇÃO E ASSINATURA ---
+    pdf.set_xy(10, y_pos)
+    declaracao = ("Venho por meio deste, DECLARAR para os devidos fins, que nesta data, autorizo o "
+                  "ajuste do meu controle de jornadas, tendo em vista o motivo anteriormente citado.")
+    pdf.multi_cell(190, 6, declaracao, align='C')
+    y_pos += 35
+    
+    pdf.set_xy(10, y_pos)
+    pdf.cell(190, 10, "________________________________________", 0, 1, 'C')
+    pdf.set_xy(10, y_pos + 5)
+    pdf.cell(190, 10, "Assinatura do Colaborador", 0, 1, 'C')
+
+    # Salva o arquivo temporariamente
+    output_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'pontos_gerados')
+    os.makedirs(output_folder, exist_ok=True)
+    
+    filename = f"ajuste_ponto_{ponto.id}_{uuid.uuid4()}.pdf"
+    filepath = os.path.join(output_folder, filename)
+    pdf.output(filepath)
+    
+    return output_folder, filename
+
+## EXCLUIR SOLICITAÇÃO DE PONTO
+@ponto_bp.route('/<int:ponto_id>/remover', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def remover_ponto(ponto_id):
+    """Remove uma solicitação de ajuste de ponto."""
+    ponto = Ponto.query.get_or_404(ponto_id)
+    funcionario_id = ponto.funcionario_id
+    
+    try:
+        # Se houver um arquivo associado, também o remove
+        if ponto.path_assinado:
+            caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], 'pontos', ponto.path_assinado)
+            if os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+                
+        db.session.delete(ponto)
+        db.session.commit()
+        flash('Solicitação de ajuste de ponto removida com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Erro ao remover a solicitação de ajuste.', 'danger')
+        current_app.logger.error(f"Erro ao remover solicitação de ponto {ponto_id}: {e}")
+
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))

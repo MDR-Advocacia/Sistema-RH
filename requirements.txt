@@ -6,4 +6,5 @@ python-dotenv
 psycopg2-binary
 Flask-Login
 pytz
+fpdf2
 #pip install -r requirements.txt
