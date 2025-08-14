@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import pytz
 
+from flask_mail import Mail
 from flask import Flask, request, redirect, url_for
 from flask_cors import CORS
 from flask_login import LoginManager, current_user
@@ -13,6 +14,7 @@ from .config import Config
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+mail = Mail() # Adicione esta linha
 login_manager.login_view = 'auth.login'
 
 # --- Filtro de Fuso Horário ---
@@ -39,6 +41,7 @@ def create_app():
 
     db.init_app(app)
     migrate.init_app(app, db)
+    mail.init_app(app)
     CORS(app)
     login_manager.init_app(app)
 

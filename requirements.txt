@@ -7,4 +7,6 @@ psycopg2-binary
 Flask-Login
 pytz
 fpdf2
+Flask-Mail
+PyJWT
 #pip install -r requirements.txt

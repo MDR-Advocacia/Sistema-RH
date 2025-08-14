@@ -1,5 +1,8 @@
-# app/models.py
+# app/mos.py
+import jwt
 
+from flask import current_app
+from datetime import datetime, timedelta, timezone
 from . import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
@@ -44,6 +47,30 @@ class Usuario(db.Model, UserMixin):
         if isinstance(nome_permissao, list):
             return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)
+    
+    def get_reset_password_token(self, expires_in=600):
+        """Gera um token seguro para redefinição de senha."""
+        return jwt.encode(
+            {
+                "reset_password": self.id,
+                "exp": datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+            },
+            current_app.config['SECRET_KEY'],
+            algorithm="HS256"
+        )
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        """Verifica o token de redefinição e retorna o usuário se for válido."""
+        try:
+            id = jwt.decode(
+                token,
+                current_app.config['SECRET_KEY'],
+                algorithms=["HS256"]
+            )['reset_password']
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            return None
+        return db.session.get(Usuario, id)
 
 class Permissao(db.Model):
     __tablename__ = 'permissao'
