@@ -6,7 +6,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, send_from_directory, jsonify, after_this_request)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-
+from .email import send_email
 from . import db
 from .decorators import permission_required
 from .models import Funcionario, Ponto
@@ -34,7 +34,7 @@ def gestao_ponto():
 def solicitar_ponto(funcionario_id):
     """Cria uma nova solicitação de ajuste de ponto para um funcionário."""
     data_ajuste_str = request.form.get('data_ajuste')
-    tipo_ajuste = request.form.get('tipo_ajuste') # Pega o novo campo
+    tipo_ajuste = request.form.get('tipo_ajuste')
 
     if not data_ajuste_str or not tipo_ajuste:
         flash('A data e o tipo do ajuste são obrigatórios.', 'danger')
@@ -42,7 +42,6 @@ def solicitar_ponto(funcionario_id):
 
     data_ajuste = datetime.strptime(data_ajuste_str, '%Y-%m-%d').date()
 
-    # Lógica de verificação alterada para incluir o tipo de ajuste
     existente = Ponto.query.filter_by(
         funcionario_id=funcionario_id, 
         data_ajuste=data_ajuste,
@@ -56,12 +55,25 @@ def solicitar_ponto(funcionario_id):
     nova_solicitacao = Ponto(
         funcionario_id=funcionario_id,
         data_ajuste=data_ajuste,
-        tipo_ajuste=tipo_ajuste, # Salva o novo campo
+        tipo_ajuste=tipo_ajuste,
         solicitante_id=current_user.id,
         status='Pendente'
     )
     db.session.add(nova_solicitacao)
     db.session.commit()
+
+    # Início da Lógica de Notificação por E-mail
+    try:
+        destinatario = Funcionario.query.get(funcionario_id)
+        if destinatario and destinatario.usuario:
+            send_email(destinatario.email,
+                       "Nova Solicitação de Ajuste de Ponto",
+                       'email/nova_solicitacao_ponto',
+                       solicitacao=nova_solicitacao)
+    except Exception as e:
+        current_app.logger.error(f"Falha ao enviar e-mail de solicitação de ponto: {e}")
+    # Fim da Lógica de Notificação
+
     flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
 

@@ -7,6 +7,8 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from .email import send_email
+
 from . import db
 from .decorators import permission_required
 from .models import Documento, Funcionario, RequisicaoDocumento
@@ -121,6 +123,18 @@ def solicitar_documento(funcionario_id):
     )
     db.session.add(nova_requisicao)
     db.session.commit()
+
+    # Início da Lógica de Notificação por E-mail
+    try:
+        destinatario = Funcionario.query.get(funcionario_id)
+        if destinatario and destinatario.usuario:
+            send_email(destinatario.email,
+                       f"Nova Solicitação de Documento: {tipo_documento}",
+                       'email/nova_solicitacao_documento',
+                       requisicao=nova_requisicao)
+    except Exception as e:
+        current_app.logger.error(f"Falha ao enviar e-mail de solicitação de documento: {e}")
+    # Fim da Lógica de Notificação
 
     flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))

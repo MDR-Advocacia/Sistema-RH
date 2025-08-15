@@ -1,0 +1,14 @@
+Olá {{ user.funcionario.nome }},
+
+Um novo aviso foi publicado no mural do MDRH:
+
+Título: {{ aviso.titulo }}
+
+Preview:
+{{ aviso.conteudo[:150] }}{% if aviso.conteudo|length > 150 %}...{% endif %}
+
+Acesse o sistema para ler o aviso completo e dar ciência.
+{{ url_for('main.listar_avisos', _external=True) }}
+
+Atenciosamente,
+Sistema MDRH

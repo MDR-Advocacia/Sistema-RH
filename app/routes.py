@@ -10,6 +10,8 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, extract, func
 from werkzeug.utils import secure_filename
 
+from .email import send_email
+
 from . import db, format_datetime_local
 from .decorators import permission_required
 from .models import (Funcionario, Permissao, Usuario, Aviso,
@@ -227,17 +229,18 @@ def listar_avisos():
 @login_required
 @permission_required('admin_rh')
 def criar_aviso():
-    # (código existente)
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         conteudo = request.form.get('conteudo')
         arquivos = request.files.getlist('anexos')
         if not titulo or not conteudo:
-            flash('Título e conteúdo são obrigatórios.')
+            flash('Título and conteúdo são obrigatórios.')
             return redirect(url_for('main.criar_aviso'))
+        
         novo_aviso = Aviso(titulo=titulo, conteudo=conteudo, autor_id=current_user.id)
         db.session.add(novo_aviso)
         db.session.commit()
+        
         for arquivo in arquivos:
             if arquivo and arquivo.filename != '':
                 filename_seguro = secure_filename(arquivo.filename)
@@ -252,11 +255,30 @@ def criar_aviso():
                     aviso_id=novo_aviso.id
                 )
                 db.session.add(anexo)
+        
         db.session.commit()
+
+        # Início da Lógica de Notificação por E-mail
+        try:
+            # Notificar todos os funcionários ativos, exceto o autor
+            destinatarios = Usuario.query.join(Usuario.funcionario).filter(
+                Usuario.id != current_user.id,
+                Funcionario.status == 'Ativo'
+            ).all()
+            
+            for user in destinatarios:
+                send_email(user.email,
+                           f"Novo Aviso no Mural: {novo_aviso.titulo}",
+                           'email/novo_aviso',
+                           user=user, aviso=novo_aviso)
+        except Exception as e:
+            current_app.logger.error(f"Falha ao enviar e-mails de notificação de aviso: {e}")
+        # Fim da Lógica de Notificação
+
         flash('Aviso publicado com sucesso!', 'success')
         return redirect(url_for('main.listar_avisos'))
+        
     return render_template('avisos/criar_aviso.html')
-
 
 @main.route('/avisos/anexo/<filename>')
 @login_required

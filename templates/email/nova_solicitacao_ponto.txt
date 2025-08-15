@@ -1,0 +1,12 @@
+Olá {{ solicitacao.funcionario.nome }},
+
+O RH solicitou um ajuste de ponto para você:
+
+Tipo do Ajuste: {{ solicitacao.tipo_ajuste }}
+Data do Ajuste: {{ solicitacao.data_ajuste.strftime('%d/%m/%Y') }}
+
+Por favor, acesse a dashboard do sistema MDRH para preencher a justificativa e enviar o documento assinado.
+{{ url_for('main.index', _external=True) }}
+
+Atenciosamente,
+Sistema MDRH
