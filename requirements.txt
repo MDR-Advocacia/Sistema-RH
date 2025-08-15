@@ -9,4 +9,6 @@ pytz
 fpdf2
 Flask-Mail
 PyJWT
+PyPDF2
+docxtpl
 #pip install -r requirements.txt

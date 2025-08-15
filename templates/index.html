@@ -193,8 +193,8 @@
             <p><strong>Instruções:</strong></p>
             <ol>
                 <li>Preencha a justificativa para o ajuste no campo abaixo.</li>
-                <li>Clique em "Baixar Modelo Pré-Preenchido" para obter o PDF com seus dados.</li>
-                <li>Assine o documento digitalmente (Ex: Assinador GOV.BR).</li>
+                <li>Clique em "Baixar Modelo Pré-Preenchido" para obter o documento.</li>
+                <li>Salve o arquivo como PDF, assine-o digitalmente (Ex: Assinador GOV.BR).</li>
                 <li>Anexe o arquivo PDF assinado e envie.</li>
             </ol>
             <hr>
@@ -204,11 +204,11 @@
             <div class="mb-3">
                 <label for="justificativa" class="form-label"><strong>Justificativa do Ajuste</strong></label>
                 <textarea class="form-control" id="justificativa" name="justificativa" rows="4" placeholder="Ex: Atestado médico anexo / Esquecimento de registro de saída." required></textarea>
-                <div class="form-text">Esta informação será salva e constará no PDF.</div>
+                <div class="form-text">Esta informação será salva e inserida no documento.</div>
             </div>
 
             <div class="mb-3">
-                <button type="button" id="btn-baixar-modelo" class="btn btn-secondary w-100"><i class="bi bi-download"></i> Baixar Modelo Pré-Preenchido</button>
+                <button type="button" id="btn-baixar-modelo" class="btn btn-secondary w-100"><i class="bi bi-download"></i> Baixar Modelo Pré-Preenchido (.docx)</button>
             </div>
 
             <div class="mb-3">
@@ -231,7 +231,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Script para o modal de DOCUMENTOS
+    // Script para o modal de DOCUMENTOS (mantido como estava)
     const modalResponderElement = document.getElementById('modal-responder-requisicao');
     if (modalResponderElement) {
         const modal = new bootstrap.Modal(modalResponderElement);
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             // Constrói a URL e simula o clique para iniciar o download
-            const downloadUrl = `/ponto/${pontoId}/gerar_pdf?justificativa=${justificativa}`;
+            const downloadUrl = `/ponto/${pontoId}/gerar_documento?justificativa=${justificativa}`;
             window.location.href = downloadUrl;
         });
 
@@ -332,6 +332,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const formData = new FormData(this);
+            formData.append('arquivo_assinado', file);
             
             pontoFeedback.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
