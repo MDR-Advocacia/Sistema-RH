@@ -2,12 +2,12 @@
     {
         "id": 1,
         "email": "pedro@mdradvocacia.com",
-        "password_hash": "scrypt:32768:8:1$R0P4TZfKXOGWVxeh$a256d68b1063c48b205c81aa6dc271fffa26d5b9b13106e49aac51ed2de48435490768354730cc5af16b2c2c094b21ab12419d3722161b1b24b8ded919efb546",
+        "password_hash": "scrypt:32768:8:1$MTZ5yKEoslzZqmkr$03d79c477cb417e3f61e75f45369d150bc62a5addd2a33a88de209ae7dc1ae9402f2a4fa7ca55573c85c3b59f6775485f053243efc410de5e1a56e7a9bb274c5",
         "funcionario_id": 1,
         "senha_provisoria": false,
         "permissoes": [
-            "admin_rh",
-            "admin_ti"
+            "admin_ti",
+            "admin_rh"
         ]
     },
     {
@@ -741,16 +741,6 @@
         ]
     },
     {
-        "id": 76,
-        "email": "andrielly.faroas@mdradvocacia.com",
-        "password_hash": "scrypt:32768:8:1$DDlg18Iiuv9mUuNZ$82b00c3b9eedd2770effbe1ac27df771f6125e31cbe35ce74d905845c1c881b80ef77f4522df412e9cd1cc6368a5306b1c3a8e2f5def1d5336918d37c742c039",
-        "funcionario_id": 76,
-        "senha_provisoria": true,
-        "permissoes": [
-            "colaborador"
-        ]
-    },
-    {
         "id": 77,
         "email": "yasminfalcao12@icloud.com",
         "password_hash": "scrypt:32768:8:1$G00YHt0zk5tn8TwI$1996d2911ca746723abf472d57126788b496ac523aaf9ad3ea45e6edde06a90a45fa2b6b71d013498a447f8e931d8fbe8e329f68901b024c95b3f148499e4d1d",
@@ -1316,6 +1306,16 @@
         "password_hash": "scrypt:32768:8:1$atoGmh25JJw2tO4F$854e5bded796489e40c19c81ecce48d47fc48a43ebf23145ca4c2c4ad32b46e4be8a74239d27d3b6a3d4ed5d2b29ed1213203dba553bff4a74db0e47a6c1b416",
         "funcionario_id": 133,
         "senha_provisoria": false,
+        "permissoes": [
+            "colaborador"
+        ]
+    },
+    {
+        "id": 134,
+        "email": "andrielly.farias@mdradvocacia.com",
+        "password_hash": "scrypt:32768:8:1$wlQZpsM43sXY6Axr$471c9836d87e934ddeabdb39a6bb8150cff16e7b969e040c208379641524d599a60ae0dcefdf55bb569cc60ad7e395c2ad53c1e3149fa6f058d7ef6fd2359441",
+        "funcionario_id": 136,
+        "senha_provisoria": true,
         "permissoes": [
             "colaborador"
         ]

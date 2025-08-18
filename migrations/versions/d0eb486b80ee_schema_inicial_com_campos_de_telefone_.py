@@ -1,8 +1,8 @@
-"""Schema inicial completo com todas as tabelas
+"""Schema inicial com campos de telefone expandidos
 
-Revision ID: eba38c024b66
+Revision ID: d0eb486b80ee
 Revises: 
-Create Date: 2025-08-08 13:05:52.636922
+Create Date: 2025-08-18 11:47:55.418357
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'eba38c024b66'
+revision = 'd0eb486b80ee'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,14 +21,15 @@ def upgrade():
     op.create_table('funcionario',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nome', sa.String(length=120), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('cpf', sa.String(length=14), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
-    sa.Column('telefone', sa.String(length=20), nullable=True),
+    sa.Column('telefone', sa.String(length=50), nullable=True),
     sa.Column('cargo', sa.String(length=100), nullable=True),
     sa.Column('setor', sa.String(length=100), nullable=True),
     sa.Column('data_nascimento', sa.Date(), nullable=True),
     sa.Column('contato_emergencia_nome', sa.String(length=120), nullable=True),
-    sa.Column('contato_emergencia_telefone', sa.String(length=20), nullable=True),
+    sa.Column('contato_emergencia_telefone', sa.String(length=50), nullable=True),
     sa.Column('foto_perfil', sa.String(length=255), nullable=True),
     sa.Column('apelido', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -98,6 +99,7 @@ def upgrade():
     op.create_table('ponto',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('data_ajuste', sa.Date(), nullable=False),
+    sa.Column('tipo_ajuste', sa.String(length=50), nullable=False),
     sa.Column('justificativa', sa.Text(), nullable=True),
     sa.Column('path_assinado', sa.String(length=512), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=False),

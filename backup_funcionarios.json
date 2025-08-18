@@ -1036,20 +1036,6 @@
         "apelido": null
     },
     {
-        "id": 76,
-        "nome": "Andrielly Duarte De Farias",
-        "cpf": "71356709494",
-        "email": "andrielly.faroas@mdradvocacia.com",
-        "telefone": "84987080958",
-        "cargo": "Nao Informado",
-        "setor": "BB - Autor Processual",
-        "data_nascimento": "2002-02-09",
-        "contato_emergencia_nome": "Erivan Duarte",
-        "contato_emergencia_telefone": "84988573134",
-        "foto_perfil": null,
-        "apelido": null
-    },
-    {
         "id": 77,
         "nome": "Yasmin Maria Albuquerque Da Costa Falcao",
         "cpf": "13537584431",
@@ -1872,6 +1858,20 @@
         "data_nascimento": "2007-12-18",
         "contato_emergencia_nome": "",
         "contato_emergencia_telefone": "",
+        "foto_perfil": null,
+        "apelido": null
+    },
+    {
+        "id": 136,
+        "nome": "Andrielly Duarte De Farias",
+        "cpf": "713.567.094-94",
+        "email": "andrielly.farias@mdradvocacia.com",
+        "telefone": "84987080958",
+        "cargo": "Advogada",
+        "setor": "BB - Autor Processual",
+        "data_nascimento": "2002-02-09",
+        "contato_emergencia_nome": "Erivan Duarte",
+        "contato_emergencia_telefone": "84988573134",
         "foto_perfil": null,
         "apelido": null
     }
