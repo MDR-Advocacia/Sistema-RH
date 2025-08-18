@@ -40,40 +40,37 @@ def index():
         funcionario_id=usuario.funcionario.id, status='Pendente'
     ).all()
 
+    # --- LÓGICA DE ANIVERSARIANTES (CORRIGIDA E PARA TODOS OS USUÁRIOS) ---
+    hoje = datetime.utcnow().date()
+    inicio_semana = hoje - timedelta(days=hoje.weekday())
+    fim_semana = inicio_semana + timedelta(days=6)
+    
+    dados_dashboard['periodo_semana'] = f"{inicio_semana.strftime('%d/%m')} - {fim_semana.strftime('%d/%m')}"
+    
+    aniversariantes = []
+    if inicio_semana.year == fim_semana.year:
+        aniversariantes = Funcionario.query.filter(
+            db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
+            db.func.extract('day', Funcionario.data_nascimento).between(inicio_semana.day, fim_semana.day)
+        ).all()
+    else: # Lida com a virada do ano
+        dezembro = Funcionario.query.filter(
+            db.func.extract('month', Funcionario.data_nascimento) == 12,
+            db.func.extract('day', Funcionario.data_nascimento) >= inicio_semana.day
+        ).all()
+        janeiro = Funcionario.query.filter(
+            db.func.extract('month', Funcionario.data_nascimento) == 1,
+            db.func.extract('day', Funcionario.data_nascimento) <= fim_semana.day
+        ).all()
+        aniversariantes = dezembro + janeiro
+
+    aniversariantes.sort(key=lambda f: (f.data_nascimento.month, f.data_nascimento.day))
+    dados_dashboard['aniversariantes'] = aniversariantes
+
+    # Bloco if agora cuida apenas dos dados específicos de admin
     if usuario.tem_permissao('admin_rh') or usuario.tem_permissao('admin_ti'):
         dados_dashboard['total_funcionarios'] = Funcionario.query.count()
         dados_dashboard['total_avisos'] = Aviso.query.filter_by(arquivado=False).count()
-        
-        hoje = datetime.utcnow().date()
-        inicio_semana = hoje - timedelta(days=hoje.weekday())
-        fim_semana = inicio_semana + timedelta(days=6)
-        
-        dados_dashboard['periodo_semana'] = f"{inicio_semana.strftime('%d/%m')} - {fim_semana.strftime('%d/%m')}"
-        
-        # --- LÓGICA DE ANIVERSARIANTES CORRIGIDA PARA POSTGRESQL ---
-        # Esta lógica agora usa a função extract, que é compatível com ambos os bancos de dados
-        # e lida corretamente com semanas que cruzam o final do ano.
-        aniversariantes = []
-        if inicio_semana.year == fim_semana.year:
-            aniversariantes = Funcionario.query.filter(
-                db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
-                db.func.extract('day', Funcionario.data_nascimento).between(inicio_semana.day, fim_semana.day)
-            ).all()
-        else: # Caso a semana comece em Dezembro e termine em Janeiro
-            dezembro = Funcionario.query.filter(
-                db.func.extract('month', Funcionario.data_nascimento) == 12,
-                db.func.extract('day', Funcionario.data_nascimento) >= inicio_semana.day
-            ).all()
-            janeiro = Funcionario.query.filter(
-                db.func.extract('month', Funcionario.data_nascimento) == 1,
-                db.func.extract('day', Funcionario.data_nascimento) <= fim_semana.day
-            ).all()
-            aniversariantes = dezembro + janeiro
-
-        aniversariantes.sort(key=lambda f: (f.data_nascimento.month, f.data_nascimento.day))
-
-        dados_dashboard['aniversariantes'] = aniversariantes
-        # --- FIM DA CORREÇÃO ---
 
     return render_template('index.html', dados=dados_dashboard)
 

@@ -119,7 +119,6 @@
         </div>
     </div>
 
-    {% if current_user.is_authenticated and (current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti')) %}
     <div class="card shadow-sm mt-4">
         <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-cake2-fill text-info"></i> ANIVERSARIANTES DA SEMANA ({{ dados.periodo_semana }})</h5>
@@ -150,7 +149,6 @@
             {% endif %}
         </div>
     </div>
-    {% endif %}
 
 {% endblock %}
 
@@ -231,7 +229,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Script para o modal de DOCUMENTOS (mantido como estava)
+    // Script para o modal de DOCUMENTOS
     const modalResponderElement = document.getElementById('modal-responder-requisicao');
     if (modalResponderElement) {
         const modal = new bootstrap.Modal(modalResponderElement);
@@ -349,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                pontoFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
+                responderFeedback.innerHTML = '<div class="alert alert-danger">Ocorreu um erro de comunicação.</div>';
             });
         });
     }
