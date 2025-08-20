@@ -32,6 +32,7 @@ class Usuario(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True)
     senha_provisoria = db.Column(db.Boolean, default=True, nullable=False)
+    data_consentimento = db.Column(db.DateTime, nullable=True)
 
     funcionario = db.relationship('Funcionario', backref=db.backref('usuario', uselist=False))
     permissoes = db.relationship('Permissao', secondary=permissoes_usuarios, lazy='subquery',

@@ -25,14 +25,13 @@ def provisionar_usuario_ad(funcionario, senha_inicial=None):
     """
     Garante que um usuário exista no AD e esteja com os dados sincronizados.
     Se a senha_inicial for fornecida, cria um novo usuário.
-    Se não, apenas atualiza um usuário existente.
+    Se não, apenas atualiza um usuário existente, incluindo o nome.
     """
     conn = get_ad_connection()
     if not conn:
         return False, "Não foi possível conectar ao servidor do Active Directory."
 
     try:
-        # Padroniza o username e o email (UPN)
         nome_parts = funcionario.nome.lower().split()
         primeiro_nome = nome_parts[0]
         sobrenome = nome_parts[-1] if len(nome_parts) > 1 else ''
@@ -41,31 +40,35 @@ def provisionar_usuario_ad(funcionario, senha_inicial=None):
         domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
         user_principal_name = f"{username}@{domain}"
         
-        # O e-mail do funcionário no nosso sistema DEVE ser o UPN do AD
         funcionario.email = user_principal_name
         
         user_dn = f"CN={funcionario.nome},{current_app.config['LDAP_USER_OU']}"
 
-        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={user_principal_name})', attributes=['cn'])
+        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={user_principal_name})', attributes=['cn', 'displayName'])
 
         if conn.entries:
-            # --- USUÁRIO EXISTE: ATUALIZAR ---
-            current_app.logger.info(f"Usuário {user_principal_name} já existe no AD. Sincronizando alterações.")
             user_dn_existente = conn.entries[0].entry_dn
-            
-            # Prepara um dicionário com os campos a serem atualizados
+            cn_existente = conn.entries[0].cn.value
+
             modificacoes = {
+                'displayName': [(MODIFY_REPLACE, [funcionario.nome])],
+                'givenName': [(MODIFY_REPLACE, [funcionario.nome.split()[0].capitalize()])],
+                'sn': [(MODIFY_REPLACE, [' '.join(funcionario.nome.split()[1:]).title()])],
                 'department': [(MODIFY_REPLACE, [funcionario.setor or 'N/A'])],
                 'title': [(MODIFY_REPLACE, [funcionario.cargo or 'N/A'])],
-                # Adicione outros campos que queira sincronizar aqui
             }
+            
+            if cn_existente != funcionario.nome:
+                novo_rdn = f"CN={funcionario.nome}"
+                # --- LINHA CORRIGIDA AQUI ---
+                conn.modify_dn(user_dn_existente, novo_rdn)
+                user_dn_existente = f"{novo_rdn},{current_app.config['LDAP_USER_OU']}"
+
             conn.modify(user_dn_existente, modificacoes)
             
         elif senha_inicial:
-            # --- USUÁRIO NÃO EXISTE E SENHA FOI FORNECIDA: CRIAR ---
+            # (Lógica de criação mantida)
             current_app.logger.info(f"Provisionando usuário {user_principal_name} no AD.")
-            
-            # Passo A: Cria o objeto do usuário (o AD pode criá-lo desabilitado por padrão)
             conn.add(
                 user_dn,
                 attributes={
@@ -75,15 +78,12 @@ def provisionar_usuario_ad(funcionario, senha_inicial=None):
                     'sn': ' '.join(nome_parts[1:]).title(),
                     'displayName': funcionario.nome,
                     'userPrincipalName': user_principal_name,
-                    'sAMAccountName': username
+                    'sAMAccountName': username,
+                    'department': funcionario.setor or 'N/A',
+                    'title': funcionario.cargo or 'N/A'
                 }
             )
-
-            # Passo B: Define a senha para a nova conta
             conn.extend.microsoft.modify_password(user_dn, senha_inicial)
-            
-            # Passo C (CORREÇÃO DEFINITIVA): Habilita a conta e força a troca de senha
-            # 512 = Conta Ativa | pwdLastSet = 0 (Força troca de senha)
             conn.modify(
                 user_dn,
                 {

@@ -1,5 +1,6 @@
 # app/auth.py
 
+import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app # type: ignore
 from flask_login import login_user, logout_user, login_required, current_user # type: ignore
 from flask_mail import Message
@@ -115,26 +116,30 @@ def logout():
     return redirect(url_for('main.index'))
 
 
-@auth.route('/change-password', methods=['GET', 'POST'])
+@auth.route('/change-password', methods=['POST'])
 @login_required
-def change_password():
-    if request.method == 'POST':
-        nova_senha = request.form.get('nova_senha')
-        confirmacao = request.form.get('confirmacao_senha')
+def change_password_post():
+    nova_senha = request.form.get('nova_senha')
+    confirmacao = request.form.get('confirmacao_senha')
+    consentimento = request.form.get('consentimento') # Pega o valor do checkbox
 
-        if not nova_senha or nova_senha != confirmacao:
-            flash('As senhas não conferem ou estão em branco.')
-            return redirect(url_for('auth.change_password'))
+    if not nova_senha or nova_senha != confirmacao:
+        flash('As senhas não conferem ou estão em branco.', 'danger')
+        return redirect(url_for('auth.change_password'))
 
-        # Atualiza a senha e a flag no banco
-        current_user.set_password(nova_senha)
-        current_user.senha_provisoria = False
-        db.session.commit()
+    # Validação do consentimento
+    if not consentimento:
+        flash('Você precisa concordar com os termos de uso para continuar.', 'danger')
+        return redirect(url_for('auth.change_password'))
 
-        flash('Senha alterada com sucesso! Você pode prosseguir.')
-        return redirect(url_for('main.index'))
+    # Salva a nova senha e a data do consentimento
+    current_user.set_password(nova_senha)
+    current_user.senha_provisoria = False
+    current_user.data_consentimento = datetime.utcnow()
+    db.session.commit()
 
-    return render_template('auth/change_password.html')
+    flash('Senha atualizada com sucesso! Bem-vindo(a) ao sistema.', 'success')
+    return redirect(url_for('main.index'))
 
 @auth.route('/esqueci-senha', methods=['GET', 'POST'])
 def esqueci_senha():

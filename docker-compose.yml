@@ -6,6 +6,8 @@ services:
     volumes:
       - .:/app
       - uploads_data:/app/uploads
+    env_file:
+      - .env  # Carrega todas as variáveis do arquivo .env  
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=development
@@ -23,6 +25,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+    env_file:
+      - .env  # Carrega as variáveis do banco (POSTGRES_USER, etc.)  
 
 volumes:
   postgres_data:

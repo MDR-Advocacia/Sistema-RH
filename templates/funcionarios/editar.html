@@ -7,7 +7,8 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="POST">
+        
+        <form method="POST" action="{{ url_for('main.editar_funcionario', funcionario_id=funcionario.id) }}">
             <h5 class="mb-3">Dados Pessoais e Profissionais</h5>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -71,21 +72,6 @@
                     </div>
                 </div>
             </div>
-
-            <hr class="my-4">
-
-            <h5 class="mb-3">Ações Administrativas</h5>
-            <div class="card bg-light border p-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>Redefinir Senha do Usuário</strong>
-                        <p class="mb-0 text-muted small">Força o usuário a criar uma nova senha no próximo login.</p>
-                    </div>
-                    <form method="POST" action="{{ url_for('main.reset_password', funcionario_id=funcionario.id) }}" onsubmit="return confirm('Tem certeza que deseja redefinir a senha deste usuário?');">
-                        <button type="submit" class="btn btn-warning">Redefinir Senha</button>
-                    </form>
-                </div>
-            </div>
             
             <hr class="my-4">
             
@@ -94,6 +80,20 @@
                 <button type="submit" class="btn btn-brand">Salvar Alterações</button>
             </div>
         </form>
+        <hr class="my-4">
+
+        <h5 class="mb-3">Ações Administrativas</h5>
+        <div class="card bg-light border p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Redefinir Senha do Usuário</strong>
+                    <p class="mb-0 text-muted small">Força o usuário a criar uma nova senha no próximo login.</p>
+                </div>
+                <form method="POST" action="{{ url_for('main.reset_password', funcionario_id=funcionario.id) }}" onsubmit="return confirm('Tem certeza que deseja redefinir a senha deste usuário?');">
+                    <button type="submit" class="btn btn-warning">Redefinir Senha</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

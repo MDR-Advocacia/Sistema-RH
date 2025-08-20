@@ -135,7 +135,7 @@ def processar_cadastro():
     # Cria o usuário local após o provisionamento no AD
     novo_usuario = Usuario(email=novo_funcionario.email, funcionario_id=novo_funcionario.id)
     novo_usuario.set_password(uuid.uuid4().hex) # Senha local impossível
-    novo_usuario.senha_provisoria = False
+    novo_usuario.senha_provisoria = True
     # ... (lógica de permissões) ...
     if permissoes_selecionadas_ids:
         permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
@@ -193,7 +193,7 @@ def editar_funcionario(funcionario_id):
     permissoes = Permissao.query.all()
     
     if request.method == 'POST':
-        # Atualiza os dados do funcionário no banco de dados local
+        # --- LÓGICA DE ATUALIZAÇÃO RESTAURADA ---
         funcionario.nome = request.form.get('nome')
         funcionario.cpf = request.form.get('cpf')
         funcionario.telefone = request.form.get('telefone')
@@ -212,7 +212,6 @@ def editar_funcionario(funcionario_id):
         db.session.commit()
 
         # --- SINCRONIZAÇÃO COM O AD APÓS A EDIÇÃO ---
-        # Chamamos a mesma função, mas sem passar a senha, então ela só irá atualizar.
         sucesso_ad, msg_ad = provisionar_usuario_ad(funcionario)
         if not sucesso_ad:
             flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
@@ -645,3 +644,32 @@ def toggle_status(funcionario_id):
     db.session.commit()
     flash(f'O status de {funcionario.nome} foi alterado para {novo_status} no sistema e no AD.', 'success')
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+
+## POLITICA DE PRIVACIDADE - LGPD
+
+@main.route('/politica-de-privacidade')
+def politica_privacidade():
+    return render_template('privacidade/politica_privacidade.html')
+
+
+@main.route('/consentimento', methods=['GET', 'POST'])
+@login_required
+def consentimento():
+    # Redireciona para o index se o usuário já consentiu e tentou acessar a página manualmente
+    if current_user.data_consentimento:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        consentimento_check = request.form.get('consentimento')
+        if not consentimento_check:
+            flash('Você precisa concordar com os termos para continuar.', 'danger')
+            return redirect(url_for('main.consentimento'))
+        
+        current_user.data_consentimento = datetime.utcnow()
+        db.session.commit()
+        
+        flash('Obrigado por confirmar seu consentimento. Bem-vindo(a)!', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('privacidade/consentimento.html')
