@@ -13,3 +13,11 @@ class Config:
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_SENDER = os.getenv('MAIL_SENDER')
+
+    # Configurações do Active Directory
+    LDAP_HOST = os.getenv('LDAP_HOST')
+    LDAP_PORT = int(os.getenv('LDAP_PORT') or 389)
+    LDAP_BASE_DN = os.getenv('LDAP_BASE_DN')
+    LDAP_USER_OU = os.getenv('LDAP_USER_OU')
+    LDAP_BIND_USER_DN = os.getenv('LDAP_BIND_USER_DN')
+    LDAP_BIND_USER_PASSWORD = os.getenv('LDAP_BIND_USER_PASSWORD')

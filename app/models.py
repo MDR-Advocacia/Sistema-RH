@@ -83,7 +83,7 @@ class Funcionario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(120), nullable=False)
     status = db.Column(db.String(50), default='Ativo', nullable=False)
-    cpf = db.Column(db.String(14), unique=True, nullable=False)
+    cpf = db.Column(db.String(25), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
     telefone = db.Column(db.String(50))
     cargo = db.Column(db.String(100))

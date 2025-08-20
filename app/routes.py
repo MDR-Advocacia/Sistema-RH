@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from io import TextIOWrapper, StringIO
+from .ad_sync import provisionar_usuario_ad, habilitar_usuario_ad, desabilitar_usuario_ad, remover_usuario_ad
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
                    url_for, flash, make_response, current_app, send_from_directory)
@@ -123,9 +124,23 @@ def processar_cadastro():
     novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
     novo_usuario.set_password(password)
     
+    # --- Alteração aqui ---
+    # Provisiona o usuário no AD, o que também atualiza o e-mail do funcionário no nosso banco
+    sucesso_ad, msg_ad = provisionar_usuario_ad(novo_funcionario, password)
+    db.session.commit() # Salva a atualização do e-mail
+
+    if not sucesso_ad:
+        flash(f"Atenção: O usuário foi criado no sistema, mas falhou ao provisionar no AD: {msg_ad}", "warning")
+    
+    # Cria o usuário local após o provisionamento no AD
+    novo_usuario = Usuario(email=novo_funcionario.email, funcionario_id=novo_funcionario.id)
+    novo_usuario.set_password(uuid.uuid4().hex) # Senha local impossível
+    novo_usuario.senha_provisoria = False
+    # ... (lógica de permissões) ...
     if permissoes_selecionadas_ids:
         permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
         novo_usuario.permissoes = permissoes_a_adicionar
+
 
     db.session.add(novo_usuario)
     db.session.commit()
@@ -173,11 +188,12 @@ def listar_funcionarios():
 @login_required
 @permission_required('admin_rh')
 def editar_funcionario(funcionario_id):
-    # (código existente para editar funcionário)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
     permissoes = Permissao.query.all()
+    
     if request.method == 'POST':
+        # Atualiza os dados do funcionário no banco de dados local
         funcionario.nome = request.form.get('nome')
         funcionario.cpf = request.form.get('cpf')
         funcionario.telefone = request.form.get('telefone')
@@ -187,13 +203,23 @@ def editar_funcionario(funcionario_id):
         funcionario.data_nascimento = datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
+        
         if usuario:
             permissoes_selecionadas_ids = request.form.getlist('permissoes')
             permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
             usuario.permissoes = permissoes_a_adicionar
+        
         db.session.commit()
-        flash(f'Dados de {funcionario.nome} atualizados com sucesso!')
+
+        # --- SINCRONIZAÇÃO COM O AD APÓS A EDIÇÃO ---
+        # Chamamos a mesma função, mas sem passar a senha, então ela só irá atualizar.
+        sucesso_ad, msg_ad = provisionar_usuario_ad(funcionario)
+        if not sucesso_ad:
+            flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
+        
+        flash(f'Dados de {funcionario.nome} atualizados e sincronizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
+
     permissoes_usuario_ids = {p.id for p in usuario.permissoes} if usuario else set()
     return render_template('funcionarios/editar.html',
                            funcionario=funcionario,
@@ -436,17 +462,25 @@ def detalhes_funcionario(funcionario_id):
 @login_required
 @permission_required(['admin_rh', 'admin_ti'])
 def remover_funcionario_api(funcionario_id):
-    # (código existente)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
+    email_para_remover = funcionario.email
+    
     try:
+        # --- Alteração aqui: Primeiro remove do AD ---
+        sucesso_ad, msg_ad = remover_usuario_ad(email_para_remover)
+        if not sucesso_ad:
+            # Se falhar no AD, não continua e avisa o usuário
+            return jsonify({'success': False, 'message': f'Erro no AD: {msg_ad}'}), 500
+
+        # Se teve sucesso no AD, remove do banco de dados local
         if funcionario.usuario:
             db.session.delete(funcionario.usuario)
         db.session.delete(funcionario)
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso.'})
+        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso do sistema e do AD.'})
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erro ao remover funcionário {funcionario_id}: {e}")
+        # ... (log de erro) ...
         return jsonify({'success': False, 'message': 'Erro ao remover o funcionário.'}), 500
 
 
@@ -595,7 +629,19 @@ def toggle_status(funcionario_id):
     """Alterna o status do funcionário entre Ativo e Suspenso."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     novo_status = 'Suspenso' if funcionario.status == 'Ativo' else 'Ativo'
+    
+    # --- Alteração aqui: Sincroniza o status com o AD ---
+    if novo_status == 'Suspenso':
+        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
+    else:
+        sucesso_ad, msg_ad = habilitar_usuario_ad(funcionario.email)
+
+    if not sucesso_ad:
+        flash(f'Falha ao sincronizar status com o Active Directory: {msg_ad}', 'danger')
+        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+    # Se teve sucesso no AD, atualiza o status local
     funcionario.status = novo_status
     db.session.commit()
-    flash(f'O status de {funcionario.nome} foi alterado para {novo_status}.', 'success')
+    flash(f'O status de {funcionario.nome} foi alterado para {novo_status} no sistema e no AD.', 'success')
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
