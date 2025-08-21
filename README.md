@@ -1,177 +1,301 @@
-# Documentação do Projeto: Sistema de RH (MDRH)
+# MDRH - Sistema de Gestão de Recursos Humanos
 
-## 1. Visão Geral
+## 📖 Sobre o Projeto
 
-O MDRH é um sistema de gestão de Recursos Humanos desenvolvido para uso interno, com o objetivo de centralizar e otimizar as operações do departamento de RH, TI e Departamento Pessoal. A plataforma web, construída com a stack tecnológica Python/Flask, oferece um ambiente seguro e multifuncional para gerenciar colaboradores, comunicações internas, documentos e outras tarefas administrativas.
+O **MDRH** é um sistema de gestão de RH interno, projetado para centralizar e automatizar processos essenciais do departamento. A aplicação é construída com Python e Flask, rodando em um ambiente totalmente containerizado com Docker e utilizando PostgreSQL como banco de dados, garantindo portabilidade, segurança e escalabilidade.
 
-## 2. Tecnologias Utilizadas
+O sistema está integrado com o **Active Directory (AD)** para autenticação centralizada e provisionamento automático de usuários, alinhando-se com as melhores práticas de gestão de identidade em ambientes corporativos.
 
-O sistema é construído sobre uma base de tecnologias modernas e robustas, garantindo escalabilidade e manutenibilidade.
+---
 
-* **Backend:**
-    * **Python 3.13:** Linguagem principal do projeto.
-    * **Flask:** Micro-framework web para a construção da aplicação e da API.
-    * **Flask-SQLAlchemy:** ORM (Object-Relational Mapper) para interação com o banco de dados.
-    * **Flask-Migrate (Alembic):** Ferramenta para gerenciamento de migrações do esquema do banco de dados.
-    * **Flask-Login:** Gerenciamento de sessões de usuário e autenticação.
-    * **Werkzeug:** Ferramentas essenciais para aplicações WSGI, incluindo a segurança de senhas.
-* **Banco de Dados:**
-    * **SQLite:** Banco de dados padrão para o ambiente de desenvolvimento, pela sua simplicidade e portabilidade.
-    * **PostgreSQL:** Recomendado para o ambiente de produção devido à sua robustez (a aplicação está pronta para a migração).
-* **Frontend:**
-    * **HTML5 / CSS3:** Estrutura e estilização das páginas.
-    * **Bootstrap 5:** Framework de componentes para a criação de uma interface responsiva e moderna.
-    * **JavaScript (Vanilla):** Utilizado para interatividade no lado do cliente, como a abertura de modais e requisições AJAX para a API.
-    * **Jinja2:** Motor de templates do Flask, para renderização dinâmica das páginas.
-* **Dependências Adicionais:**
-    * **python-dotenv:** Para gerenciamento de variáveis de ambiente.
-    * **pytz:** Para manipulação de fusos horários.
-    * A lista completa pode ser encontrada no arquivo `requirements.txt`.
+## ✨ Funcionalidades Principais
 
-## 3. Estrutura do Projeto
+- **Gestão de Colaboradores:**
+  - Cadastro, edição, visualização e listagem de funcionários.
+  - Filtro de colaboradores por status: Ativos, Suspensos e Desligados.
+  - Sincronização de status (suspender/reativar) com o Active Directory.
+  - Processo de **Offboarding (Desligamento)** com anonimização de dados pessoais para conformidade com a LGPD.
 
-O projeto segue uma estrutura modular e organizada para facilitar o desenvolvimento e a manutenção.
+- **Autenticação e Segurança:**
+  - **Integração com Active Directory (LDAP):** Autenticação centralizada usando as credenciais de rede (`nome.sobrenome`).
+  - **Provisionamento Automático:**
+    - Ao criar um funcionário no MDRH, a conta é automaticamente criada e ativada no AD.
+    - Ao editar um funcionário (nome, cargo, setor), as alterações são espelhadas no AD.
+    - Ao excluir um funcionário no MDRH, a conta é removida do AD.
+  - **Vinculação Inteligente:** Usuários existentes no AD que fazem login pela primeira vez são automaticamente vinculados aos seus perfis de funcionário no sistema (baseado no nome completo).
+  - **Autenticação Local de Fallback:** Contas de administrador locais continuam funcionando, garantindo acesso ao sistema mesmo se o AD estiver offline.
+  - **Gestão de Senhas:** Redefinição de senha para usuários locais e forçar a alteração de senha no primeiro login para usuários criados via MDRH.
+
+- **Módulos de RH:**
+  - **Mural de Avisos:** Publicação de comunicados gerais com suporte a anexos e log de ciência.
+  - **Gestão de Documentos:** Upload e armazenamento de documentos por colaborador.
+  - **Ajuste de Ponto:** Fluxo de solicitação, preenchimento de justificativa, geração de documento `.docx` pré-preenchido, envio para aprovação e gestão pelo RH.
+
+- **Conformidade com LGPD:**
+  - Coleta de consentimento explícito dos termos de uso e política de privacidade.
+  - Barreira de navegação que impede o uso do sistema antes do consentimento.
+  - Anonimização de dados pessoais de funcionários desligados.
+
+- **DevOps e Resiliência:**
+  - **Ambiente Containerizado:** Aplicação e banco de dados rodando em containers Docker isolados.
+  - **Backups Automatizados:** Serviço dedicado que realiza backups diários do banco de dados PostgreSQL.
+  - **Política de Retenção:** Backups são mantidos por 7 dias, com limpeza automática dos mais antigos.
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Backend:** Python 3.11+, Flask
+- **Banco de Dados:** PostgreSQL 16
+- **Ambiente:** Docker, Docker Compose
+- **Integrações:** LDAP (Active Directory)
+- **Frontend:** HTML, CSS, JavaScript, Bootstrap 5
+- **Bibliotecas Principais:** SQLAlchemy, Flask-Migrate, Flask-Login, Flask-Mail, ldap3, docxtpl.
+
+---
+
+## 🚀 Instalação e Execução
+
+### Pré-requisitos
+
+-   [Docker](https://www.docker.com/products/docker-desktop/) instalado e em execução.
+
+### 1. Configuração do Ambiente
+
+1.  **Copie o Arquivo de Ambiente:**
+    Crie uma cópia do arquivo `.env.example` (se existir) ou crie um novo arquivo chamado `.env` na raiz do projeto.
+
+2.  **Preencha o Arquivo `.env`:**
+    Abra o arquivo `.env` e preencha todas as variáveis com as suas configurações.
+
+    ```
+    # Chave secreta para a segurança da sessão do Flask
+    SECRET_KEY=gere_uma_chave_longa_e_aleatoria_aqui
+
+    # Credenciais do Banco de Dados PostgreSQL
+    POSTGRES_USER=mdrh_user
+    POSTGRES_PASSWORD=uma_senha_muito_forte_123
+    POSTGRES_DB=mdrh_db
+
+    # Configurações de E-mail (Ex: Gmail com Senha de App)
+    MAIL_SERVER=smtp.gmail.com
+    MAIL_PORT=587
+    MAIL_USE_TLS=True
+    MAIL_USERNAME=seu-email-de-sistema@gmail.com
+    MAIL_PASSWORD=sua_senha_de_app_de_16_digitos
+    MAIL_SENDER="MDRH <seu-email-de-sistema@gmail.com>"
+
+    # Configurações do Active Directory (LDAP)
+    LDAP_HOST=192.168.0.31
+    LDAP_PORT=389
+    LDAP_BASE_DN=DC=mdr,DC=local
+    LDAP_USER_OU=CN=Users,DC=mdr,DC=local
+    LDAP_BIND_USER_DN=CN=interno,OU=Serviços,DC=mdr,DC=local
+    LDAP_BIND_USER_PASSWORD=senha_da_conta_de_servico
+    ```
+
+### 2. Execução com Docker Compose
+
+1.  **Construa e Inicie os Containers:**
+    Abra um terminal na raiz do projeto e execute o comando:
+    `docker-compose up --build -d`
+    *(A flag `-d` executa os containers em segundo plano)*.
+
+2.  **Crie as Tabelas no Banco de Dados:**
+    Aguarde alguns segundos para o container do PostgreSQL iniciar e então execute:
+    `docker-compose exec web flask db upgrade`
+
+3.  **Crie seu Usuário Administrador Local:**
+    Este usuário não depende do AD e serve como acesso de emergência.
+    `docker-compose exec web flask create-admin seu-email@dominio.com sua-senha-segura`
+
+4.  **Acesse a Aplicação:**
+    Abra seu navegador e acesse `http://127.0.0.1:5000`.
+
+### 3. (Opcional) Restaurar Dados de um Backup
+
+Se você possui um backup (`.json`), pode restaurar os dados após o passo 2 (`flask db upgrade`).
+
+`docker-compose exec web python restore.py`
+
+---
+
+## 🔧 Operações e Manutenção
+
+-   **Ver Logs da Aplicação em Tempo Real:**
+    `docker-compose logs -f web`
+
+-   **Executar um Backup Manual:**
+    `docker-compose run --rm backup`
+
+-   **Listar Backups Existentes:**
+    `docker-compose run --rm --entrypoint ls backup -l /backups`
+
+-   **Baixar um Arquivo de Backup:**
+    Consulte o `MANUAL_OPERACOES.md` para o passo a passo detalhado.
+
+---
+
+## 📁 Estrutura do Projeto
+Com certeza! Um README.md bem escrito é o cartão de visita de um projeto. Ele deve ser claro, completo e guiar qualquer novo desenvolvedor (ou você mesmo, no futuro) a entender e rodar o sistema sem dificuldades.
+
+Preparei uma reestruturação completa do seu README.md para refletir o estado atual e profissional do projeto, incluindo a migração para Docker e PostgreSQL, a integração com o AD e as práticas de DevOps que implementamos.
+
+Aqui está o conteúdo completo. Você pode copiar este bloco de código e colar diretamente no seu arquivo README.md.
+
+Markdown
+
+# MDRH - Sistema de Gestão de Recursos Humanos
+
+## 📖 Sobre o Projeto
+
+O **MDRH** é um sistema de gestão de RH interno, projetado para centralizar e automatizar processos essenciais do departamento. A aplicação é construída com Python e Flask, rodando em um ambiente totalmente containerizado com Docker e utilizando PostgreSQL como banco de dados, garantindo portabilidade, segurança e escalabilidade.
+
+O sistema está integrado com o **Active Directory (AD)** para autenticação centralizada e provisionamento automático de usuários, alinhando-se com as melhores práticas de gestão de identidade em ambientes corporativos.
+
+---
+
+## ✨ Funcionalidades Principais
+
+- **Gestão de Colaboradores:**
+  - Cadastro, edição, visualização e listagem de funcionários.
+  - Filtro de colaboradores por status: Ativos, Suspensos e Desligados.
+  - Sincronização de status (suspender/reativar) com o Active Directory.
+  - Processo de **Offboarding (Desligamento)** com anonimização de dados pessoais para conformidade com a LGPD.
+
+- **Autenticação e Segurança:**
+  - **Integração com Active Directory (LDAP):** Autenticação centralizada usando as credenciais de rede (`nome.sobrenome`).
+  - **Provisionamento Automático:**
+    - Ao criar um funcionário no MDRH, a conta é automaticamente criada e ativada no AD.
+    - Ao editar um funcionário (nome, cargo, setor), as alterações são espelhadas no AD.
+    - Ao excluir um funcionário no MDRH, a conta é removida do AD.
+  - **Vinculação Inteligente:** Usuários existentes no AD que fazem login pela primeira vez são automaticamente vinculados aos seus perfis de funcionário no sistema (baseado no nome completo).
+  - **Autenticação Local de Fallback:** Contas de administrador locais continuam funcionando, garantindo acesso ao sistema mesmo se o AD estiver offline.
+  - **Gestão de Senhas:** Redefinição de senha para usuários locais e forçar a alteração de senha no primeiro login para usuários criados via MDRH.
+
+- **Módulos de RH:**
+  - **Mural de Avisos:** Publicação de comunicados gerais com suporte a anexos e log de ciência.
+  - **Gestão de Documentos:** Upload e armazenamento de documentos por colaborador.
+  - **Ajuste de Ponto:** Fluxo de solicitação, preenchimento de justificativa, geração de documento `.docx` pré-preenchido, envio para aprovação e gestão pelo RH.
+
+- **Conformidade com LGPD:**
+  - Coleta de consentimento explícito dos termos de uso e política de privacidade.
+  - Barreira de navegação que impede o uso do sistema antes do consentimento.
+  - Anonimização de dados pessoais de funcionários desligados.
+
+- **DevOps e Resiliência:**
+  - **Ambiente Containerizado:** Aplicação e banco de dados rodando em containers Docker isolados.
+  - **Backups Automatizados:** Serviço dedicado que realiza backups diários do banco de dados PostgreSQL.
+  - **Política de Retenção:** Backups são mantidos por 7 dias, com limpeza automática dos mais antigos.
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Backend:** Python 3.11+, Flask
+- **Banco de Dados:** PostgreSQL 16
+- **Ambiente:** Docker, Docker Compose
+- **Integrações:** LDAP (Active Directory)
+- **Frontend:** HTML, CSS, JavaScript, Bootstrap 5
+- **Bibliotecas Principais:** SQLAlchemy, Flask-Migrate, Flask-Login, Flask-Mail, ldap3, docxtpl.
+
+---
+
+## 🚀 Instalação e Execução
+
+### Pré-requisitos
+
+-   [Docker](https://www.docker.com/products/docker-desktop/) instalado e em execução.
+
+### 1. Configuração do Ambiente
+
+1.  **Copie o Arquivo de Ambiente:**
+    Crie uma cópia do arquivo `.env.example` (se existir) ou crie um novo arquivo chamado `.env` na raiz do projeto.
+
+2.  **Preencha o Arquivo `.env`:**
+    Abra o arquivo `.env` e preencha todas as variáveis com as suas configurações.
+
+    ```
+    # Chave secreta para a segurança da sessão do Flask
+    SECRET_KEY=gere_uma_chave_longa_e_aleatoria_aqui
+
+    # Credenciais do Banco de Dados PostgreSQL
+    POSTGRES_USER=mdrh_user
+    POSTGRES_PASSWORD=uma_senha_muito_forte_123
+    POSTGRES_DB=mdrh_db
+
+    # Configurações de E-mail (Ex: Gmail com Senha de App)
+    MAIL_SERVER=smtp.gmail.com
+    MAIL_PORT=587
+    MAIL_USE_TLS=True
+    MAIL_USERNAME=seu-email-de-sistema@gmail.com
+    MAIL_PASSWORD=sua_senha_de_app_de_16_digitos
+    MAIL_SENDER="MDRH <seu-email-de-sistema@gmail.com>"
+
+    # Configurações do Active Directory (LDAP)
+    LDAP_HOST=192.168.0.31
+    LDAP_PORT=389
+    LDAP_BASE_DN=DC=mdr,DC=local
+    LDAP_USER_OU=CN=Users,DC=mdr,DC=local
+    LDAP_BIND_USER_DN=CN=interno,OU=Serviços,DC=mdr,DC=local
+    LDAP_BIND_USER_PASSWORD=senha_da_conta_de_servico
+    ```
+
+### 2. Execução com Docker Compose
+
+1.  **Construa e Inicie os Containers:**
+    Abra um terminal na raiz do projeto e execute o comando:
+    `docker-compose up --build -d`
+    *(A flag `-d` executa os containers em segundo plano)*.
+
+2.  **Crie as Tabelas no Banco de Dados:**
+    Aguarde alguns segundos para o container do PostgreSQL iniciar e então execute:
+    `docker-compose exec web flask db upgrade`
+
+3.  **Crie seu Usuário Administrador Local:**
+    Este usuário não depende do AD e serve como acesso de emergência.
+    `docker-compose exec web flask create-admin seu-email@dominio.com sua-senha-segura`
+
+4.  **Acesse a Aplicação:**
+    Abra seu navegador e acesse `http://127.0.0.1:5000`.
+
+### 3. (Opcional) Restaurar Dados de um Backup
+
+Se você possui um backup (`.json`), pode restaurar os dados após o passo 2 (`flask db upgrade`).
+
+`docker-compose exec web python restore.py`
+
+---
+
+## 🔧 Operações e Manutenção
+
+-   **Ver Logs da Aplicação em Tempo Real:**
+    `docker-compose logs -f web`
+
+-   **Executar um Backup Manual:**
+    `docker-compose run --rm backup`
+
+-   **Listar Backups Existentes:**
+    `docker-compose run --rm --entrypoint ls backup -l /backups`
+
+-   **Baixar um Arquivo de Backup:**
+    Consulte o `MANUAL_OPERACOES.md` para o passo a passo detalhado.
+
+---
+
+## 📁 Estrutura do Projeto
 
 ```
-V2-sis-rh/
-├── app/                  # Contém o núcleo da aplicação
-│   ├── init.py       # Inicializa a aplicação Flask, extensões e blueprints
-│   ├── auth.py           # Rotas de autenticação (login, logout, troca de senha)
-│   ├── config.py         # Configurações da aplicação
-│   ├── decorators.py     # Decoradores customizados (ex: verificação de permissão)
-│   ├── documentos.py     # Rotas para a gestão de documentos
-│   ├── models.py         # Definição dos modelos do banco de dados (SQLAlchemy)
-│   ├── perfil.py         # Rotas para o perfil do usuário
-│   └── routes.py         # Rotas principais da aplicação (dashboard, CRUD de funcionários, avisos)
-├── instance/
-│   └── projetinho.db     # Arquivo do banco de dados SQLite
-├── migrations/           # Arquivos de migração gerados pelo Flask-Migrate
-├── static/
-│   ├── custom_style.css  # Folha de estilo principal com a identidade visual
-│   └── modelo_importacao.csv # Modelo para importação em lote
-├── templates/
-│   ├── auth/             # Templates de autenticação
-│   ├── avisos/           # Templates do mural de avisos
-│   ├── documentos/       # Templates da gestão de documentos
-│   ├── funcionarios/     # Templates do CRUD de funcionários
-│   ├── perfil/           # Template de edição de perfil
-│   ├── base.html         # Template base com o menu lateral e estrutura principal
-│   └── index.html        # Template da Dashboard
-├── uploads/              # Pasta para armazenamento de arquivos (documentos, fotos)
-│   └── fotos_perfil/
-├── .env                  # Arquivo de variáveis de ambiente (não versionado)
-├── manage.py             # Script para comandos customizados (criar admin, etc.)
-├── requirements.txt      # Lista de dependências Python
-└── run.py                # Ponto de entrada para executar a aplicação
+
+├── app/                  # Contém toda a lógica da aplicação Flask
+├── migrations/           # Arquivos de migração do banco de dados (gerados)
+├── scripts/              # Scripts de utilidades (ex: backup.sh)
+├── static/               # Arquivos estáticos (CSS, JS, Imagens, Modelos .docx)
+├── templates/            # Arquivos HTML (Jinja2)
+├── uploads/              # (Gerado) Pasta para uploads de arquivos (fotos, documentos)
+├── .env                  # Arquivo de variáveis de ambiente (NÃO VERSIONADO)
+├── docker-compose.yml    # Orquestração dos containers
+├── Dockerfile            # Receita para construir a imagem da aplicação
+├── requirements.txt      # Dependências Python
+└── run.py                # Ponto de entrada da aplicação
 ```
-
-## 4. Configuração e Instalação
-
-Siga os passos abaixo para configurar o ambiente de desenvolvimento.
-
-1.  **Clone o Repositório:**
-    ```bash
-    git clone [https://github.com/MDR-Advocacia/Sistema-RH.git](https://github.com/MDR-Advocacia/Sistema-RH.git)
-    cd V2-sis-rh
-    ```
-
-2.  **Crie e Ative um Ambiente Virtual (Recomendado):**
-    ```bash
-    python -m venv venv
-    # Windows
-    venv\Scripts\activate
-
-    Obs: pode ser que o powershell bloqueie a execução e seja necessário rodar o comando abaixo antes de ativar o ambiente
-    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-
-    # macOS/Linux
-    source venv/bin/activate
-    ```
-
-3.  **Instale as Dependências:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Configure as Variáveis de Ambiente:**
-    * Crie um arquivo chamado `.env` na raiz do projeto.
-    * Copie o conteúdo abaixo para dentro dele:
-        ```env
-        DATABASE_URL=sqlite:///instance/projetinho.db
-        FLASK_APP=run.py
-        FLASK_ENV=development
-        ```
-
-5.  **Crie o Banco de Dados:**
-    * Execute os comandos de migração para criar todas as tabelas:
-        ```bash
-        flask db upgrade
-        ```
-
-6.  **Crie o Primeiro Usuário Administrador:**
-    * Use o comando customizado para criar seu usuário de acesso. Substitua com seu e-mail e senha.
-        ```bash
-        flask create-admin seu-email@exemplo.com sua-senha-segura
-        ```
-
-7.  **Execute a Aplicação:**
-    ```bash
-    flask run
-    ```
-    Acesse `http://127.0.0.1:5000` no seu navegador.
-
-## 5. Funcionalidades Implementadas
-
-### 5.1. Autenticação e Permissões
-* **Login Seguro:** Autenticação baseada em e-mail e senha, com hash de senhas.
-* **Senha Provisória:** Novos usuários (criados manualmente ou via CSV) recebem uma senha provisória e são forçados a alterá-la no primeiro acesso.
-* **Controle de Acesso por Papel (RBAC):** O acesso às funcionalidades é controlado por permissões (`admin_rh`, `admin_ti`, `colaborador`). Um decorador customizado (`@permission_required`) protege as rotas.
-
-### 5.2. Dashboard
-* **Dashboard de Admin:** Exibe dados agregados, como o número total de funcionários e avisos publicados.
-* **Dashboard Pessoal:** Disponível para todos os usuários (incluindo admins), exibe um painel com pendências pessoais, como avisos não lidos e solicitações de documentos.
-
-### 5.3. Gestão de Funcionários (CRUD)
-* **Cadastro Completo:** Formulário para adicionar novos colaboradores, incluindo seus dados pessoais, profissionais, contato de emergência e acesso ao sistema (senha e permissões).
-* **Listagem e Busca:** Tabela com todos os funcionários, com busca dinâmica por nome, CPF ou setor.
-* **Ordenação:** A lista pode ser ordenada alfabeticamente pelo nome do funcionário.
-* **Visualização Detalhada:** Um modal exibe todas as informações de um funcionário, incluindo seus documentos e pendências, ao clicar em seu nome na lista.
-* **Edição e Remoção (Individual e em Lote):**
-    * Admins podem editar os dados de um funcionário em uma página dedicada.
-    * Admins (`admin_rh` ou `admin_ti`) podem remover funcionários individualmente (pelo modal) ou em lote (selecionando múltiplos na tabela).
-* **Importação/Exportação via CSV:** Admins podem adicionar múltiplos funcionários de uma vez através de um arquivo CSV, que já cria o acesso de usuário com uma senha padrão.
-
-### 5.4. Mural de Avisos
-* **Criação de Avisos:** Admins podem publicar comunicados para toda a empresa, com a opção de anexar múltiplos arquivos.
-* **Ciência de Avisos:** Colaboradores devem marcar cada aviso como "ciente", e o sistema registra a data e hora da ciência.
-* **Auditoria de Logs:** Admins podem visualizar, para cada aviso, a lista de colaboradores que já deram ciência e a lista dos que ainda estão pendentes.
-* **Remoção de Avisos:** Admins podem excluir avisos, o que também remove todos os seus anexos e logs de ciência associados.
-
-### 5.5. Gestão de Documentos
-* **Upload de Documentos (pelo RH):** O RH pode anexar documentos ao perfil de qualquer funcionário.
-* **Solicitação de Documentos:** O RH pode criar uma "requisição de documento" para um colaborador, que aparece como uma pendência em sua dashboard.
-* **Resposta à Solicitação:** O colaborador pode responder a uma solicitação enviando o arquivo diretamente pela sua dashboard. O sistema automaticamente marca a pendência como "concluída".
-* **Visualização Centralizada:** Na página de gestão de documentos de um funcionário, o RH pode ver tanto os arquivos já enviados quanto as solicitações ainda pendentes.
-
-### 5.6. Perfil do Usuário
-* **Edição de Dados:** Cada usuário pode editar suas próprias informações, como nome, apelido, telefone e contato de emergência.
-* **Foto de Perfil:** Usuários podem fazer o upload de uma foto de perfil, que é exibida no menu lateral e em outras áreas do sistema.
-
-## 6. Comandos de Gerenciamento
-
-O arquivo `manage.py` fornece comandos de terminal úteis para a administração do sistema:
-
-* **`flask create-admin <email> <senha>`**
-    * Cria um novo usuário com permissões de `admin_rh` e `admin_ti`. Essencial para a configuração inicial do sistema.
-* **`flask remove-admin <email>`**
-    * Remove um usuário e seu registro de funcionário associado. Útil para manutenção e limpeza de dados.
-
-## 7. Próximos Passos e Melhorias Futuras
-
-O sistema possui uma base sólida que permite diversas expansões:
-
-* **Módulo de Feedback:** Implementar a funcionalidade de registro de feedbacks (o modelo de dados `Feedback` já existe).
-* **Controle de Ponto:** Criar um módulo para registro de ponto, cálculo de horas e gestão de faltas.
-* **Gestão de Férias:** Desenvolver um fluxo de solicitação e aprovação de férias.
-* **Notificações:** Enviar notificações por e-mail para novas solicitações de documentos ou avisos importantes.
-* **Integração com PostgreSQL:** Migrar o banco de dados de SQLite para PostgreSQL no ambiente de produção para maior robustez.

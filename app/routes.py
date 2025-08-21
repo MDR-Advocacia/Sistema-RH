@@ -166,7 +166,10 @@ def listar_funcionarios():
         
     elif status_filter == 'suspensos':
         query = query.filter_by(status='Suspenso')
-        
+
+    elif status_filter == 'desligados':
+        query = query.filter_by(status='Desligado')
+
     # Se for 'todos', nenhum filtro de status é aplicado
 
     if termo_busca:
@@ -673,3 +676,57 @@ def consentimento():
         return redirect(url_for('main.index'))
 
     return render_template('privacidade/consentimento.html')
+
+def anonimizar_dados_funcionario(funcionario):
+    """Limpa dados pessoais não essenciais de um funcionário, preservando o nome e o histórico."""
+    funcionario.telefone = "Anonimizado"
+    funcionario.data_nascimento = None
+    funcionario.contato_emergencia_nome = "Anonimizado"
+    funcionario.contato_emergencia_telefone = "Anonimizado"
+    funcionario.cpf = "Anonimizado"
+    funcionario.apelido = None
+    funcionario.email = "Anonimizado"
+    # Apaga a foto de perfil se existir
+    if funcionario.foto_perfil:
+        try:
+            caminho_foto = os.path.join(current_app.config['UPLOAD_FOLDER'], 'fotos_perfil', funcionario.foto_perfil)
+            if os.path.exists(caminho_foto):
+                os.remove(caminho_foto)
+            funcionario.foto_perfil = None
+        except Exception as e:
+            current_app.logger.error(f"Erro ao remover foto de perfil do funcionário {funcionario.id}: {e}")
+
+
+@main.route('/funcionario/<int:funcionario_id>/desligar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def desligar_funcionario(funcionario_id):
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+
+    try:
+        # 1. Desabilita a conta no Active Directory
+        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
+        if not sucesso_ad:
+            flash(f"Falha ao desabilitar o usuário no Active Directory: {msg_ad}", "danger")
+            return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))
+
+        # 2. Anonimiza os dados pessoais não essenciais
+        anonimizar_dados_funcionario(funcionario)
+
+        # 3. Atualiza o status e a data de desligamento no sistema
+        funcionario.status = 'Desligado'
+        funcionario.data_desligamento = datetime.utcnow().date()
+
+        # 4. Remove as permissões de login do usuário (segurança extra)
+        if funcionario.usuario:
+            funcionario.usuario.permissoes = []
+
+        db.session.commit()
+        flash(f"O processo de desligamento para {funcionario.nome} foi concluído com sucesso.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erro no processo de desligamento para o funcionário {funcionario_id}: {e}")
+        flash("Ocorreu um erro inesperado durante o processo de desligamento.", "danger")
+
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))

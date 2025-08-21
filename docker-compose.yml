@@ -28,6 +28,22 @@ services:
     env_file:
       - .env  # Carrega as variáveis do banco (POSTGRES_USER, etc.)  
 
+  backup:
+    image: postgres:16 # Usamos a mesma imagem para ter acesso ao pg_dump
+    volumes:
+      - ./scripts:/scripts # Mapeia a pasta de scripts para dentro do container
+      - backups_data:/backups # Mapeia o novo volume onde os backups serão salvos
+    env_file:
+      - .env # Carrega as credenciais do banco
+    environment:
+      # Diz ao pg_dump para onde se conectar (o nome do serviço do banco)
+      - PGHOST=db
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    entrypoint: ["/scripts/backup.sh"] # Comando que será executado ao iniciar
+
 volumes:
   postgres_data:
   uploads_data:
+  backups_data: # Declara o novo volume para os backups    

@@ -23,6 +23,7 @@
                         <select name="status" class="form-select" style="max-width: 150px;">
                             <option value="ativos" {% if status_filter == 'ativos' %}selected{% endif %}>Ativos</option>
                             <option value="suspensos" {% if status_filter == 'suspensos' %}selected{% endif %}>Suspensos</option>
+                            <option value="desligados" {% if status_filter == 'desligados' %}selected{% endif %}>Desligados</option>
                             <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>Todos</option>
                         </select>
                         

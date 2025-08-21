@@ -94,6 +94,7 @@ class Funcionario(db.Model):
     contato_emergencia_telefone = db.Column(db.String(50))
     foto_perfil = db.Column(db.String(255), nullable=True)
     apelido = db.Column(db.String(50), nullable=True)
+    data_desligamento = db.Column(db.Date, nullable=True)
 
     sistemas = db.relationship('Sistema', secondary=funcionario_sistemas, lazy='subquery',
                                backref=db.backref('funcionarios', lazy=True))
@@ -192,8 +193,6 @@ class Ponto(db.Model):
     status = db.Column(db.String(50), default='Pendente', nullable=False)
     data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_upload = db.Column(db.DateTime, nullable=True)
-    
-    # ADICIONE ESTA LINHA
     observacao_rh = db.Column(db.Text, nullable=True) # Motivo da reprovação pelo RH
 
     # Relacionamentos
