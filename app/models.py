@@ -49,8 +49,8 @@ class Usuario(db.Model, UserMixin):
             return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)
     
-    def get_reset_password_token(self, expires_in=600):
-        """Gera um token seguro para redefinição de senha."""
+    """ def get_reset_password_token(self, expires_in=600):
+        #Gera um token seguro para redefinição de senha.
         return jwt.encode(
             {
                 "reset_password": self.id,
@@ -62,7 +62,7 @@ class Usuario(db.Model, UserMixin):
 
     @staticmethod
     def verify_reset_password_token(token):
-        """Verifica o token de redefinição e retorna o usuário se for válido."""
+        #Verifica o token de redefinição e retorna o usuário se for válido.
         try:
             id = jwt.decode(
                 token,
@@ -72,7 +72,7 @@ class Usuario(db.Model, UserMixin):
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
         return db.session.get(Usuario, id)
-
+ """
 class Permissao(db.Model):
     __tablename__ = 'permissao'
     id = db.Column(db.Integer, primary_key=True)

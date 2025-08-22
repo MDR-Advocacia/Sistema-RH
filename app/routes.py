@@ -91,61 +91,58 @@ def exibir_formulario_cadastro():
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
-    """Processa os dados do formulário de cadastro."""
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
-    email = request.form.get('email')
+    email_contato = request.form.get('email')
+    # ... (captura dos outros campos, exceto a senha)
     telefone = request.form.get('telefone')
     cargo = request.form.get('cargo')
     setor = request.form.get('setor')
     data_nascimento_str = request.form.get('data_nascimento')
     contato_emergencia_nome = request.form.get('contato_emergencia_nome')
     contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-    password = request.form.get('password')
     permissoes_selecionadas_ids = request.form.getlist('permissoes')
 
-    if not all([nome, cpf, email, password]):
-        flash('Nome, CPF, Email e Senha são obrigatórios.')
+    if not all([nome, cpf, email_contato]):
+        flash('Nome, CPF e Email são obrigatórios.')
         return redirect(url_for('main.exibir_formulario_cadastro'))
 
-    if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
-        flash('CPF ou Email já cadastrado no sistema.')
+    if Funcionario.query.filter(or_(Funcionario.cpf == cpf, Funcionario.email == email_contato)).first():
+        flash('CPF ou Email de contato já cadastrado no sistema.')
         return redirect(url_for('main.exibir_formulario_cadastro'))
 
     novo_funcionario = Funcionario(
-        nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
+        nome=nome, cpf=cpf, email=email_contato, telefone=telefone, cargo=cargo, setor=setor,
         data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
         contato_emergencia_nome=contato_emergencia_nome,
         contato_emergencia_telefone=contato_emergencia_telefone
     )
+
+    # Tenta provisionar no AD. A senha não é mais passada daqui.
+    sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(novo_funcionario)
+    
+    if not sucesso_ad:
+        flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}. O usuário não foi criado.", "danger")
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+    
     db.session.add(novo_funcionario)
     db.session.commit()
-
-    novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
-    novo_usuario.set_password(password)
     
-    # --- Alteração aqui ---
-    # Provisiona o usuário no AD, o que também atualiza o e-mail do funcionário no nosso banco
-    sucesso_ad, msg_ad = provisionar_usuario_ad(novo_funcionario, password)
-    db.session.commit() # Salva a atualização do e-mail
-
-    if not sucesso_ad:
-        flash(f"Atenção: O usuário foi criado no sistema, mas falhou ao provisionar no AD: {msg_ad}", "warning")
+    novo_usuario = Usuario(
+        email=email_ad,
+        funcionario_id=novo_funcionario.id,
+        senha_provisoria=False
+    )
+    novo_usuario.set_password(uuid.uuid4().hex)
     
-    # Cria o usuário local após o provisionamento no AD
-    novo_usuario = Usuario(email=novo_funcionario.email, funcionario_id=novo_funcionario.id)
-    novo_usuario.set_password(uuid.uuid4().hex) # Senha local impossível
-    novo_usuario.senha_provisoria = True
-    # ... (lógica de permissões) ...
     if permissoes_selecionadas_ids:
         permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
         novo_usuario.permissoes = permissoes_a_adicionar
 
-
     db.session.add(novo_usuario)
     db.session.commit()
 
-    flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
+    flash(f'Funcionário {nome} criado com sucesso! Login no AD: {email_ad}')
     return redirect(url_for('main.listar_funcionarios'))
 # --- FIM DA CORREÇÃO ---
 
@@ -562,7 +559,7 @@ def importar_csv():
             )
             db.session.add(novo_funcionario)
             db.session.commit()
-            novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id, senha_provisoria=True)
+            novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id, senha_provisoria=False)
             novo_usuario.set_password('Mudar@123')
             novo_usuario.permissoes.append(permissao_colaborador)
             db.session.add(novo_usuario)
@@ -609,11 +606,11 @@ def exportar_csv():
 
 
 ## REDEFINIÇÃO DE SENHA
-@main.route('/funcionario/<int:funcionario_id>/reset-password', methods=['POST'])
+""" @main.route('/funcionario/<int:funcionario_id>/reset-password', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def reset_password(funcionario_id):
-    """Marca a senha do usuário como provisória, forçando a alteração no próximo login."""
+    # Marca a senha do usuário como provisória, forçando a alteração no próximo login.
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     if funcionario.usuario:
         funcionario.usuario.senha_provisoria = True
@@ -621,7 +618,7 @@ def reset_password(funcionario_id):
         flash(f'A senha de {funcionario.nome} foi redefinida. O usuário deverá criar uma nova senha no próximo login.', 'success')
     else:
         flash('Este funcionário não possui um usuário de sistema para redefinir a senha.', 'danger')
-    return redirect(url_for('main.editar_funcionario', funcionario_id=funcionario_id))
+    return redirect(url_for('main.editar_funcionario', funcionario_id=funcionario_id)) """
 
 ## ALTERAR STATUS DO FUNCIONARIO (ATIVO/SUSPENSO)
 @main.route('/funcionario/<int:funcionario_id>/toggle-status', methods=['POST'])

@@ -141,7 +141,7 @@ def change_password_post():
     flash('Senha atualizada com sucesso! Bem-vindo(a) ao sistema.', 'success')
     return redirect(url_for('main.index'))
 
-@auth.route('/esqueci-senha', methods=['GET', 'POST'])
+""" @auth.route('/esqueci-senha', methods=['GET', 'POST'])
 def esqueci_senha():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -189,4 +189,4 @@ def redefinir_senha(token):
         flash('Sua senha foi atualizada com sucesso! Você já pode fazer login.', 'success')
         return redirect(url_for('auth.login'))
         
-    return render_template('auth/redefinir_senha.html')
+    return render_template('auth/redefinir_senha.html') """

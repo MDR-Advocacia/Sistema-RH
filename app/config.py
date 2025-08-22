@@ -24,6 +24,7 @@ class Config:
     LDAP_USER_OU = os.getenv('LDAP_USER_OU')
     LDAP_BIND_USER_DN = os.getenv('LDAP_BIND_USER_DN')
     LDAP_BIND_USER_PASSWORD = os.getenv('LDAP_BIND_USER_PASSWORD')
+    AD_DEFAULT_PASSWORD = os.getenv('AD_DEFAULT_PASSWORD')
 
     # Pasta de arquivos 
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__name__)), 'uploads')

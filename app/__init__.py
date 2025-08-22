@@ -32,11 +32,10 @@ def format_datetime_local(utc_dt):
     return local_dt.strftime('%d/%m/%Y %H:%M:%S')
 
 
+
 def create_app():
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     
-    # --- CARREGAMENTO EXPLÍCITO DA SECRET_KEY ---
-    # Carrega a configuração da classe Config E garante que a SECRET_KEY seja definida.
     app.config.from_object(Config)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
@@ -75,13 +74,14 @@ def create_app():
         if not current_user.is_authenticated or not request.endpoint or 'static' in request.endpoint or 'auth.' in request.endpoint:
             return
 
-        if current_user.senha_provisoria:
-            if request.endpoint != 'auth.change_password':
-                return redirect(url_for('auth.change_password'))
-            return
-
         if not current_user.data_consentimento:
             if request.endpoint not in ['main.consentimento', 'main.politica_privacidade']:
                 return redirect(url_for('main.consentimento'))
+
+    # --- REGISTRO DOS COMANDOS CLI ---
+    # Garante que os comandos como 'flask create-admin' funcionem corretamente
+    from manage import register_commands
+    register_commands(app)
+    # ----------------------------------
 
     return app

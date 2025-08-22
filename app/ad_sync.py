@@ -3,7 +3,7 @@ from ldap3 import Server, Connection, ALL, MODIFY_REPLACE
 from ldap3.core.exceptions import LDAPException
 
 def get_ad_connection():
-    # ... (esta função continua igual)
+    """Cria e retorna uma conexão autenticada com o AD usando a conta de serviço."""
     try:
         server = Server(
             current_app.config['LDAP_HOST'],
@@ -21,54 +21,38 @@ def get_ad_connection():
         current_app.logger.error(f"Falha ao conectar ao AD com a conta de serviço: {e}")
         return None
 
-def provisionar_usuario_ad(funcionario, senha_inicial=None):
+def provisionar_usuario_ad(funcionario):
     """
-    Garante que um usuário exista no AD e esteja com os dados sincronizados.
-    Se a senha_inicial for fornecida, cria um novo usuário.
-    Se não, apenas atualiza um usuário existente, incluindo o nome.
+    Cria um usuário no AD em estado DESABILITADO. A ativação e definição
+    de senha devem ser feitas manualmente pelo administrador de TI.
     """
     conn = get_ad_connection()
     if not conn:
-        return False, "Não foi possível conectar ao servidor do Active Directory."
+        return False, "Falha na conexão com o AD.", None
 
     try:
+        # ... (geração de username e UPN continua igual) ...
         nome_parts = funcionario.nome.lower().split()
         primeiro_nome = nome_parts[0]
         sobrenome = nome_parts[-1] if len(nome_parts) > 1 else ''
         username = f"{primeiro_nome}.{sobrenome}" if sobrenome else primeiro_nome
-        
         domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
         user_principal_name = f"{username}@{domain}"
-        
-        funcionario.email = user_principal_name
-        
         user_dn = f"CN={funcionario.nome},{current_app.config['LDAP_USER_OU']}"
 
-        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={user_principal_name})', attributes=['cn', 'displayName'])
+        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={user_principal_name})', attributes=['cn'])
 
         if conn.entries:
-            user_dn_existente = conn.entries[0].entry_dn
-            cn_existente = conn.entries[0].cn.value
-
-            modificacoes = {
-                'displayName': [(MODIFY_REPLACE, [funcionario.nome])],
-                'givenName': [(MODIFY_REPLACE, [funcionario.nome.split()[0].capitalize()])],
-                'sn': [(MODIFY_REPLACE, [' '.join(funcionario.nome.split()[1:]).title()])],
-                'department': [(MODIFY_REPLACE, [funcionario.setor or 'N/A'])],
-                'title': [(MODIFY_REPLACE, [funcionario.cargo or 'N/A'])],
-            }
+            # Se o usuário já existe, não fazemos nada para evitar erros.
+            current_app.logger.info(f"Usuário {user_principal_name} já existe no AD. Nenhuma nova ação será tomada.")
+            return True, "Usuário já existia no AD.", user_principal_name
+        
+        else:
+            # --- FLUXO FINAL DE CRIAÇÃO ---
+            current_app.logger.info(f"Provisionando usuário {user_principal_name} no AD em estado desabilitado.")
             
-            if cn_existente != funcionario.nome:
-                novo_rdn = f"CN={funcionario.nome}"
-                # --- LINHA CORRIGIDA AQUI ---
-                conn.modify_dn(user_dn_existente, novo_rdn)
-                user_dn_existente = f"{novo_rdn},{current_app.config['LDAP_USER_OU']}"
-
-            conn.modify(user_dn_existente, modificacoes)
-            
-        elif senha_inicial:
-            # (Lógica de criação mantida)
-            current_app.logger.info(f"Provisionando usuário {user_principal_name} no AD.")
+            # O valor 514 significa "Conta Normal, Desabilitada"
+            # Esta é a única operação que faremos.
             conn.add(
                 user_dn,
                 attributes={
@@ -79,45 +63,45 @@ def provisionar_usuario_ad(funcionario, senha_inicial=None):
                     'displayName': funcionario.nome,
                     'userPrincipalName': user_principal_name,
                     'sAMAccountName': username,
-                    'department': funcionario.setor or 'N/A',
-                    'title': funcionario.cargo or 'N/A'
+                    'mail': funcionario.email,
+                    'userAccountControl': '514' # Flag para criar desabilitado
                 }
             )
-            conn.extend.microsoft.modify_password(user_dn, senha_inicial)
-            conn.modify(
-                user_dn,
-                {
-                    'userAccountControl': [(MODIFY_REPLACE, ['512'])],
-                    'pwdLastSet': [(MODIFY_REPLACE, [0])]
-                }
-            )
-        
-        return True, "Operação no AD realizada com sucesso."
+            if not conn.result['result'] == 0:
+                raise LDAPException(f"Falha ao criar o objeto do usuário: {conn.result['description']} - {conn.result['message']}")
+
+        return True, "Usuário criado DESABILITADO no AD. A TI precisa ativá-lo.", user_principal_name
 
     except LDAPException as e:
-        current_app.logger.error(f"Erro de LDAP ao provisionar/sincronizar usuário: {e}")
-        return False, f"Erro de LDAP: {e}"
+        current_app.logger.error(f"Erro de LDAP ao provisionar usuário: {e}")
+        return False, f"Erro de LDAP: {e}", None
     finally:
         if conn:
             conn.unbind()
 
-# (As outras funções de habilitar, desabilitar e remover continuam iguais)
+# (As outras funções de habilitar, desabilitar e remover continuam aqui)
+
 def _alterar_status_usuario_ad(email, habilitar=True):
-    # ... (código mantido)
     conn = get_ad_connection()
-    if not conn: return False, "Falha na conexão com o AD."
+    if not conn:
+        return False, "Falha na conexão com o AD."
+
     try:
         conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={email})', attributes=['userAccountControl'])
-        if not conn.entries: return True, "Usuário não encontrado no AD, nenhuma ação necessária."
+        if not conn.entries:
+            return True, "Usuário não encontrado no AD, nenhuma ação necessária."
+
         user_dn = conn.entries[0].entry_dn
         novo_status = '512' if habilitar else '514'
+        
         conn.modify(user_dn, {'userAccountControl': [(MODIFY_REPLACE, [novo_status])]})
         return True, f"Usuário {email} {'habilitado' if habilitar else 'desabilitado'} no AD."
     except LDAPException as e:
         current_app.logger.error(f"Erro ao alterar status do usuário {email} no AD: {e}")
         return False, "Erro ao alterar status no AD."
     finally:
-        if conn: conn.unbind()
+        if conn:
+            conn.unbind()
 
 def habilitar_usuario_ad(email):
     return _alterar_status_usuario_ad(email, habilitar=True)
@@ -126,12 +110,15 @@ def desabilitar_usuario_ad(email):
     return _alterar_status_usuario_ad(email, habilitar=False)
 
 def remover_usuario_ad(email):
-    # ... (código mantido)
     conn = get_ad_connection()
-    if not conn: return False, "Falha na conexão com o AD."
+    if not conn:
+        return False, "Falha na conexão com o AD."
+
     try:
         conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={email})')
-        if not conn.entries: return True, "Usuário não encontrado no AD, nenhuma ação necessária."
+        if not conn.entries:
+            return True, "Usuário não encontrado no AD, nenhuma ação necessária."
+
         user_dn = conn.entries[0].entry_dn
         conn.delete(user_dn)
         return True, f"Usuário {email} removido do AD com sucesso."
@@ -139,4 +126,5 @@ def remover_usuario_ad(email):
         current_app.logger.error(f"Erro ao remover usuário {email} do AD: {e}")
         return False, "Erro ao remover usuário do AD."
     finally:
-        if conn: conn.unbind()
+        if conn:
+            conn.unbind()
