@@ -280,20 +280,6 @@
         "apelido": null
     },
     {
-        "id": 21,
-        "nome": "Pedro Henrique Oliveira Da Costa",
-        "cpf": "04462909127",
-        "email": "pedro.costa@mdradvocacia.com",
-        "telefone": "84998642928",
-        "cargo": "Nao Informado",
-        "setor": "BB - Reu",
-        "data_nascimento": "1994-09-28",
-        "contato_emergencia_nome": "Carlos Henrique Da Costa",
-        "contato_emergencia_telefone": "84998197000",
-        "foto_perfil": null,
-        "apelido": null
-    },
-    {
         "id": 22,
         "nome": "Gustavo Silva Abdias",
         "cpf": "10850736455",
@@ -1872,6 +1858,48 @@
         "data_nascimento": "2002-02-09",
         "contato_emergencia_nome": "Erivan Duarte",
         "contato_emergencia_telefone": "84988573134",
+        "foto_perfil": null,
+        "apelido": null
+    },
+    {
+        "id": 137,
+        "nome": "Administrador do Sistema",
+        "cpf": "000.000.000-00",
+        "email": "admin@mdradvocacia",
+        "telefone": null,
+        "cargo": "Administrador",
+        "setor": "TI/RH",
+        "data_nascimento": null,
+        "contato_emergencia_nome": null,
+        "contato_emergencia_telefone": null,
+        "foto_perfil": null,
+        "apelido": null
+    },
+    {
+        "id": 138,
+        "nome": "Cleyton Joseph Barros Ferreira",
+        "cpf": "135.763.774-84",
+        "email": "cj.ferreira336@gmail.com",
+        "telefone": "(84) 98145-7521",
+        "cargo": "Estagiário",
+        "setor": "TI",
+        "data_nascimento": "2004-10-01",
+        "contato_emergencia_nome": "Rebecca ",
+        "contato_emergencia_telefone": "(84) 99425-0384",
+        "foto_perfil": null,
+        "apelido": null
+    },
+    {
+        "id": 21,
+        "nome": "Pedro Henrique Oliveira Da Costa",
+        "cpf": "Anonimizado",
+        "email": "Anonimizado",
+        "telefone": "Anonimizado",
+        "cargo": "Nao Informado",
+        "setor": "BB - Reu",
+        "data_nascimento": null,
+        "contato_emergencia_nome": "Anonimizado",
+        "contato_emergencia_telefone": "Anonimizado",
         "foto_perfil": null,
         "apelido": null
     }

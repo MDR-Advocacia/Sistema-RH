@@ -1,16 +1,5 @@
 [
     {
-        "id": 1,
-        "email": "pedro@mdradvocacia.com",
-        "password_hash": "scrypt:32768:8:1$MTZ5yKEoslzZqmkr$03d79c477cb417e3f61e75f45369d150bc62a5addd2a33a88de209ae7dc1ae9402f2a4fa7ca55573c85c3b59f6775485f053243efc410de5e1a56e7a9bb274c5",
-        "funcionario_id": 1,
-        "senha_provisoria": false,
-        "permissoes": [
-            "admin_ti",
-            "admin_rh"
-        ]
-    },
-    {
         "id": 2,
         "email": "eliezer.souza@mdradvocacia.com",
         "password_hash": "scrypt:32768:8:1$oPYfA2WVKrUPA2DH$ed331454562fcf0442c2a804249b4a2b06750399584306b20bf793e1e8066d8a5aab37dba4ce9ba1b0e355bff23addbae6c057d86771501635769baefe84e75a",
@@ -206,9 +195,7 @@
         "password_hash": "scrypt:32768:8:1$1Ro2Ame2AJYumrFo$bc64fa7f894d51820c02a02ed03a309d51f193a39a35021188e4308a348cd1aac6aa1b70264916331212b38e8ebe0a318f6a4697e6e22591ebc4f4129fe31e96",
         "funcionario_id": 21,
         "senha_provisoria": true,
-        "permissoes": [
-            "colaborador"
-        ]
+        "permissoes": []
     },
     {
         "id": 22,
@@ -1318,6 +1305,38 @@
         "senha_provisoria": true,
         "permissoes": [
             "colaborador"
+        ]
+    },
+    {
+        "id": 135,
+        "email": "admin@mdradvocacia",
+        "password_hash": "scrypt:32768:8:1$7dJGdJiGdz6gRvLu$1be863a75dd8a2eeeeb008994a76defdaf9ebb096c01eb91fc065bfeef4e0965b48c637c51d2bdc74d62d14044bfb1bcab919a6773fa4b09c972776076a3d646",
+        "funcionario_id": 137,
+        "senha_provisoria": true,
+        "permissoes": [
+            "admin_ti",
+            "admin_rh"
+        ]
+    },
+    {
+        "id": 1,
+        "email": "pedro.alecrim@mdr.local",
+        "password_hash": "scrypt:32768:8:1$MTZ5yKEoslzZqmkr$03d79c477cb417e3f61e75f45369d150bc62a5addd2a33a88de209ae7dc1ae9402f2a4fa7ca55573c85c3b59f6775485f053243efc410de5e1a56e7a9bb274c5",
+        "funcionario_id": 1,
+        "senha_provisoria": false,
+        "permissoes": [
+            "admin_rh",
+            "admin_ti"
+        ]
+    },
+    {
+        "id": 136,
+        "email": "cleyton.ferreira@mdr.local",
+        "password_hash": "scrypt:32768:8:1$1QBkFJE7lLbKIiOf$4f9afb99f52e2faeaeaf090d590b8f002313d363e47671bce163a7f39feaf417f93c631531630f33471abe15f2c06d737ad200a4c4360048fac1456330a79e1a",
+        "funcionario_id": 138,
+        "senha_provisoria": false,
+        "permissoes": [
+            "admin_ti"
         ]
     }
 ]
