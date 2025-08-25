@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from io import TextIOWrapper, StringIO
+from .ad_sync import provisionar_usuario_ad, habilitar_usuario_ad, desabilitar_usuario_ad, remover_usuario_ad
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
                    url_for, flash, make_response, current_app, send_from_directory)
@@ -90,38 +91,49 @@ def exibir_formulario_cadastro():
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
-    """Processa os dados do formulário de cadastro."""
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
-    email = request.form.get('email')
+    email_contato = request.form.get('email')
+    # ... (captura dos outros campos, exceto a senha)
     telefone = request.form.get('telefone')
     cargo = request.form.get('cargo')
     setor = request.form.get('setor')
     data_nascimento_str = request.form.get('data_nascimento')
     contato_emergencia_nome = request.form.get('contato_emergencia_nome')
     contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-    password = request.form.get('password')
     permissoes_selecionadas_ids = request.form.getlist('permissoes')
 
-    if not all([nome, cpf, email, password]):
-        flash('Nome, CPF, Email e Senha são obrigatórios.')
+    if not all([nome, cpf, email_contato]):
+        flash('Nome, CPF e Email são obrigatórios.')
         return redirect(url_for('main.exibir_formulario_cadastro'))
 
-    if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(email=email).first():
-        flash('CPF ou Email já cadastrado no sistema.')
+    if Funcionario.query.filter(or_(Funcionario.cpf == cpf, Funcionario.email == email_contato)).first():
+        flash('CPF ou Email de contato já cadastrado no sistema.')
         return redirect(url_for('main.exibir_formulario_cadastro'))
 
     novo_funcionario = Funcionario(
-        nome=nome, cpf=cpf, email=email, telefone=telefone, cargo=cargo, setor=setor,
+        nome=nome, cpf=cpf, email=email_contato, telefone=telefone, cargo=cargo, setor=setor,
         data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
         contato_emergencia_nome=contato_emergencia_nome,
         contato_emergencia_telefone=contato_emergencia_telefone
     )
+
+    # Tenta provisionar no AD. A senha não é mais passada daqui.
+    sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(novo_funcionario)
+    
+    if not sucesso_ad:
+        flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}. O usuário não foi criado.", "danger")
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+    
     db.session.add(novo_funcionario)
     db.session.commit()
-
-    novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id)
-    novo_usuario.set_password(password)
+    
+    novo_usuario = Usuario(
+        email=email_ad,
+        funcionario_id=novo_funcionario.id,
+        senha_provisoria=False
+    )
+    novo_usuario.set_password(uuid.uuid4().hex)
     
     if permissoes_selecionadas_ids:
         permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
@@ -130,7 +142,7 @@ def processar_cadastro():
     db.session.add(novo_usuario)
     db.session.commit()
 
-    flash(f'Funcionário {nome} e seu usuário de acesso foram criados com sucesso!')
+    flash(f'Funcionário {nome} criado com sucesso! Login no AD: {email_ad}')
     return redirect(url_for('main.listar_funcionarios'))
 # --- FIM DA CORREÇÃO ---
 
@@ -151,7 +163,10 @@ def listar_funcionarios():
         
     elif status_filter == 'suspensos':
         query = query.filter_by(status='Suspenso')
-        
+
+    elif status_filter == 'desligados':
+        query = query.filter_by(status='Desligado')
+
     # Se for 'todos', nenhum filtro de status é aplicado
 
     if termo_busca:
@@ -173,11 +188,12 @@ def listar_funcionarios():
 @login_required
 @permission_required('admin_rh')
 def editar_funcionario(funcionario_id):
-    # (código existente para editar funcionário)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
     permissoes = Permissao.query.all()
+    
     if request.method == 'POST':
+        # --- LÓGICA DE ATUALIZAÇÃO RESTAURADA ---
         funcionario.nome = request.form.get('nome')
         funcionario.cpf = request.form.get('cpf')
         funcionario.telefone = request.form.get('telefone')
@@ -187,13 +203,22 @@ def editar_funcionario(funcionario_id):
         funcionario.data_nascimento = datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
+        
         if usuario:
             permissoes_selecionadas_ids = request.form.getlist('permissoes')
             permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
             usuario.permissoes = permissoes_a_adicionar
+        
         db.session.commit()
-        flash(f'Dados de {funcionario.nome} atualizados com sucesso!')
+
+        # --- SINCRONIZAÇÃO COM O AD APÓS A EDIÇÃO ---
+        sucesso_ad, msg_ad = provisionar_usuario_ad(funcionario)
+        if not sucesso_ad:
+            flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
+        
+        flash(f'Dados de {funcionario.nome} atualizados e sincronizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
+
     permissoes_usuario_ids = {p.id for p in usuario.permissoes} if usuario else set()
     return render_template('funcionarios/editar.html',
                            funcionario=funcionario,
@@ -436,17 +461,25 @@ def detalhes_funcionario(funcionario_id):
 @login_required
 @permission_required(['admin_rh', 'admin_ti'])
 def remover_funcionario_api(funcionario_id):
-    # (código existente)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
+    email_para_remover = funcionario.email
+    
     try:
+        # --- Alteração aqui: Primeiro remove do AD ---
+        sucesso_ad, msg_ad = remover_usuario_ad(email_para_remover)
+        if not sucesso_ad:
+            # Se falhar no AD, não continua e avisa o usuário
+            return jsonify({'success': False, 'message': f'Erro no AD: {msg_ad}'}), 500
+
+        # Se teve sucesso no AD, remove do banco de dados local
         if funcionario.usuario:
             db.session.delete(funcionario.usuario)
         db.session.delete(funcionario)
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso.'})
+        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso do sistema e do AD.'})
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erro ao remover funcionário {funcionario_id}: {e}")
+        # ... (log de erro) ...
         return jsonify({'success': False, 'message': 'Erro ao remover o funcionário.'}), 500
 
 
@@ -526,7 +559,7 @@ def importar_csv():
             )
             db.session.add(novo_funcionario)
             db.session.commit()
-            novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id, senha_provisoria=True)
+            novo_usuario = Usuario(email=email, funcionario_id=novo_funcionario.id, senha_provisoria=False)
             novo_usuario.set_password('Mudar@123')
             novo_usuario.permissoes.append(permissao_colaborador)
             db.session.add(novo_usuario)
@@ -573,11 +606,11 @@ def exportar_csv():
 
 
 ## REDEFINIÇÃO DE SENHA
-@main.route('/funcionario/<int:funcionario_id>/reset-password', methods=['POST'])
+""" @main.route('/funcionario/<int:funcionario_id>/reset-password', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def reset_password(funcionario_id):
-    """Marca a senha do usuário como provisória, forçando a alteração no próximo login."""
+    # Marca a senha do usuário como provisória, forçando a alteração no próximo login.
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     if funcionario.usuario:
         funcionario.usuario.senha_provisoria = True
@@ -585,7 +618,7 @@ def reset_password(funcionario_id):
         flash(f'A senha de {funcionario.nome} foi redefinida. O usuário deverá criar uma nova senha no próximo login.', 'success')
     else:
         flash('Este funcionário não possui um usuário de sistema para redefinir a senha.', 'danger')
-    return redirect(url_for('main.editar_funcionario', funcionario_id=funcionario_id))
+    return redirect(url_for('main.editar_funcionario', funcionario_id=funcionario_id)) """
 
 ## ALTERAR STATUS DO FUNCIONARIO (ATIVO/SUSPENSO)
 @main.route('/funcionario/<int:funcionario_id>/toggle-status', methods=['POST'])
@@ -595,7 +628,102 @@ def toggle_status(funcionario_id):
     """Alterna o status do funcionário entre Ativo e Suspenso."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     novo_status = 'Suspenso' if funcionario.status == 'Ativo' else 'Ativo'
+    
+    # --- Alteração aqui: Sincroniza o status com o AD ---
+    if novo_status == 'Suspenso':
+        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
+    else:
+        sucesso_ad, msg_ad = habilitar_usuario_ad(funcionario.email)
+
+    if not sucesso_ad:
+        flash(f'Falha ao sincronizar status com o Active Directory: {msg_ad}', 'danger')
+        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+    # Se teve sucesso no AD, atualiza o status local
     funcionario.status = novo_status
     db.session.commit()
-    flash(f'O status de {funcionario.nome} foi alterado para {novo_status}.', 'success')
+    flash(f'O status de {funcionario.nome} foi alterado para {novo_status} no sistema e no AD.', 'success')
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+
+## POLITICA DE PRIVACIDADE - LGPD
+
+@main.route('/politica-de-privacidade')
+def politica_privacidade():
+    return render_template('privacidade/politica_privacidade.html')
+
+
+@main.route('/consentimento', methods=['GET', 'POST'])
+@login_required
+def consentimento():
+    # Redireciona para o index se o usuário já consentiu e tentou acessar a página manualmente
+    if current_user.data_consentimento:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        consentimento_check = request.form.get('consentimento')
+        if not consentimento_check:
+            flash('Você precisa concordar com os termos para continuar.', 'danger')
+            return redirect(url_for('main.consentimento'))
+        
+        current_user.data_consentimento = datetime.utcnow()
+        db.session.commit()
+        
+        flash('Obrigado por confirmar seu consentimento. Bem-vindo(a)!', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('privacidade/consentimento.html')
+
+def anonimizar_dados_funcionario(funcionario):
+    """Limpa dados pessoais não essenciais de um funcionário, preservando o nome e o histórico."""
+    funcionario.telefone = "Anonimizado"
+    funcionario.data_nascimento = None
+    funcionario.contato_emergencia_nome = "Anonimizado"
+    funcionario.contato_emergencia_telefone = "Anonimizado"
+    funcionario.cpf = "Anonimizado"
+    funcionario.apelido = None
+    funcionario.email = "Anonimizado"
+    # Apaga a foto de perfil se existir
+    if funcionario.foto_perfil:
+        try:
+            caminho_foto = os.path.join(current_app.config['UPLOAD_FOLDER'], 'fotos_perfil', funcionario.foto_perfil)
+            if os.path.exists(caminho_foto):
+                os.remove(caminho_foto)
+            funcionario.foto_perfil = None
+        except Exception as e:
+            current_app.logger.error(f"Erro ao remover foto de perfil do funcionário {funcionario.id}: {e}")
+
+
+@main.route('/funcionario/<int:funcionario_id>/desligar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def desligar_funcionario(funcionario_id):
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+
+    try:
+        # 1. Desabilita a conta no Active Directory
+        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
+        if not sucesso_ad:
+            flash(f"Falha ao desabilitar o usuário no Active Directory: {msg_ad}", "danger")
+            return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))
+
+        # 2. Anonimiza os dados pessoais não essenciais
+        anonimizar_dados_funcionario(funcionario)
+
+        # 3. Atualiza o status e a data de desligamento no sistema
+        funcionario.status = 'Desligado'
+        funcionario.data_desligamento = datetime.utcnow().date()
+
+        # 4. Remove as permissões de login do usuário (segurança extra)
+        if funcionario.usuario:
+            funcionario.usuario.permissoes = []
+
+        db.session.commit()
+        flash(f"O processo de desligamento para {funcionario.nome} foi concluído com sucesso.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erro no processo de desligamento para o funcionário {funcionario_id}: {e}")
+        flash("Ocorreu um erro inesperado durante o processo de desligamento.", "danger")
+
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))

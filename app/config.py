@@ -13,3 +13,18 @@ class Config:
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_SENDER = os.getenv('MAIL_SENDER')
+
+    # Carregando token
+    SECRET_KEY = os.getenv('SECRET_KEY')
+
+    # Configurações do Active Directory
+    LDAP_HOST = os.getenv('LDAP_HOST')
+    LDAP_PORT = int(os.getenv('LDAP_PORT') or 389)
+    LDAP_BASE_DN = os.getenv('LDAP_BASE_DN')
+    LDAP_USER_OU = os.getenv('LDAP_USER_OU')
+    LDAP_BIND_USER_DN = os.getenv('LDAP_BIND_USER_DN')
+    LDAP_BIND_USER_PASSWORD = os.getenv('LDAP_BIND_USER_PASSWORD')
+    AD_DEFAULT_PASSWORD = os.getenv('AD_DEFAULT_PASSWORD')
+
+    # Pasta de arquivos 
+    UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__name__)), 'uploads')

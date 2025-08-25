@@ -32,6 +32,7 @@ class Usuario(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True)
     senha_provisoria = db.Column(db.Boolean, default=True, nullable=False)
+    data_consentimento = db.Column(db.DateTime, nullable=True)
 
     funcionario = db.relationship('Funcionario', backref=db.backref('usuario', uselist=False))
     permissoes = db.relationship('Permissao', secondary=permissoes_usuarios, lazy='subquery',
@@ -48,8 +49,8 @@ class Usuario(db.Model, UserMixin):
             return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)
     
-    def get_reset_password_token(self, expires_in=600):
-        """Gera um token seguro para redefinição de senha."""
+    """ def get_reset_password_token(self, expires_in=600):
+        #Gera um token seguro para redefinição de senha.
         return jwt.encode(
             {
                 "reset_password": self.id,
@@ -61,7 +62,7 @@ class Usuario(db.Model, UserMixin):
 
     @staticmethod
     def verify_reset_password_token(token):
-        """Verifica o token de redefinição e retorna o usuário se for válido."""
+        #Verifica o token de redefinição e retorna o usuário se for válido.
         try:
             id = jwt.decode(
                 token,
@@ -71,7 +72,7 @@ class Usuario(db.Model, UserMixin):
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
         return db.session.get(Usuario, id)
-
+ """
 class Permissao(db.Model):
     __tablename__ = 'permissao'
     id = db.Column(db.Integer, primary_key=True)
@@ -83,7 +84,7 @@ class Funcionario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(120), nullable=False)
     status = db.Column(db.String(50), default='Ativo', nullable=False)
-    cpf = db.Column(db.String(14), unique=True, nullable=False)
+    cpf = db.Column(db.String(25), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
     telefone = db.Column(db.String(50))
     cargo = db.Column(db.String(100))
@@ -93,6 +94,7 @@ class Funcionario(db.Model):
     contato_emergencia_telefone = db.Column(db.String(50))
     foto_perfil = db.Column(db.String(255), nullable=True)
     apelido = db.Column(db.String(50), nullable=True)
+    data_desligamento = db.Column(db.Date, nullable=True)
 
     sistemas = db.relationship('Sistema', secondary=funcionario_sistemas, lazy='subquery',
                                backref=db.backref('funcionarios', lazy=True))
@@ -191,8 +193,6 @@ class Ponto(db.Model):
     status = db.Column(db.String(50), default='Pendente', nullable=False)
     data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_upload = db.Column(db.DateTime, nullable=True)
-    
-    # ADICIONE ESTA LINHA
     observacao_rh = db.Column(db.Text, nullable=True) # Motivo da reprovação pelo RH
 
     # Relacionamentos

@@ -1,11 +1,20 @@
 # app/auth.py
 
+import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app # type: ignore
 from flask_login import login_user, logout_user, login_required, current_user # type: ignore
 from flask_mail import Message
 from . import mail
-from .models import Usuario
+from .models import Usuario, Funcionario
 from . import db
+
+
+from ldap3.core.exceptions import LDAPBindError, LDAPException # LDAPException adicionado aqui
+from flask import current_app
+from ldap3 import Server, Connection, ALL
+import uuid
+
+
 
 auth = Blueprint('auth', __name__)
 
@@ -15,25 +24,90 @@ def login():
 
 @auth.route('/login', methods=['POST'])
 def login_post():
-    email = request.form.get('email')
+    username = request.form.get('username')
     password = request.form.get('password')
+    user = None
 
-    # Busca o usuário pelo email
-    user = Usuario.query.filter_by(email=email).first()
+    if not username or not password:
+        flash('Usuário e senha são obrigatórios.')
+        return redirect(url_for('auth.login'))
 
-    # Verifica se o usuário existe e se a senha está correta
-    if not user or not user.check_password(password):
-        flash('Por favor, verifique seus dados de login e tente novamente.')
-        return redirect(url_for('auth.login')) # Recarrega a página de login
-    
-    # Verificação de usuario suspenso
+    # --- TENTATIVA 1: Autenticação via Active Directory ---
+    try:
+        domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
+        user_for_bind = f'{username}@{domain}'
+
+        server = Server(current_app.config['LDAP_HOST'], get_info=ALL)
+        conn = Connection(server, user=user_for_bind, password=password, auto_bind=True)
+        
+        conn.search(
+            search_base=current_app.config['LDAP_BASE_DN'],
+            search_filter=f'(&(objectClass=person)(sAMAccountName={username}))',
+            attributes=['cn', 'mail', 'sAMAccountName']
+        )
+
+        if not conn.entries:
+            conn.unbind()
+            raise LDAPException(f"Usuário {username} autenticado, mas não foi possível buscar seus dados no AD.")
+
+        ad_user = conn.entries[0]
+        ad_full_name = ad_user.cn.value
+        ad_email = ad_user.mail.value if ad_user.mail else f"{username}@{domain}"
+        conn.unbind()
+
+        # --- Lógica de Vinculação e Provisionamento CORRIGIDA ---
+        user = Usuario.query.filter_by(email=ad_email).first()
+
+        if not user:
+            funcionario_existente = Funcionario.query.filter_by(nome=ad_full_name).first()
+            
+            if funcionario_existente:
+                # Se o funcionário existe, verifica se ele JÁ TEM um usuário
+                if funcionario_existente.usuario:
+                    current_app.logger.info(f"Usuário AD '{ad_email}' corresponde a um funcionário com usuário já existente (ID: {funcionario_existente.usuario.id}). Usando usuário existente.")
+                    user = funcionario_existente.usuario
+                    # Garante que o e-mail esteja sincronizado
+                    if user.email != ad_email:
+                        user.email = ad_email
+                        db.session.commit()
+                else:
+                    # Se o funcionário existe mas NÃO TEM usuário, cria e vincula um novo
+                    current_app.logger.info(f"Vinculando usuário AD '{ad_email}' ao funcionário existente SEM usuário '{ad_full_name}' (ID: {funcionario_existente.id})")
+                    user = Usuario(email=ad_email, funcionario_id=funcionario_existente.id, senha_provisoria=False)
+                    user.set_password(uuid.uuid4().hex)
+                    db.session.add(user)
+                    db.session.commit()
+            
+            else:
+                # NÃO ENCONTROU: Provisionamento de um novo funcionário
+                current_app.logger.info(f"Provisionando novo funcionário e usuário para '{ad_email}' a partir do AD.")
+                novo_funcionario = Funcionario(nome=ad_full_name, email=ad_email, cpf=f"AD_{ad_user.sAMAccountName.value}", cargo="A Definir", setor="A Definir")
+                db.session.add(novo_funcionario)
+                db.session.commit()
+                user = Usuario(email=ad_email, funcionario_id=novo_funcionario.id, senha_provisoria=False)
+                user.set_password(uuid.uuid4().hex)
+                db.session.add(user)
+                db.session.commit()
+        
+    except (LDAPBindError, LDAPException) as e:
+        current_app.logger.warning(f"Falha na autenticação LDAP para '{username}': {e}. Tentando autenticação local.")
+        user = None
+
+    # --- TENTATIVA 2: Fallback para Autenticação Local ---
+    if not user:
+        user = Usuario.query.filter_by(email=username).first()
+        if not user or not user.check_password(password):
+            flash('Usuário ou senha inválidos.')
+            return redirect(url_for('auth.login'))
+
+    # --- Verificações Finais e Login ---
     if user.funcionario and user.funcionario.status == 'Suspenso':
         flash('Este usuário está suspenso e não pode acessar o sistema.', 'danger')
         return redirect(url_for('auth.login'))
 
-    # Se tudo estiver correto, loga o usuário
     login_user(user)
-    return redirect(url_for('main.index')) # Redireciona para a página principal
+    return redirect(url_for('main.index'))
+
 
 @auth.route('/logout')
 @login_required # Garante que apenas usuários logados podem deslogar
@@ -42,28 +116,32 @@ def logout():
     return redirect(url_for('main.index'))
 
 
-@auth.route('/change-password', methods=['GET', 'POST'])
+@auth.route('/change-password', methods=['POST'])
 @login_required
-def change_password():
-    if request.method == 'POST':
-        nova_senha = request.form.get('nova_senha')
-        confirmacao = request.form.get('confirmacao_senha')
+def change_password_post():
+    nova_senha = request.form.get('nova_senha')
+    confirmacao = request.form.get('confirmacao_senha')
+    consentimento = request.form.get('consentimento') # Pega o valor do checkbox
 
-        if not nova_senha or nova_senha != confirmacao:
-            flash('As senhas não conferem ou estão em branco.')
-            return redirect(url_for('auth.change_password'))
+    if not nova_senha or nova_senha != confirmacao:
+        flash('As senhas não conferem ou estão em branco.', 'danger')
+        return redirect(url_for('auth.change_password'))
 
-        # Atualiza a senha e a flag no banco
-        current_user.set_password(nova_senha)
-        current_user.senha_provisoria = False
-        db.session.commit()
+    # Validação do consentimento
+    if not consentimento:
+        flash('Você precisa concordar com os termos de uso para continuar.', 'danger')
+        return redirect(url_for('auth.change_password'))
 
-        flash('Senha alterada com sucesso! Você pode prosseguir.')
-        return redirect(url_for('main.index'))
+    # Salva a nova senha e a data do consentimento
+    current_user.set_password(nova_senha)
+    current_user.senha_provisoria = False
+    current_user.data_consentimento = datetime.utcnow()
+    db.session.commit()
 
-    return render_template('auth/change_password.html')
+    flash('Senha atualizada com sucesso! Bem-vindo(a) ao sistema.', 'success')
+    return redirect(url_for('main.index'))
 
-@auth.route('/esqueci-senha', methods=['GET', 'POST'])
+""" @auth.route('/esqueci-senha', methods=['GET', 'POST'])
 def esqueci_senha():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -111,4 +189,4 @@ def redefinir_senha(token):
         flash('Sua senha foi atualizada com sucesso! Você já pode fazer login.', 'success')
         return redirect(url_for('auth.login'))
         
-    return render_template('auth/redefinir_senha.html')
+    return render_template('auth/redefinir_senha.html') """

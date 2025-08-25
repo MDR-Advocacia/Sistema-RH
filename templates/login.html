@@ -29,17 +29,19 @@
 
                 <form method="POST" action="{{ url_for('auth.login') }}">
                     <div class="mb-3">
-                        <label for="email" class="form-label">E-mail</label>
-                        <input type="email" class="form-control form-control-lg" id="email" name="email" required>
+                        {# ALTERADO DE "E-mail" PARA "Usuário de Rede" #}
+                        <label for="username" class="form-label">Usuário</label>
+                        {# ALTERADO type="email" PARA type="text" e os atributos name/id #}
+                        <input type="text" class="form-control form-control-lg" id="username" name="username" required>
                     </div>
                     
                     {# BLOCO ALTERADO PARA INCLUIR O LINK #}
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <label for="password" class="form-label">Senha</label>
-                            <a href="{{ url_for('auth.esqueci_senha') }}" class="form-text text-decoration-none">Esqueceu sua senha?</a>
                         </div>
                         <input type="password" class="form-control form-control-lg" id="password" name="password" required>
+                        
                     </div>
                     
                     <div class="d-grid">

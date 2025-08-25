@@ -14,12 +14,19 @@
         </nav>
     </div>
     <div class="btn-toolbar">
+        <form method="POST" action="{{ url_for('main.desligar_funcionario', funcionario_id=funcionario.id) }}" class="me-2" 
+              onsubmit="return confirm('ATENÇÃO: Esta ação irá DESLIGAR o colaborador. A conta no AD será desativada e dados pessoais serão anonimizados. Deseja continuar?');">
+            <button type="submit" class="btn btn-danger" {% if funcionario.status == 'Desligado' %}disabled{% endif %}>
+                <i class="bi bi-person-x-fill"></i> Desligar Colaborador
+            </button>
+        </form>
+
         <form method="POST" action="{{ url_for('main.toggle_status', funcionario_id=funcionario.id) }}" class="me-2">
             {% if funcionario.status == 'Ativo' %}
                 <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Tem certeza que deseja suspender este usuário? Ele não poderá mais acessar o sistema.');">
                     <i class="bi bi-person-fill-slash"></i> Suspender
                 </button>
-            {% else %}
+            {% elif funcionario.status == 'Suspenso' %}
                 <button type="submit" class="btn btn-outline-success" onclick="return confirm('Tem certeza que deseja reativar este usuário?');">
                     <i class="bi bi-person-fill-check"></i> Reativar
                 </button>
@@ -42,6 +49,12 @@
         <div>
             <h3 class="mb-0">{{ funcionario.nome }}</h3>
             <p class="mb-0 text-muted">{{ funcionario.cargo or 'Cargo não informado' }} | {{ funcionario.setor or 'Setor não informado' }}</p>
+            {% if funcionario.status != 'Ativo' %}
+                <span class="badge bg-danger mt-2">{{ funcionario.status }}</span>
+                {% if funcionario.data_desligamento %}
+                    <span class="text-muted small">em {{ funcionario.data_desligamento.strftime('%d/%m/%Y') }}</span>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
     <div class="card-body p-4">
@@ -66,7 +79,7 @@
                 <p><strong>CPF:</strong> {{ funcionario.cpf }}</p>
                 <p><strong>E-mail:</strong> {{ funcionario.email }}</p>
                 <p><strong>Telefone:</strong> {{ funcionario.telefone or 'N/A' }}</p>
-                <p><strong>Data de Nascimento:</strong> {{ funcionario.data_nascimento.strftime('%d/%m/%Y') if funcionario.data_nascimento else 'N/A' }}</p>
+                <p><strong>Data de Nascimento:</strong> {% if funcionario.data_nascimento %}{{ funcionario.data_nascimento.strftime('%d/%m/%Y') }}{% else %}N/A{% endif %}</p>
                 <hr>
                 <h5>Contato de Emergência</h5>
                 <p><strong>Nome:</strong> {{ funcionario.contato_emergencia_nome or 'N/A' }}</p>

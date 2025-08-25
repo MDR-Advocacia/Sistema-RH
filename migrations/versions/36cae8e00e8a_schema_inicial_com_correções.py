@@ -1,8 +1,8 @@
-"""Schema inicial com campos de telefone expandidos
+"""Schema inicial com correções
 
-Revision ID: d0eb486b80ee
+Revision ID: 36cae8e00e8a
 Revises: 
-Create Date: 2025-08-18 11:47:55.418357
+Create Date: 2025-08-20 14:13:25.902070
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd0eb486b80ee'
+revision = '36cae8e00e8a'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,7 +22,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nome', sa.String(length=120), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('cpf', sa.String(length=14), nullable=False),
+    sa.Column('cpf', sa.String(length=25), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
     sa.Column('telefone', sa.String(length=50), nullable=True),
     sa.Column('cargo', sa.String(length=100), nullable=True),
