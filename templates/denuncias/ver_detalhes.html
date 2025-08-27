@@ -25,7 +25,21 @@
         <hr>
         <h5 class="mt-4">Conteúdo da Denúncia:</h5>
         <p style="white-space: pre-wrap;">{{ denuncia.conteudo }}</p>
-    </div>
+
+        {% if denuncia.anexos.all() %}
+        <hr>
+        <h5 class="mt-4">Evidências Anexadas:</h5>
+        <ul class="list-group">
+            {% for anexo in denuncia.anexos %}
+            <li class="list-group-item">
+                <a href="{{ url_for('denuncias.download_anexo', filename=anexo.path_armazenamento) }}">
+                    <i class="bi bi-paperclip"></i> {{ anexo.nome_arquivo_original }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        </div>
     <div class="card-footer">
         <form method="POST" class="d-flex justify-content-end align-items-center">
             <label for="status" class="form-label me-2 mb-0">Alterar Status:</label>

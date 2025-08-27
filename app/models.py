@@ -215,5 +215,16 @@ class Denuncia(db.Model):
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default='Nova', nullable=False)
 
+    # Adicione este relacionamento para conectar a denúncia aos seus anexos
+    anexos = db.relationship('DenunciaAnexo', backref='denuncia', lazy='dynamic', cascade="all, delete-orphan")
+
     def __repr__(self):
         return f'<Denuncia "{self.titulo}">'
+
+# Crie esta nova classe para os anexos
+class DenunciaAnexo(db.Model):
+    __tablename__ = 'denuncia_anexo'
+    id = db.Column(db.Integer, primary_key=True)
+    nome_arquivo_original = db.Column(db.String(255), nullable=False)
+    path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
+    denuncia_id = db.Column(db.Integer, db.ForeignKey('denuncia.id'), nullable=False)

@@ -10,7 +10,8 @@
             <h4 class="alert-heading">Processo Seguro e Anônimo</h4>
             <p>Este canal é um espaço seguro para relatar preocupações, violações de políticas ou condutas inadequadas. Sua submissão é **100% anônima**. Nenhuma informação que possa identificá-lo(a) será registrada ou enviada.</p>
         </div>
-        <form method="POST" action="{{ url_for('denuncias.enviar_denuncia') }}">
+        
+        <form method="POST" action="{{ url_for('denuncias.enviar_denuncia') }}" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="titulo" class="form-label">Título/Assunto da Denúncia</label>
                 <input type="text" class="form-control" id="titulo" name="titulo" required>
@@ -19,6 +20,13 @@
                 <label for="conteudo" class="form-label">Descrição Detalhada</label>
                 <textarea class="form-control" id="conteudo" name="conteudo" rows="10" required placeholder="Descreva a situação com o máximo de detalhes possível, incluindo datas, locais e pessoas envolvidas, se aplicável."></textarea>
             </div>
+
+            <div class="mb-4">
+                <label for="anexos" class="form-label">Anexar Evidências (Opcional)</label>
+                <input class="form-control" type="file" id="anexos" name="anexos" multiple>
+                <div class="form-text">Você pode selecionar múltiplos arquivos. Tipos permitidos: imagens, pdf, doc, etc.</div>
+            </div>
+
             <div class="d-flex justify-content-end">
                 <a href="{{ url_for('main.index') }}" class="btn btn-secondary me-2">Cancelar</a>
                 <button type="submit" class="btn btn-danger">Enviar Denúncia Anônima</button>
