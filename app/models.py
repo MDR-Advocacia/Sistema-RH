@@ -216,6 +216,13 @@ class Denuncia(db.Model):
     categoria = db.Column(db.String(100), nullable=False, default='Outros')
     status = db.Column(db.String(50), default='Nova', nullable=False)
 
+    # Adicionamos um campo único e indexado para o protocolo.
+    # nullable=True para não quebrar denúncias antigas que não terão protocolo.
+    protocolo = db.Column(db.String(32), unique=True, nullable=True, index=True)
+
+    # Feedback dado pelo RH a denuncia
+    feedback_rh = db.Column(db.Text, nullable=True) 
+
     # Adicione este relacionamento para conectar a denúncia aos seus anexos
     anexos = db.relationship('DenunciaAnexo', backref='denuncia', lazy='dynamic', cascade="all, delete-orphan")
 

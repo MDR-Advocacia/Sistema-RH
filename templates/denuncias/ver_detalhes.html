@@ -40,16 +40,22 @@
             {% endfor %}
         </ul>
         {% endif %}
-        </div>
+    </div>
     <div class="card-footer">
-        <form method="POST" class="d-flex justify-content-end align-items-center">
-            <label for="status" class="form-label me-2 mb-0">Alterar Status:</label>
-            <select class="form-select me-2" style="width: auto;" id="status" name="status">
-                <option value="Nova" {% if denuncia.status == 'Nova' %}selected{% endif %}>Nova</option>
-                <option value="Em Investigação" {% if denuncia.status == 'Em Investigação' %}selected{% endif %}>Em Investigação</option>
-                <option value="Concluída" {% if denuncia.status == 'Concluída' %}selected{% endif %}>Concluída</option>
-            </select>
-            <button type="submit" class="btn btn-brand">Salvar Status</button>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="feedback_rh" class="form-label"><strong>Feedback para o Denunciante (será visível na consulta por protocolo)</strong></label>
+                <textarea class="form-control" id="feedback_rh" name="feedback_rh" rows="3">{{ denuncia.feedback_rh or '' }}</textarea>
+            </div>
+            <div class="d-flex justify-content-end align-items-center">
+                <label for="status" class="form-label me-2 mb-0">Alterar Status:</label>
+                <select class="form-select me-2" style="width: auto;" id="status" name="status">
+                    <option value="Nova" {% if denuncia.status == 'Nova' %}selected{% endif %}>Nova</option>
+                    <option value="Em Investigação" {% if denuncia.status == 'Em Investigação' %}selected{% endif %}>Em Investigação</option>
+                    <option value="Concluída" {% if denuncia.status == 'Concluída' %}selected{% endif %}>Concluída</option>
+                </select>
+                <button type="submit" class="btn btn-brand">Salvar Alterações</button>
+            </div>
         </form>
     </div>
 </div>

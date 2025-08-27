@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Canal de Denúncias{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Canal de Denúncias Anônimas</h1>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-send-plus-fill"></i> Enviar Nova Denúncia</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info small">
+                    <strong>Processo Seguro e Anônimo:</strong> Nenhuma informação que possa identificá-lo(a) será registrada.
+                </div>
+                <form method="POST" action="{{ url_for('denuncias.canal') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="form_name" value="enviar">
+                    <div class="mb-3">
+                        <label for="categoria" class="form-label">Categoria</label>
+                        <select class="form-select" id="categoria" name="categoria" required>
+                            <option value="" selected disabled>Selecione...</option>
+                            <option value="Assédio Moral ou Sexual">Assédio Moral ou Sexual</option>
+                            <option value="Discriminação ou Preconceito">Discriminação ou Preconceito</option>
+                            <option value="Fraude ou Corrupção">Fraude ou Corrupção</option>
+                            <option value="Violação de Políticas Internas">Violação de Políticas Internas</option>
+                            <option value="Más Condições de Trabalho">Más Condições de Trabalho</option>
+                            <option value="Sugestão de Melhoria">Sugestão de Melhoria</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="titulo" class="form-label">Título/Assunto</label>
+                        <input type="text" class="form-control" id="titulo" name="titulo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="conteudo" class="form-label">Descrição Detalhada</label>
+                        <textarea class="form-control" id="conteudo" name="conteudo" rows="8" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="anexos" class="form-label">Anexar Evidências (Opcional)</label>
+                        <input class="form-control" type="file" id="anexos" name="anexos" multiple>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-danger w-100">Enviar Denúncia Anônima</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-search"></i> Consultar Andamento</h5>
+            </div>
+            <div class="card-body">
+                <p>Insira o protocolo recebido para verificar o status da sua denúncia.</p>
+                <form method="POST" action="{{ url_for('denuncias.canal') }}">
+                    <input type="hidden" name="form_name" value="consultar">
+                    <div class="mb-3">
+                        <label for="protocolo" class="form-label">Número do Protocolo</label>
+                        <input type="text" class="form-control" id="protocolo" name="protocolo" required placeholder="Ex: MDRH-A1B2C3">
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-brand w-100">Consultar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

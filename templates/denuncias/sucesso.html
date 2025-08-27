@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Denúncia Enviada com Sucesso{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm text-center">
+    <div class="card-body p-5">
+        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+        <h1 class="h2 mt-3">Denúncia Enviada com Sucesso</h1>
+        <p class="lead">Sua denúncia foi registrada de forma anônima.</p>
+        <hr>
+        <p>Guarde o número de protocolo abaixo. Ele é a **única forma** de acompanhar o andamento da sua solicitação no futuro.</p>
+        <div class="alert alert-warning">
+            <h3 class="display-6"><strong>{{ protocolo }}</strong></h3>
+        </div>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-3">Voltar para a Dashboard</a>
+        <a href="{{ url_for('denuncias.canal') }}" class="btn btn-secondary mt-3">Consultar Protocolo</a>
+    </div>
+</div>
+{% endblock %}

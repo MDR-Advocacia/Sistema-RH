@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Consultar Denúncia{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Consultar Andamento da Denúncia</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p>Insira o número de protocolo que você recebeu ao enviar sua denúncia para verificar o status atual.</p>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="protocolo" class="form-label">Número do Protocolo</label>
+                <input type="text" class="form-control" id="protocolo" name="protocolo" required placeholder="Ex: MDRH-A1B2C3">
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-brand">Consultar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

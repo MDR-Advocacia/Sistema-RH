@@ -1,7 +1,7 @@
 import os
 import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
-from flask_login import login_required, current_user
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 from . import db
 from .models import Denuncia, DenunciaAnexo
@@ -9,52 +9,75 @@ from .decorators import permission_required
 
 denuncias_bp = Blueprint('denuncias', __name__)
 
-# --- FUNÇÃO AUXILIAR PARA VERIFICAR EXTENSÕES PERMITIDAS ---
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt', 'mp3', 'wav', 'm4a'}
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@denuncias_bp.route('/enviar', methods=['GET', 'POST'])
+# ROTA UNIFICADA PARA O CANAL DE DENÚNCIAS
+@denuncias_bp.route('/', methods=['GET', 'POST'])
 @login_required
-def enviar_denuncia():
+def canal():
     if request.method == 'POST':
-        categoria = request.form.get('categoria')
-        titulo = request.form.get('titulo')
-        conteudo = request.form.get('conteudo')
-        anexos = request.files.getlist('anexos')
+        form_name = request.form.get('form_name')
 
-        if not titulo or not conteudo or not categoria:
-            flash('Categoria, título e conteúdo são obrigatórios.', 'danger')
-            return redirect(url_for('denuncias.enviar_denuncia'))
+        # Lógica para o formulário de ENVIO
+        if form_name == 'enviar':
+            categoria = request.form.get('categoria')
+            titulo = request.form.get('titulo')
+            conteudo = request.form.get('conteudo')
+            anexos = request.files.getlist('anexos')
 
-        nova_denuncia = Denuncia(titulo=titulo, conteudo=conteudo, categoria=categoria)
-        db.session.add(nova_denuncia)
+            if not titulo or not conteudo or not categoria:
+                flash('Categoria, título e conteúdo são obrigatórios.', 'danger')
+                return redirect(url_for('denuncias.canal'))
+
+            protocolo = None
+            while not protocolo:
+                novo_protocolo = f'MDRH-{uuid.uuid4().hex[:6].upper()}'
+                if not Denuncia.query.filter_by(protocolo=novo_protocolo).first():
+                    protocolo = novo_protocolo
+            
+            nova_denuncia = Denuncia(titulo=titulo, conteudo=conteudo, categoria=categoria, protocolo=protocolo)
+            db.session.add(nova_denuncia)
+            
+            upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'denuncias')
+            os.makedirs(upload_folder, exist_ok=True)
+
+            for arquivo in anexos:
+                if arquivo and arquivo.filename != '' and allowed_file(arquivo.filename):
+                    filename_seguro = secure_filename(arquivo.filename)
+                    extensao = filename_seguro.rsplit('.', 1)[1].lower()
+                    nome_unico = f"{uuid.uuid4()}.{extensao}"
+                    arquivo.save(os.path.join(upload_folder, nome_unico))
+                    novo_anexo = DenunciaAnexo(nome_arquivo_original=filename_seguro, path_armazenamento=nome_unico, denuncia=nova_denuncia)
+                    db.session.add(novo_anexo)
+
+            db.session.commit()
+            return redirect(url_for('denuncias.envio_sucesso', protocolo=protocolo))
         
-        # Lógica de upload dos anexos
-        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'denuncias')
-        os.makedirs(upload_folder, exist_ok=True)
+        # Lógica para o formulário de CONSULTA
+        elif form_name == 'consultar':
+            protocolo = request.form.get('protocolo')
+            if not protocolo:
+                flash('Por favor, insira um número de protocolo.', 'warning')
+                return redirect(url_for('denuncias.canal'))
 
-        for arquivo in anexos:
-            if arquivo and arquivo.filename != '' and allowed_file(arquivo.filename):
-                filename_seguro = secure_filename(arquivo.filename)
-                extensao = filename_seguro.rsplit('.', 1)[1].lower()
-                nome_unico = f"{uuid.uuid4()}.{extensao}"
-                
-                arquivo.save(os.path.join(upload_folder, nome_unico))
+            denuncia = Denuncia.query.filter_by(protocolo=protocolo.strip().upper()).first()
+            if not denuncia:
+                flash('Protocolo não encontrado. Verifique o número e tente novamente.', 'danger')
+                return redirect(url_for('denuncias.canal'))
+            
+            return render_template('denuncias/resultado_consulta.html', denuncia=denuncia)
 
-                novo_anexo = DenunciaAnexo(
-                    nome_arquivo_original=filename_seguro,
-                    path_armazenamento=nome_unico,
-                    denuncia=nova_denuncia
-                )
-                db.session.add(novo_anexo)
+    # Se a requisição for GET, apenas renderiza a página principal do canal
+    return render_template('denuncias/canal.html')
 
-        db.session.commit()
-        flash('Sua denúncia foi enviada com sucesso de forma anônima.', 'success')
-        return redirect(url_for('main.index'))
-        
-    return render_template('denuncias/enviar.html')
+
+@denuncias_bp.route('/enviada/<protocolo>')
+@login_required
+def envio_sucesso(protocolo):
+    return render_template('denuncias/sucesso.html', protocolo=protocolo)
+
 
 @denuncias_bp.route('/gestao')
 @login_required
@@ -63,18 +86,18 @@ def gestao_denuncias():
     denuncias = Denuncia.query.order_by(Denuncia.data_envio.desc()).all()
     return render_template('denuncias/gestao.html', denuncias=denuncias)
 
+
 @denuncias_bp.route('/<int:denuncia_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required('admin_rh')
 def ver_denuncia(denuncia_id):
     denuncia = Denuncia.query.get_or_404(denuncia_id)
     if request.method == 'POST':
-        novo_status = request.form.get('status')
-        if novo_status:
-            denuncia.status = novo_status
-            db.session.commit()
-            flash('Status da denúncia atualizado com sucesso.', 'success')
-            return redirect(url_for('denuncias.gestao_denuncias'))
+        denuncia.status = request.form.get('status')
+        denuncia.feedback_rh = request.form.get('feedback_rh') # Captura o novo campo
+        db.session.commit()
+        flash('Status e feedback da denúncia atualizados com sucesso.', 'success')
+        return redirect(url_for('denuncias.gestao_denuncias'))
 
     return render_template('denuncias/ver_detalhes.html', denuncia=denuncia)
 
