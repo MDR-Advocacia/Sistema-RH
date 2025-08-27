@@ -15,6 +15,7 @@
                 <thead>
                     <tr>
                         <th>Data de Envio</th>
+                        <th>Categoria</th>
                         <th>Título</th>
                         <th>Status</th>
                         <th class="text-end">Ações</th>
@@ -24,6 +25,7 @@
                     {% for denuncia in denuncias %}
                     <tr>
                         <td>{{ denuncia.data_envio | localtime }}</td>
+                        <td><span class="badge bg-secondary">{{ denuncia.categoria }}</span></td>
                         <td>{{ denuncia.titulo }}</td>
                         <td>
                             {% if denuncia.status == 'Nova' %}
@@ -42,7 +44,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center p-4">Nenhuma denúncia recebida.</td>
+                        <td colspan="5" class="text-center p-4">Nenhuma denúncia recebida.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

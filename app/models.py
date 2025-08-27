@@ -213,6 +213,7 @@ class Denuncia(db.Model):
     titulo = db.Column(db.String(200), nullable=False)
     conteudo = db.Column(db.Text, nullable=False)
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
+    categoria = db.Column(db.String(100), nullable=False, default='Outros')
     status = db.Column(db.String(50), default='Nova', nullable=False)
 
     # Adicione este relacionamento para conectar a denúncia aos seus anexos

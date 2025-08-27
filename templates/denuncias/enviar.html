@@ -8,13 +8,29 @@
     <div class="card-body">
         <div class="alert alert-info" role="alert">
             <h4 class="alert-heading">Processo Seguro e Anônimo</h4>
-            <p>Este canal é um espaço seguro para relatar preocupações, violações de políticas ou condutas inadequadas. Sua submissão é **100% anônima**. Nenhuma informação que possa identificá-lo(a) será registrada ou enviada.</p>
+            <p>Este canal é um espaço seguro para relatar preocupações, violações de políticas ou condutas inadequadas. Sua submissão é 100% anônima. Nenhuma informação que possa identificá-lo(a) será registrada ou enviada.</p>
         </div>
         
         <form method="POST" action="{{ url_for('denuncias.enviar_denuncia') }}" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="titulo" class="form-label">Título/Assunto da Denúncia</label>
-                <input type="text" class="form-control" id="titulo" name="titulo" required>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="categoria" class="form-label">Categoria da Denúncia</label>
+                    <select class="form-select" id="categoria" name="categoria" required>
+                        <option value="" selected disabled>Selecione uma categoria...</option>
+                        <option value="Assédio Moral ou Sexual">Assédio Moral ou Sexual</option>
+                        <option value="Discriminação ou Preconceito">Discriminação ou Preconceito</option>
+                        <option value="Fraude ou Corrupção">Fraude ou Corrupção</option>
+                        <option value="Violação de Políticas Internas">Violação de Políticas Internas</option>
+                        <option value="Más Condições de Trabalho">Más Condições de Trabalho</option>
+                        <option value="Sugestão de Melhoria">Sugestão de Melhoria</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="titulo" class="form-label">Título/Assunto da Denúncia</label>
+                    <input type="text" class="form-control" id="titulo" name="titulo" required>
+                </div>
             </div>
             <div class="mb-3">
                 <label for="conteudo" class="form-label">Descrição Detalhada</label>

@@ -21,6 +21,7 @@
     </div>
     <div class="card-body">
         <p><strong>Recebida em:</strong> {{ denuncia.data_envio | localtime }}</p>
+        <p><strong>Categoria:</strong> {{ denuncia.categoria }}</p>
         <p><strong>Status Atual:</strong> {{ denuncia.status }}</p>
         <hr>
         <h5 class="mt-4">Conteúdo da Denúncia:</h5>
