@@ -203,3 +203,17 @@ class Ponto(db.Model):
     funcionario = db.relationship('Funcionario', backref='pontos')
     solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
     revisor = db.relationship('Usuario', foreign_keys=[revisor_id])
+
+
+## Modelo de Denuncias
+
+class Denuncia(db.Model):
+    __tablename__ = 'denuncia'
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False)
+    conteudo = db.Column(db.Text, nullable=False)
+    data_envio = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50), default='Nova', nullable=False)
+
+    def __repr__(self):
+        return f'<Denuncia "{self.titulo}">'

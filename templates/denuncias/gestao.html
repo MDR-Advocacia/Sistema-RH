@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Denúncias{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Gestão de Denúncias</h1>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-shield-lock-fill"></i> Denúncias Recebidas</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Data de Envio</th>
+                        <th>Título</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for denuncia in denuncias %}
+                    <tr>
+                        <td>{{ denuncia.data_envio | localtime }}</td>
+                        <td>{{ denuncia.titulo }}</td>
+                        <td>
+                            {% if denuncia.status == 'Nova' %}
+                                <span class="badge bg-danger">{{ denuncia.status }}</span>
+                            {% elif denuncia.status == 'Em Investigação' %}
+                                <span class="badge bg-warning text-dark">{{ denuncia.status }}</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ denuncia.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('denuncias.ver_denuncia', denuncia_id=denuncia.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye-fill"></i> Ver Detalhes
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center p-4">Nenhuma denúncia recebida.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

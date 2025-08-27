@@ -212,7 +212,8 @@ def editar_funcionario(funcionario_id):
         db.session.commit()
 
         # --- SINCRONIZAÇÃO COM O AD APÓS A EDIÇÃO ---
-        sucesso_ad, msg_ad = provisionar_usuario_ad(funcionario)
+        # CORREÇÃO: Agora a linha recebe os três valores retornados pela função.
+        sucesso_ad, msg_ad, _ = provisionar_usuario_ad(funcionario)
         if not sucesso_ad:
             flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
         

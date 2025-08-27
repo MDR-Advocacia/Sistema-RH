@@ -29,6 +29,11 @@
                 </a>
             </li>
             
+            <li>
+                <a href="{{ url_for('denuncias.enviar_denuncia') }}" class="nav-link {% if 'denuncias.enviar_denuncia' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-shield-exclamation"></i> Canal de Denúncias
+                </a>
+            </li>
             {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
             <hr class="text-secondary">
             <li class="nav-item">
@@ -44,6 +49,12 @@
             <li>
                 <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> Gestão de Ponto
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ url_for('denuncias.gestao_denuncias') }}" class="nav-link {% if 'denuncias.gestao_denuncias' in request.endpoint or 'denuncias.ver_denuncia' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-shield-lock-fill"></i> Gestão de Denúncias
                 </a>
             </li>
             {% endif %}
@@ -73,6 +84,17 @@
     </div>
 
     <main class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category or 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
 

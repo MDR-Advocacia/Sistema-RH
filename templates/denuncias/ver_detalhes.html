@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes da Denúncia{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-0">Detalhes da Denúncia</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb bg-transparent p-0 mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('denuncias.gestao_denuncias') }}">Gestão de Denúncias</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Visualização</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Denúncia #{{ denuncia.id }} - {{ denuncia.titulo }}</h5>
+    </div>
+    <div class="card-body">
+        <p><strong>Recebida em:</strong> {{ denuncia.data_envio | localtime }}</p>
+        <p><strong>Status Atual:</strong> {{ denuncia.status }}</p>
+        <hr>
+        <h5 class="mt-4">Conteúdo da Denúncia:</h5>
+        <p style="white-space: pre-wrap;">{{ denuncia.conteudo }}</p>
+    </div>
+    <div class="card-footer">
+        <form method="POST" class="d-flex justify-content-end align-items-center">
+            <label for="status" class="form-label me-2 mb-0">Alterar Status:</label>
+            <select class="form-select me-2" style="width: auto;" id="status" name="status">
+                <option value="Nova" {% if denuncia.status == 'Nova' %}selected{% endif %}>Nova</option>
+                <option value="Em Investigação" {% if denuncia.status == 'Em Investigação' %}selected{% endif %}>Em Investigação</option>
+                <option value="Concluída" {% if denuncia.status == 'Concluída' %}selected{% endif %}>Concluída</option>
+            </select>
+            <button type="submit" class="btn btn-brand">Salvar Status</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

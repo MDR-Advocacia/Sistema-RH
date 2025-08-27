@@ -67,6 +67,9 @@ def create_app():
     app.register_blueprint(perfil_bp, url_prefix='/perfil')
     from .ponto import ponto_bp
     app.register_blueprint(ponto_bp, url_prefix='/ponto')
+    # Adicione estas duas linhas
+    from .denuncias import denuncias_bp
+    app.register_blueprint(denuncias_bp, url_prefix='/denuncias')
 
     # --- Verificações Globais ---
     @app.before_request

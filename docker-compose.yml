@@ -31,8 +31,9 @@ services:
   backup:
     image: postgres:16 # Usamos a mesma imagem para ter acesso ao pg_dump
     volumes:
-      - ./scripts:/scripts # Mapeia a pasta de scripts para dentro do container
+      - ./scripts:/scripts
       - backups_data:/backups # Mapeia o novo volume onde os backups serão salvos
+      #- /D:\Backups\MDRH-BACKUP   
     env_file:
       - .env # Carrega as credenciais do banco
     environment:
