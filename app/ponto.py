@@ -1,3 +1,5 @@
+# app/ponto.py
+
 import os
 import uuid
 from datetime import datetime
@@ -23,60 +25,50 @@ def allowed_file(filename):
 
 # --- Rotas para RH ---
 
-@ponto_bp.route('/gestao')
+@ponto_bp.route('/gestao', methods=['GET', 'POST'])
 @login_required
 @permission_required('admin_rh')
 def gestao_ponto():
-    """Página para o RH gerenciar e revisar pontos."""
+    """Página unificada para o RH gerenciar pontos: solicitar e revisar."""
+    if request.method == 'POST':
+        # Lógica para SOLICITAR um novo ponto
+        funcionario_id = request.form.get('funcionario_id')
+        data_ajuste_str = request.form.get('data_ajuste')
+        tipo_ajuste = request.form.get('tipo_ajuste')
+
+        if not all([funcionario_id, data_ajuste_str, tipo_ajuste]):
+            flash('Funcionário, data e tipo do ajuste são obrigatórios.', 'danger')
+            return redirect(url_for('ponto.gestao_ponto'))
+
+        data_ajuste = datetime.strptime(data_ajuste_str, '%Y-%m-%d').date()
+
+        existente = Ponto.query.filter_by(
+            funcionario_id=funcionario_id,
+            data_ajuste=data_ajuste,
+            tipo_ajuste=tipo_ajuste
+        ).first()
+
+        if existente:
+            flash(f'Já existe uma solicitação de "{tipo_ajuste}" para o dia {data_ajuste.strftime("%d/%m/%Y")} para este funcionário.', 'warning')
+            return redirect(url_for('ponto.gestao_ponto'))
+
+        nova_solicitacao = Ponto(
+            funcionario_id=funcionario_id,
+            data_ajuste=data_ajuste,
+            tipo_ajuste=tipo_ajuste,
+            solicitante_id=current_user.id,
+            status='Pendente'
+        )
+        db.session.add(nova_solicitacao)
+        db.session.commit()
+
+        flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
+        return redirect(url_for('ponto.gestao_ponto'))
+
+    # Se for GET, exibe a página de gestão
     pontos_para_revisar = Ponto.query.filter_by(status='Em Revisão').order_by(Ponto.data_upload.asc()).all()
     return render_template('ponto/gestao.html', pontos_para_revisar=pontos_para_revisar)
 
-@ponto_bp.route('/funcionario/<int:funcionario_id>/solicitar', methods=['POST'])
-@login_required
-@permission_required('admin_rh')
-def solicitar_ponto(funcionario_id):
-    """Cria uma nova solicitação de ajuste de ponto para um funcionário."""
-    data_ajuste_str = request.form.get('data_ajuste')
-    tipo_ajuste = request.form.get('tipo_ajuste')
-
-    if not data_ajuste_str or not tipo_ajuste:
-        flash('A data e o tipo do ajuste são obrigatórios.', 'danger')
-        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
-
-    data_ajuste = datetime.strptime(data_ajuste_str, '%Y-%m-%d').date()
-
-    existente = Ponto.query.filter_by(
-        funcionario_id=funcionario_id,
-        data_ajuste=data_ajuste,
-        tipo_ajuste=tipo_ajuste
-    ).first()
-
-    if existente:
-        flash(f'Já existe uma solicitação de "{tipo_ajuste}" para o dia {data_ajuste.strftime("%d/%m/%Y")}.', 'warning')
-        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
-
-    nova_solicitacao = Ponto(
-        funcionario_id=funcionario_id,
-        data_ajuste=data_ajuste,
-        tipo_ajuste=tipo_ajuste,
-        solicitante_id=current_user.id,
-        status='Pendente'
-    )
-    db.session.add(nova_solicitacao)
-    db.session.commit()
-
-    try:
-        destinatario = Funcionario.query.get(funcionario_id)
-        if destinatario and destinatario.usuario:
-            send_email(destinatario.email,
-                       "Nova Solicitação de Ajuste de Ponto",
-                       'email/nova_solicitacao_ponto',
-                       solicitacao=nova_solicitacao)
-    except Exception as e:
-        current_app.logger.error(f"Falha ao enviar e-mail de solicitação de ponto: {e}")
-
-    flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
-    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
 
 @ponto_bp.route('/<int:ponto_id>/aprovar', methods=['POST'])
 @login_required
@@ -234,3 +226,22 @@ def download_ponto_assinado(filename):
         
     ponto_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'pontos')
     return send_from_directory(ponto_folder, filename, as_attachment=True)
+
+@ponto_bp.route('/api/funcionario/<int:funcionario_id>/historico')
+@login_required
+@permission_required('admin_rh')
+def historico_ponto_funcionario(funcionario_id):
+    """Retorna o histórico de pontos de um funcionário em formato JSON."""
+    funcionario = Funcionario.query.get_or_404(funcionario_id)
+    pontos = Ponto.query.filter_by(funcionario_id=funcionario.id).order_by(Ponto.data_ajuste.desc()).all()
+    
+    historico = []
+    for p in pontos:
+        historico.append({
+            'id': p.id,
+            'data_ajuste': p.data_ajuste.strftime('%d/%m/%Y'),
+            'tipo_ajuste': p.tipo_ajuste,
+            'status': p.status,
+            'path_assinado': url_for('ponto.download_ponto_assinado', filename=p.path_assinado) if p.path_assinado else None
+        })
+    return jsonify(historico)    

@@ -25,20 +25,107 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@documentos_bp.route('/gestao')
+@documentos_bp.route('/gestao', methods=['GET', 'POST'])
 @login_required
 @permission_required('admin_rh')
 def gestao_documentos():
-    """Página unificada para gestão, consulta e revisão de documentos."""
+    """Página unificada para gestão de documentos: revisar, solicitar e consultar."""
+    if request.method == 'POST':
+        # Esta lógica agora lida com o formulário da aba "Solicitar"
+        funcionario_id = request.form.get('funcionario_id')
+        tipo_documento = request.form.get('tipo_documento_solicitado')
+        
+        if not funcionario_id or not tipo_documento:
+            flash('Funcionário e Tipo de Documento são obrigatórios.', 'danger')
+            return redirect(url_for('documentos.gestao_documentos'))
+
+        nova_requisicao = RequisicaoDocumento(
+            tipo_documento=tipo_documento,
+            solicitante_id=current_user.id,
+            destinatario_id=funcionario_id
+        )
+        db.session.add(nova_requisicao)
+        db.session.commit()
+        flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
+        return redirect(url_for('documentos.gestao_documentos'))
+
+    # Para GET, carrega os documentos para revisão e renderiza a página
     documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
     return render_template('documentos/gestao.html', documentos_para_revisar=documentos_para_revisar)
+
+
+# NOVO: API para a aba de consulta
+@documentos_bp.route('/api/funcionario/<int:funcionario_id>/documentos')
+@login_required
+@permission_required('admin_rh')
+def historico_documentos_funcionario(funcionario_id):
+    """Retorna o histórico de documentos de um funcionário em formato JSON."""
+    documentos = Documento.query.filter_by(funcionario_id=funcionario_id).order_by(Documento.data_upload.desc()).all()
+    
+    historico = []
+    for doc in documentos:
+        historico.append({
+            'id': doc.id,
+            'tipo_documento': doc.tipo_documento,
+            'nome_arquivo': doc.nome_arquivo,
+            'data_upload': doc.data_upload.strftime('%d/%m/%Y %H:%M'),
+            'status': doc.status,
+            'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)
+        })
+    return jsonify(historico)
+
+
+# ROTA PARA O NOVO FORMULÁRIO DE UPLOAD MANUAL NA PÁGINA DE GESTÃO
+@documentos_bp.route('/upload-manual', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def upload_manual_documento():
+    """Processa o upload de um novo documento pelo RH a partir da tela de gestão."""
+    funcionario_id = request.form.get('funcionario_id')
+    tipo_documento = request.form.get('tipo_documento')
+    
+    if 'arquivo' not in request.files:
+        flash('Nenhum arquivo selecionado.', 'danger')
+        return redirect(url_for('documentos.gestao_documentos'))
+
+    file = request.files['arquivo']
+
+    if not all([funcionario_id, tipo_documento, file.filename]):
+        flash('Funcionário, tipo de documento e arquivo são obrigatórios.', 'danger')
+        return redirect(url_for('documentos.gestao_documentos'))
+
+    if file and allowed_file(file.filename):
+        filename_seguro = secure_filename(file.filename)
+        extensao = filename_seguro.rsplit('.', 1)[1]
+        nome_unico = f"{uuid.uuid4()}.{extensao}"
+
+        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
+        os.makedirs(upload_path, exist_ok=True)
+        file.save(os.path.join(upload_path, nome_unico))
+
+        novo_documento = Documento(
+            nome_arquivo=filename_seguro,
+            tipo_documento=tipo_documento,
+            path_armazenamento=nome_unico,
+            funcionario_id=funcionario_id,
+            status='Aprovado',
+            revisor_id=current_user.id,
+            data_revisao=datetime.utcnow()
+        )
+        db.session.add(novo_documento)
+        db.session.commit()
+        flash('Documento enviado com sucesso!', 'success')
+    else:
+        flash('Extensão de arquivo não permitida.', 'danger')
+
+    return redirect(url_for('documentos.gestao_documentos'))
 
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>')
 @login_required
 @permission_required('admin_rh')
 def ver_documentos_funcionario(funcionario_id):
-    """Exibe os documentos e as requisições pendentes de um funcionário."""
+    """Exibe os documentos e as requisições pendentes de um funcionário (usado no perfil)."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(
