@@ -1,3 +1,5 @@
+# app/routes.py (versão com a contagem de funcionários corrigida)
+
 import csv
 import os
 import uuid
@@ -70,7 +72,8 @@ def index():
 
     # Bloco if agora cuida apenas dos dados específicos de admin
     if usuario.tem_permissao('admin_rh') or usuario.tem_permissao('admin_ti'):
-        dados_dashboard['total_funcionarios'] = Funcionario.query.count()
+        # --- LINHA CORRIGIDA ---
+        dados_dashboard['total_funcionarios'] = Funcionario.query.filter_by(status='Ativo').count()
         dados_dashboard['total_avisos'] = Aviso.query.filter_by(arquivado=False).count()
 
     return render_template('index.html', dados=dados_dashboard)
@@ -706,7 +709,7 @@ def desligar_funcionario(funcionario_id):
         sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
         if not sucesso_ad:
             flash(f"Falha ao desabilitar o usuário no Active Directory: {msg_ad}", "danger")
-            return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))
+            return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
 
         # 2. Anonimiza os dados pessoais não essenciais
         anonimizar_dados_funcionario(funcionario)
@@ -727,4 +730,4 @@ def desligar_funcionario(funcionario_id):
         current_app.logger.error(f"Erro no processo de desligamento para o funcionário {funcionario_id}: {e}")
         flash("Ocorreu um erro inesperado durante o processo de desligamento.", "danger")
 
-    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario.id))
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))

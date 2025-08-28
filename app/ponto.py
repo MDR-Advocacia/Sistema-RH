@@ -245,3 +245,41 @@ def historico_ponto_funcionario(funcionario_id):
             'path_assinado': url_for('ponto.download_ponto_assinado', filename=p.path_assinado) if p.path_assinado else None
         })
     return jsonify(historico)    
+
+# ROTA RESTAURADA PARA FUNCIONAR NA PÁGINA DE PERFIL DO FUNCIONÁRIO
+@ponto_bp.route('/funcionario/<int:funcionario_id>/solicitar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def solicitar_ponto(funcionario_id):
+    """Cria uma nova solicitação de ajuste de ponto para um funcionário a partir da página de perfil."""
+    data_ajuste_str = request.form.get('data_ajuste')
+    tipo_ajuste = request.form.get('tipo_ajuste')
+
+    if not data_ajuste_str or not tipo_ajuste:
+        flash('A data e o tipo do ajuste são obrigatórios.', 'danger')
+        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+    data_ajuste = datetime.strptime(data_ajuste_str, '%Y-%m-%d').date()
+
+    existente = Ponto.query.filter_by(
+        funcionario_id=funcionario_id,
+        data_ajuste=data_ajuste,
+        tipo_ajuste=tipo_ajuste
+    ).first()
+
+    if existente:
+        flash(f'Já existe uma solicitação de "{tipo_ajuste}" para o dia {data_ajuste.strftime("%d/%m/%Y")}.', 'warning')
+        return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+    nova_solicitacao = Ponto(
+        funcionario_id=funcionario_id,
+        data_ajuste=data_ajuste,
+        tipo_ajuste=tipo_ajuste,
+        solicitante_id=current_user.id,
+        status='Pendente'
+    )
+    db.session.add(nova_solicitacao)
+    db.session.commit()
+
+    flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
+    return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
