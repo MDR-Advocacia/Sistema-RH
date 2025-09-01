@@ -7,8 +7,11 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form method="POST" action="{{ url_for('main.processar_cadastro') }}">
+            <form method="POST" action="{{ url_for('main.processar_cadastro') }}" id="form-cadastro">
                 
+                <input type="hidden" name="ad_username_manual" id="ad_username_manual">
+                <input type="hidden" name="vincular_ad_existente" id="vincular_ad_existente">
+
                 <h5 class="mb-3">Dados Pessoais e Profissionais</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -60,8 +63,10 @@
                 <h5 class="mb-3">Acesso ao Sistema</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
-                    
-                        <div class="form-text">O usuário usará o e-mail e esta senha "Mudar@12345" para logar.</div>
+                        <label class="form-label">Senha Inicial</label>
+                        <p class="form-control-plaintext">
+                            Será definida a senha padrão do AD. O usuário deverá alterá-la no primeiro login.
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Permissões</label>
@@ -82,10 +87,111 @@
                 
                 <div class="d-flex justify-content-end">
                     <a href="{{ url_for('main.listar_funcionarios') }}" class="btn btn-secondary me-2">Cancelar</a>
-                    <button type="submit" class="btn btn-brand">Cadastrar Funcionário</button>
+                    <button type="submit" class="btn btn-brand" id="btn-submit-cadastro">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Cadastrar Funcionário
+                    </button>
                 </div>
 
             </form>
         </div>
     </div>
+{% endblock %}
+
+{% block content_after %}
+<div class="modal fade" id="modal-conflito-ad" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Conflito de Usuário no Active Directory</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Já existe um usuário no Active Directory com o nome de login <strong id="ad-username-conflito"></strong>.</p>
+        <p>Este usuário pertence a: <strong id="ad-displayname-conflito"></strong>.</p>
+        <hr>
+        <p><strong>O que você deseja fazer?</strong></p>
+        
+        <div class="d-grid gap-2">
+            <button class="btn btn-success" id="btn-vincular-conta">
+                <i class="bi bi-link-45deg"></i> Vincular a este usuário do AD
+            </button>
+            <button class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#collapse-manual">
+                <i class="bi bi-pencil-square"></i> Definir um login diferente manualmente
+            </button>
+        </div>
+
+        <div class="collapse mt-3" id="collapse-manual">
+            <div class="card card-body">
+                <label for="input-username-manual" class="form-label">Novo nome de login (sem @dominio.com):</label>
+                <input type="text" class="form-control" id="input-username-manual" placeholder="ex: nome.sobrenome2">
+                <button class="btn btn-primary mt-2" id="btn-salvar-manual">Salvar e Cadastrar com este Login</button>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('form-cadastro');
+    const btnSubmit = document.getElementById('btn-submit-cadastro');
+    const spinner = btnSubmit.querySelector('.spinner-border');
+    
+    const hiddenManualUsername = document.getElementById('ad_username_manual');
+    const hiddenVincularFlag = document.getElementById('vincular_ad_existente');
+    
+    const conflitoModalEl = document.getElementById('modal-conflito-ad');
+    const conflitoModal = new bootstrap.Modal(conflitoModalEl);
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault(); // Impede o envio padrão do formulário
+        
+        btnSubmit.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        const nomeCompleto = document.getElementById('nome').value.trim().toLowerCase();
+        const nomeParts = nomeCompleto.split(' ');
+        const usernamePadrao = nomeParts.length > 1 
+            ? `${nomeParts[0]}.${nomeParts[nomeParts.length - 1]}`
+            : nomeParts[0];
+
+        const response = await fetch(`/api/ad/check-username?username=${encodeURIComponent(usernamePadrao)}`);
+        const data = await response.json();
+
+        if (data.existe) {
+            document.getElementById('ad-username-conflito').textContent = usernamePadrao;
+            document.getElementById('ad-displayname-conflito').textContent = data.displayName;
+            
+            btnSubmit.disabled = false;
+            spinner.classList.add('d-none');
+            conflitoModal.show();
+        } else {
+            form.submit();
+        }
+    });
+    
+    document.getElementById('btn-vincular-conta').addEventListener('click', function() {
+        hiddenVincularFlag.value = 'true';
+        conflitoModal.hide();
+        form.submit();
+    });
+
+    document.getElementById('btn-salvar-manual').addEventListener('click', function() {
+        const manualUsername = document.getElementById('input-username-manual').value.trim();
+        if (manualUsername) {
+            hiddenManualUsername.value = manualUsername;
+            conflitoModal.hide();
+            form.submit();
+        } else {
+            alert('Por favor, digite um nome de usuário manual.');
+        }
+    });
+
+});
+</script>
 {% endblock %}

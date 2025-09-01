@@ -5,7 +5,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from io import TextIOWrapper, StringIO
-from .ad_sync import provisionar_usuario_ad, habilitar_usuario_ad, desabilitar_usuario_ad, remover_usuario_ad
+from .ad_sync import provisionar_usuario_ad, habilitar_usuario_ad, desabilitar_usuario_ad, remover_usuario_ad, verificar_usuario_ad
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
                    url_for, flash, make_response, current_app, send_from_directory)
@@ -90,14 +90,27 @@ def exibir_formulario_cadastro():
     permissoes = Permissao.query.all()
     return render_template('cadastrar.html', permissoes=permissoes)
 
+# --- NOVA ROTA DE API PARA VERIFICAÇÃO ---
+@main.route('/api/ad/check-username')
+@login_required
+@permission_required('admin_rh')
+def check_ad_username():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'Nome de usuário não fornecido'}), 400
+    
+    resultado = verificar_usuario_ad(username)
+    return jsonify(resultado)    
+
+# ROTA DE CADASTRO
 @main.route('/cadastrar', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
+    # Captura dos dados do formulário
     nome = request.form.get('nome')
     cpf = request.form.get('cpf')
     email_contato = request.form.get('email')
-    # ... (captura dos outros campos, exceto a senha)
     telefone = request.form.get('telefone')
     cargo = request.form.get('cargo')
     setor = request.form.get('setor')
@@ -105,6 +118,10 @@ def processar_cadastro():
     contato_emergencia_nome = request.form.get('contato_emergencia_nome')
     contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
     permissoes_selecionadas_ids = request.form.getlist('permissoes')
+
+    # Captura dos novos campos de controle do AD
+    ad_username_manual = request.form.get('ad_username_manual')
+    vincular_ad_existente = request.form.get('vincular_ad_existente') == 'true'
 
     if not all([nome, cpf, email_contato]):
         flash('Nome, CPF e Email são obrigatórios.')
@@ -120,23 +137,45 @@ def processar_cadastro():
         contato_emergencia_nome=contato_emergencia_nome,
         contato_emergencia_telefone=contato_emergencia_telefone
     )
-
-    # Tenta provisionar no AD. A senha não é mais passada daqui.
-    sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(novo_funcionario)
     
+    # Adiciona o funcionário à sessão para poder usá-lo, mas não commita ainda
+    db.session.add(novo_funcionario)
+
+    # Lógica de provisionamento/vinculação no AD
+    sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
+        novo_funcionario, 
+        username_manual=ad_username_manual,
+        vincular=vincular_ad_existente
+    )
+
     if not sucesso_ad:
+        db.session.rollback() # Desfaz a adição do funcionário se o AD falhar
         flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}. O usuário não foi criado.", "danger")
         return redirect(url_for('main.exibir_formulario_cadastro'))
     
-    db.session.add(novo_funcionario)
-    db.session.commit()
-    
+    # Se chegou aqui, a operação no AD foi um sucesso (criar, atualizar ou validar para vincular)
+    db.session.commit() # Agora sim, salva o novo funcionário no banco
+
+    # Se a opção for vincular...
+    if vincular_ad_existente:
+        usuario_existente = Usuario.query.filter_by(email=email_ad).first()
+        if usuario_existente:
+            usuario_existente.funcionario_id = novo_funcionario.id
+            db.session.commit()
+            flash(f"Funcionário {novo_funcionario.nome} criado e vinculado à conta AD existente de {email_ad}.", "success")
+            return redirect(url_for('main.listar_funcionarios'))
+        else:
+            # Este é um caso de erro raro, mas importante de tratar
+            flash(f"Erro: A conta AD {email_ad} existe, mas não foi encontrada no sistema para vinculação.", "danger")
+            return redirect(url_for('main.exibir_formulario_cadastro'))
+
+    # Se não era para vincular, cria um novo usuário no sistema
     novo_usuario = Usuario(
         email=email_ad,
         funcionario_id=novo_funcionario.id,
-        senha_provisoria=False
+        senha_provisoria=False # A senha já foi definida no AD
     )
-    novo_usuario.set_password(uuid.uuid4().hex)
+    novo_usuario.set_password(uuid.uuid4().hex) # Define uma senha interna aleatória e segura
     
     if permissoes_selecionadas_ids:
         permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()

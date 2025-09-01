@@ -27,30 +27,71 @@ def get_ad_connection():
         current_app.logger.error(f"Falha ao conectar ao AD com a conta de serviço: {e}")
         return None
 
-# --- FUNÇÃO ATUALIZADA PARA O FLUXO COMPLETO ---
-def provisionar_usuario_ad(funcionario):
-    """
-    Garante que um usuário exista no AD, define uma senha padrão, o ativa e
-    força a alteração da senha no primeiro login.
-    """
+def verificar_usuario_ad(username):
+    """Verifica se um sAMAccountName já existe no AD."""
     conn = get_ad_connection()
     if not conn:
-        return False, "Falha na conexão com o AD.", None
-
+        return {'existe': False, 'error': 'Falha na conexão com o AD.'}
+    
     try:
+        search_filter = f'(sAMAccountName={username})'
+        conn.search(
+            search_base=current_app.config['LDAP_BASE_DN'],
+            search_filter=search_filter,
+            attributes=['displayName']
+        )
+        if conn.entries:
+            display_name = conn.entries[0].displayName.value
+            return {'existe': True, 'displayName': display_name}
+        return {'existe': False}
+    except LDAPException as e:
+        current_app.logger.error(f"Erro ao verificar usuário no AD: {e}")
+        return {'existe': False, 'error': str(e)}
+    finally:
+        if conn:
+            conn.unbind()
+
+# --- FUNÇÃO ATUALIZADA PARA O FLUXO COMPLETO ---
+# app/ad_sync.py
+
+def provisionar_usuario_ad(funcionario, username_manual=None, vincular=False):
+    """
+    Garante que um usuário exista no AD, com suporte para username manual e vinculação.
+    """
+    if vincular:
+        # Se a intenção é apenas vincular, não precisamos conectar ao AD para criar.
+        # Apenas retornamos os dados necessários para a vinculação no sistema.
         nome_parts = funcionario.nome.lower().split()
         primeiro_nome = nome_parts[0]
         sobrenome = nome_parts[-1] if len(nome_parts) > 1 else ''
         username = f"{primeiro_nome}.{sobrenome}" if sobrenome else primeiro_nome
         domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
+        email_ad = f"{username}@{domain}"
+        return True, "Vinculação manual solicitada.", email_ad
+
+    conn = get_ad_connection()
+    if not conn:
+        return False, "Falha na conexão com o AD.", None
+
+    try:
+        # Define o username (padrão ou manual)
+        if username_manual:
+            username = username_manual.lower()
+        else:
+            nome_parts = funcionario.nome.lower().split()
+            primeiro_nome = nome_parts[0]
+            sobrenome = nome_parts[-1] if len(nome_parts) > 1 else ''
+            username = f"{primeiro_nome}.{sobrenome}" if sobrenome else primeiro_nome
+        
+        domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
         user_principal_name = f"{username}@{domain}"
         user_dn = f"CN={funcionario.nome},{current_app.config['LDAP_USER_OU']}"
 
-        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(userPrincipalName={user_principal_name})', attributes=['cn'])
+        # Verifica se o usuário já existe (a verificação primária é feita via API, esta é uma dupla checagem)
+        conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(sAMAccountName={username})', attributes=['cn'])
 
         if conn.entries:
-            # Lógica de atualização para usuários existentes (não mexe na senha)
-            current_app.logger.info(f"Usuário {user_principal_name} já existe no AD. Sincronizando dados.")
+            # Lógica de atualização para usuários existentes
             user_dn_existente = conn.entries[0].entry_dn
             modificacoes = {
                 'displayName': [(MODIFY_REPLACE, [funcionario.nome])],
@@ -60,15 +101,13 @@ def provisionar_usuario_ad(funcionario):
             conn.modify(user_dn_existente, modificacoes)
         else:
             # Fluxo de criação de novo usuário
-            current_app.logger.info(f"Provisionando usuário {user_principal_name} no AD.")
-            
             conn.add(
                 user_dn,
                 attributes={
                     'objectClass': ['top', 'person', 'organizationalPerson', 'user'],
                     'cn': funcionario.nome,
-                    'givenName': primeiro_nome.capitalize(),
-                    'sn': ' '.join(nome_parts[1:]).title(),
+                    'givenName': nome_parts[0].capitalize(),
+                    'sn': ' '.join(nome_parts[1:]).title() if len(nome_parts) > 1 else nome_parts[0].capitalize(),
                     'displayName': funcionario.nome,
                     'userPrincipalName': user_principal_name,
                     'sAMAccountName': username,
@@ -76,22 +115,18 @@ def provisionar_usuario_ad(funcionario):
                 }
             )
             if not conn.result['result'] == 0:
-                raise LDAPException(f"Falha ao criar o objeto do usuário: {conn.result['description']} - {conn.result['message']}")
+                raise LDAPException(f"Falha ao criar o objeto do usuÃ¡rio: {conn.result['description']} - {conn.result['message']}")
 
-            # --- INÍCIO DA ALTERAÇÃO: MÉTODO DIRETO PARA DEFINIR SENHA ---
             senha_padrao = current_app.config.get('AD_DEFAULT_PASSWORD')
             if not senha_padrao:
-                raise LDAPException("A senha padrão do AD (AD_DEFAULT_PASSWORD) não está configurada no .env")
+                raise LDAPException("A senha padrÃ£o do AD (AD_DEFAULT_PASSWORD) nÃ£o estÃ¡ configurada no .env")
 
-            # Formata a senha para o atributo unicodePwd do AD
             quoted_password = '"' + senha_padrao + '"'
             encoded_password = quoted_password.encode('utf-16-le')
 
-            # Usa o método de modificação padrão para definir a senha
             conn.modify(user_dn, {'unicodePwd': [(MODIFY_REPLACE, [encoded_password])]})
             if not conn.result['result'] == 0:
-                raise LDAPException(f"Falha ao definir a senha (verifique a política de complexidade): {conn.result['description']} - {conn.result['message']}")
-            # --- FIM DA ALTERAÇÃO ---
+                raise LDAPException(f"Falha ao definir a senha (verifique a polÃ­tica de complexidade): {conn.result['description']} - {conn.result['message']}")
             
             conn.modify(user_dn, {'userAccountControl': [(MODIFY_REPLACE, ['512'])]})
             if not conn.result['result'] == 0:
@@ -99,18 +134,18 @@ def provisionar_usuario_ad(funcionario):
             
             conn.modify(user_dn, {'pwdLastSet': [(MODIFY_REPLACE, [0])]})
             if not conn.result['result'] == 0:
-                raise LDAPException(f"Falha ao forçar troca de senha: {conn.result['description']} - {conn.result['message']}")
+                raise LDAPException(f"Falha ao forÃ§ar troca de senha: {conn.result['description']} - {conn.result['message']}")
 
-        return True, "Usuário provisionado no AD com sucesso.", user_principal_name
+        return True, "UsuÃ¡rio provisionado no AD com sucesso.", user_principal_name
 
     except LDAPException as e:
-        current_app.logger.error(f"Erro de LDAP ao provisionar/sincronizar usuário: {e}")
+        current_app.logger.error(f"Erro de LDAP ao provisionar/sincronizar usuÃ¡rio: {e}")
         return False, f"Erro de LDAP: {e}", None
     finally:
         if conn:
             conn.unbind()
 
-# (As outras funções de habilitar, desabilitar e remover continuam aqui)
+# ALTERAR, DESABILITAR E REMOVER
 
 def _alterar_status_usuario_ad(email, habilitar=True):
     conn = get_ad_connection()
