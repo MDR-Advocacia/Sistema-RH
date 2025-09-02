@@ -4,10 +4,9 @@ import jwt
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from . import db
-from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash # type: ignore
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean # type: ignore # Adicione Boolean
-from flask_login import UserMixin # type: ignore
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean
+from flask_login import UserMixin
 
 # --- Tabelas de Associação ---
 
@@ -236,3 +235,17 @@ class DenunciaAnexo(db.Model):
     nome_arquivo_original = db.Column(db.String(255), nullable=False)
     path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
     denuncia_id = db.Column(db.Integer, db.ForeignKey('denuncia.id'), nullable=False)
+
+# Modelo de LOGS
+class LogAtividade(db.Model):
+    __tablename__ = 'log_atividade'
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    acao = db.Column(db.String(512), nullable=False)
+    
+    # Relacionamento para saber quem executou a ação
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    usuario = db.relationship('Usuario', backref='logs_atividade')
+
+    def __repr__(self):
+        return f'<Log {self.timestamp}: {self.acao}>'

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Logs de Atividade do Sistema{% endblock %}
+
+{% block content %}
+<h1 class="h2 mb-4">Logs de Atividade do Sistema</h1>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-card-checklist"></i> Registros de Atividade</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Data e Hora</th>
+                        <th style="width: 20%;">Usuário</th>
+                        <th>Ação Realizada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>{{ log.timestamp | localtime }}</td>
+                        <td>{{ log.usuario.funcionario.nome if log.usuario.funcionario else log.usuario.email }}</td>
+                        <td>{{ log.acao }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center p-4">Nenhum log de atividade registrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if logs.pages > 1 %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% for page_num in logs.iter_pages() %}
+                    {% if page_num %}
+                        {% if logs.page == page_num %}
+                            <li class="page-item active"><a class="page-link" href="#">{{ page_num }}</a></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('main.ver_logs', page=page_num) }}">{{ page_num }}</a></li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

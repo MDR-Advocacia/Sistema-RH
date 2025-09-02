@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from docxtpl import DocxTemplate
 from io import BytesIO
-
+from .utils import registrar_log # <-- Importar a função de log
 from .email import send_email
 from . import db
 from .decorators import permission_required
@@ -62,6 +62,11 @@ def gestao_ponto():
         db.session.add(nova_solicitacao)
         db.session.commit()
 
+        # LOG
+        funcionario = Funcionario.query.get(funcionario_id)
+        registrar_log(f"Solicitou ajuste de ponto ({tipo_ajuste} em {data_ajuste.strftime('%d/%m/%Y')}) para '{funcionario.nome}'.")
+
+
         flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
         return redirect(url_for('ponto.gestao_ponto'))
 
@@ -80,6 +85,10 @@ def aprovar_ponto(ponto_id):
     ponto.revisor_id = current_user.id
     ponto.observacao_rh = None
     db.session.commit()
+
+    # LOG
+    registrar_log(f"Aprovou o ajuste de ponto ({ponto.tipo_ajuste} de {ponto.data_ajuste.strftime('%d/%m/%Y')}) do funcionário '{ponto.funcionario.nome}'.")
+
     flash(f'Ajuste de ponto de {ponto.funcionario.nome} para o dia {ponto.data_ajuste.strftime("%d/%m/%Y")} foi aprovado.', 'success')
     return redirect(url_for('ponto.gestao_ponto'))
 
@@ -108,9 +117,15 @@ def reprovar_ponto(ponto_id):
     ponto.path_assinado = None
     ponto.revisor_id = current_user.id
     db.session.commit()
+
+    # LOG
+    registrar_log(f"Reprovou o ajuste de ponto ({ponto.tipo_ajuste} de {ponto.data_ajuste.strftime('%d/%m/%Y')}) do funcionário '{ponto.funcionario.nome}' pelo motivo: '{motivo}'.")
+  
+
     flash(f'Ajuste de {ponto.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
     return redirect(url_for('ponto.gestao_ponto'))
 
+# REMOÇÃO VIA FORMULARIO
 @ponto_bp.route('/<int:ponto_id>/remover', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
@@ -120,6 +135,9 @@ def remover_ponto(ponto_id):
     funcionario_id = ponto.funcionario_id
     
     try:
+        # LOG (registra antes de deletar para ter acesso aos dados)
+        registrar_log(f"Removeu a solicitação de ajuste de ponto ({ponto.tipo_ajuste} de {ponto.data_ajuste.strftime('%d/%m/%Y')}) do funcionário '{ponto.funcionario.nome}'.")
+
         if ponto.path_assinado:
             caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], 'pontos', ponto.path_assinado)
             if os.path.exists(caminho_arquivo):
@@ -133,6 +151,27 @@ def remover_ponto(ponto_id):
         current_app.logger.error(f"Erro ao remover solicitação de ponto {ponto_id}: {e}")
 
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+# REMOÇÃO VIA API
+@ponto_bp.route('/api/ponto/<int:ponto_id>/remover', methods=['DELETE'])
+@login_required
+@permission_required('admin_rh')
+def remover_ponto_api(ponto_id):
+    """Remove uma solicitação de ajuste de ponto via API."""
+    ponto = Ponto.query.get_or_404(ponto_id)
+    try:
+        registrar_log(f"Removeu (via API) o ajuste de ponto ({ponto.tipo_ajuste} de {ponto.data_ajuste.strftime('%d/%m/%Y')}) do funcionário '{ponto.funcionario.nome}'.")
+        if ponto.path_assinado:
+            caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], 'pontos', ponto.path_assinado)
+            if os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+        db.session.delete(ponto)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Ajuste de ponto removido com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erro ao remover ajuste de ponto {ponto_id} via API: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao remover o ajuste de ponto.'}), 500    
 
 
 # --- Rotas para Colaborador ---

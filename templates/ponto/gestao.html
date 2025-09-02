@@ -160,82 +160,58 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- SCRIPT PARA ABA DE SOLICITAÇÃO ---
-    const buscaInputSolicitar = document.getElementById('busca-funcionario');
-    const resultadosDivSolicitar = document.getElementById('resultados-busca');
-    const funcionarioIdInputSolicitar = document.getElementById('funcionario_id');
-    let searchTimeoutSolicitar;
+    
+    // --- LÓGICA DE BUSCA GENÉRICA ---
+    function setupBusca(inputId, resultadosId, hiddenInputId) {
+        const buscaInput = document.getElementById(inputId);
+        const resultadosDiv = document.getElementById(resultadosId);
+        const hiddenInput = document.getElementById(hiddenInputId);
+        let searchTimeout;
 
-    buscaInputSolicitar.addEventListener('keyup', () => {
-        clearTimeout(searchTimeoutSolicitar);
-        searchTimeoutSolicitar = setTimeout(async () => {
-            const termo = buscaInputSolicitar.value.trim();
-            resultadosDivSolicitar.innerHTML = '';
-            funcionarioIdInputSolicitar.value = '';
+        buscaInput.addEventListener('keyup', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                const termo = buscaInput.value.trim();
+                resultadosDiv.innerHTML = '';
+                if(hiddenInput) hiddenInput.value = '';
 
-            if (termo.length < 2) return;
+                if (termo.length < 2) return;
 
-            const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
-            const colaboradores = await res.json();
-            
-            if (colaboradores.length > 0) {
-                colaboradores.forEach(colab => {
-                    const item = document.createElement('a');
-                    item.href = '#';
-                    item.className = 'list-group-item list-group-item-action';
-                    item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
-                    item.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        buscaInputSolicitar.value = colab.nome;
-                        funcionarioIdInputSolicitar.value = colab.id;
-                        resultadosDivSolicitar.innerHTML = '';
+                const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
+                const colaboradores = await res.json();
+                
+                if (colaboradores.length > 0) {
+                    colaboradores.forEach(colab => {
+                        const item = document.createElement('a');
+                        item.href = '#';
+                        item.className = 'list-group-item list-group-item-action';
+                        item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            buscaInput.value = colab.nome;
+                            if(hiddenInput) {
+                                hiddenInput.value = colab.id;
+                            } else {
+                                carregarHistorico(colab.id);
+                            }
+                            resultadosDiv.innerHTML = '';
+                        });
+                        resultadosDiv.appendChild(item);
                     });
-                    resultadosDivSolicitar.appendChild(item);
-                });
-            } else {
-                resultadosDivSolicitar.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
-            }
-        }, 300);
-    });
+                } else {
+                    resultadosDiv.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
+                }
+            }, 300);
+        });
+    }
 
-    // --- SCRIPT PARA A NOVA ABA DE CONSULTA ---
-    const buscaInputConsulta = document.getElementById('busca-consulta');
-    const resultadosDivConsulta = document.getElementById('resultados-consulta');
+    setupBusca('busca-funcionario', 'resultados-busca', 'funcionario_id');
+    setupBusca('busca-consulta', 'resultados-consulta', null);
+
     const historicoContainer = document.getElementById('historico-container');
-    let searchTimeoutConsulta;
-
-    buscaInputConsulta.addEventListener('keyup', () => {
-        clearTimeout(searchTimeoutConsulta);
-        searchTimeoutConsulta = setTimeout(async () => {
-            const termo = buscaInputConsulta.value.trim();
-            resultadosDivConsulta.innerHTML = '';
-
-            if (termo.length < 2) return;
-
-            const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
-            const colaboradores = await res.json();
-            
-            if (colaboradores.length > 0) {
-                colaboradores.forEach(colab => {
-                    const item = document.createElement('a');
-                    item.href = '#';
-                    item.className = 'list-group-item list-group-item-action';
-                    item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
-                    item.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        buscaInputConsulta.value = colab.nome;
-                        resultadosDivConsulta.innerHTML = '';
-                        carregarHistorico(colab.id);
-                    });
-                    resultadosDivConsulta.appendChild(item);
-                });
-            } else {
-                resultadosDivConsulta.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
-            }
-        }, 300);
-    });
 
     async function carregarHistorico(funcionarioId) {
         historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
@@ -255,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <th>Data</th>
                             <th>Tipo</th>
                             <th>Status</th>
-                            <th class="text-end">Ação</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -268,15 +244,16 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (ponto.status === 'Aprovado') statusBadge = '<span class="badge bg-success">Aprovado</span>';
             
             const btnDownload = ponto.path_assinado 
-                ? `<a href="${ponto.path_assinado}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i></a>` 
+                ? `<a href="${ponto.path_assinado}" class="btn btn-sm btn-outline-secondary" title="Baixar Anexo"><i class="bi bi-download"></i></a>` 
                 : '';
+            const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-ponto" data-ponto-id="${ponto.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
 
             tableHtml += `
-                <tr>
+                <tr id="ponto-row-${ponto.id}">
                     <td>${ponto.data_ajuste}</td>
                     <td>${ponto.tipo_ajuste}</td>
                     <td>${statusBadge}</td>
-                    <td class="text-end">${btnDownload}</td>
+                    <td class="text-end">${btnDownload} ${btnRemover}</td>
                 </tr>
             `;
         });
@@ -284,6 +261,26 @@ document.addEventListener('DOMContentLoaded', function() {
         tableHtml += '</tbody></table></div>';
         historicoContainer.innerHTML = tableHtml;
     }
+
+    historicoContainer.addEventListener('click', function(event) {
+        const target = event.target.closest('.btn-remover-ponto');
+        if (!target) return;
+        
+        const pontoId = target.dataset.pontoId;
+        if (confirm('Tem certeza que deseja remover este registro de ponto? Esta ação é irreversível.')) {
+            fetch(`/ponto/api/ponto/${pontoId}/remover`, {
+                method: 'DELETE'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`ponto-row-${pontoId}`).remove();
+                } else {
+                    alert(data.message || 'Ocorreu um erro.');
+                }
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

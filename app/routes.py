@@ -1,4 +1,3 @@
-# app/routes.py (versão com a contagem de funcionários corrigida)
 
 import csv
 import os
@@ -17,8 +16,10 @@ from .email import send_email
 
 from . import db, format_datetime_local
 from .decorators import permission_required
+# Adicione LogAtividade e registrar_log às importações
 from .models import (Funcionario, Permissao, Usuario, Aviso,
-                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto)
+                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto, LogAtividade)
+from .utils import registrar_log
 
 main = Blueprint('main', __name__)
 
@@ -184,6 +185,9 @@ def processar_cadastro():
     db.session.add(novo_usuario)
     db.session.commit()
 
+    # Log ao final, se tudo deu certo
+    registrar_log(f"Cadastrou o funcionário '{nome}' (CPF: {cpf}) e provisionou o usuário AD '{email_ad}'.")
+    
     flash(f'Funcionário {nome} criado com sucesso! Login no AD: {email_ad}')
     return redirect(url_for('main.listar_funcionarios'))
 # --- FIM DA CORREÇÃO ---
@@ -338,6 +342,9 @@ def criar_aviso():
                 db.session.add(anexo)
         
         db.session.commit()
+
+        # REGISTRO DE LOG
+        registrar_log(f"Publicou o aviso: '{novo_aviso.titulo}'.")
 
         # Início da Lógica de Notificação por E-mail
         try:
@@ -761,6 +768,9 @@ def desligar_funcionario(funcionario_id):
         if funcionario.usuario:
             funcionario.usuario.permissoes = []
 
+        # REGISTRAR LOG
+        registrar_log(f"Realizou o processo de desligamento para o funcionário '{funcionario.nome}' (ID: {funcionario.id}).")
+
         db.session.commit()
         flash(f"O processo de desligamento para {funcionario.nome} foi concluído com sucesso.", "success")
 
@@ -770,3 +780,17 @@ def desligar_funcionario(funcionario_id):
         flash("Ocorreu um erro inesperado durante o processo de desligamento.", "danger")
 
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+
+
+# VISUALIZAÇÃO DE LOGS
+
+@main.route('/logs')
+@login_required
+@permission_required('admin_ti')
+def ver_logs():
+    """Exibe a página de logs de atividade do sistema."""
+    page = request.args.get('page', 1, type=int)
+    logs = LogAtividade.query.order_by(LogAtividade.timestamp.desc()).paginate(
+        page=page, per_page=30
+    )
+    return render_template('logs/visualizar.html', logs=logs)

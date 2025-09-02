@@ -1,14 +1,12 @@
 import os
 import uuid
 from datetime import datetime
-
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, send_from_directory, jsonify)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-
 from .email import send_email
-
+from .utils import registrar_log  # <-- Importar a função de log
 from . import db
 from .decorators import permission_required
 from .models import Documento, Funcionario, RequisicaoDocumento
@@ -46,6 +44,9 @@ def gestao_documentos():
         )
         db.session.add(nova_requisicao)
         db.session.commit()
+
+        # LOG
+        registrar_log(f"Solicitou o documento '{tipo_documento}' para o funcionário '{funcionario.nome}'.")
         flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
         return redirect(url_for('documentos.gestao_documentos'))
 
@@ -114,6 +115,11 @@ def upload_manual_documento():
         )
         db.session.add(novo_documento)
         db.session.commit()
+        
+        # LOG
+        funcionario = Funcionario.query.get(funcionario_id)
+        registrar_log(f"Enviou manualmente o documento '{tipo_documento}' para o funcionário '{funcionario.nome}'.")
+
         flash('Documento enviado com sucesso!', 'success')
     else:
         flash('Extensão de arquivo não permitida.', 'danger')
@@ -226,7 +232,7 @@ def solicitar_documento(funcionario_id):
     flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
 
-
+# ROTA   
 @documentos_bp.route('/requisicao/<int:req_id>/remover', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
@@ -247,6 +253,28 @@ def remover_requisicao(req_id):
     # --- LINHA CORRIGIDA ---
     # A variável correta é 'funcionario_id', que foi definida acima.
     return redirect(url_for('documentos.ver_documentos_funcionario', funcionario_id=funcionario_id))
+
+# NOVA ROTA DE API (remove o DOCUMENTO)
+@documentos_bp.route('/api/documento/<int:documento_id>/remover', methods=['DELETE'])
+@login_required
+@permission_required('admin_rh')
+def remover_documento_api(documento_id):
+    """Remove um documento e seu arquivo físico via API."""
+    documento = Documento.query.get_or_404(documento_id)
+    try:
+        registrar_log(f"Removeu (via API) o documento '{documento.tipo_documento}' ({documento.nome_arquivo}) do funcionário '{documento.funcionario.nome}'.")
+        
+        caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.path_armazenamento)
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+            
+        db.session.delete(documento)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Documento removido com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erro ao remover documento {documento_id} via API: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao remover o documento.'}), 500    
 
 
 @documentos_bp.route('/requisicao/<int:req_id>/responder', methods=['POST'])
@@ -312,6 +340,10 @@ def aprovar_documento(documento_id):
             requisicao.data_conclusao = datetime.utcnow()
 
     db.session.commit()
+
+    # LOG
+    registrar_log(f"Aprovou o documento '{documento.tipo_documento}' do funcionário '{documento.funcionario.nome}'.")
+
     flash(f'Documento "{documento.tipo_documento}" de {documento.funcionario.nome} foi aprovado.', 'success')
     return redirect(url_for('documentos.gestao_documentos'))
 
@@ -342,6 +374,10 @@ def reprovar_documento(documento_id):
             os.remove(caminho_arquivo)
 
         db.session.commit()
+
+        # LOG
+        registrar_log(f"Reprovou o documento '{documento.tipo_documento}' do funcionário '{documento.funcionario.nome}' pelo motivo: '{motivo}'.")
+
         flash(f'Documento de {documento.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
     except Exception as e:
         db.session.rollback()

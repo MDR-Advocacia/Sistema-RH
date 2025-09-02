@@ -21,7 +21,7 @@
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="enviar-tab" data-bs-toggle="tab" data-bs-target="#enviar" type="button" role="tab" aria-controls="enviar" aria-selected="false">
-            Cadastro de Documentos
+            Enviar Manualmente
         </button>
     </li>
     <li class="nav-item" role="presentation">
@@ -108,7 +108,7 @@
     <div class="tab-pane fade" id="enviar" role="tabpanel" aria-labelledby="enviar-tab">
         <div class="card shadow-sm card-tab">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-upload"></i> Cadastro Manual</h5>
+                <h5 class="mb-0"><i class="bi bi-upload"></i> Enviar Documento Manualmente</h5>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('documentos.upload_manual_documento') }}" enctype="multipart/form-data">
@@ -184,7 +184,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- LÓGICA DE BUSCA GENÉRICA ---
     function setupBusca(inputId, resultadosId, hiddenInputId) {
         const buscaInput = document.getElementById(inputId);
         const resultadosDiv = document.getElementById(resultadosId);
@@ -215,7 +214,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             if(hiddenInput) {
                                 hiddenInput.value = colab.id;
                             } else {
-                                // Lógica específica para a aba de consulta
                                 carregarHistorico(colab.id);
                             }
                             resultadosDiv.innerHTML = '';
@@ -229,12 +227,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- INICIALIZAR BUSCAS PARA TODAS AS ABAS ---
     setupBusca('busca-solicitar', 'resultados-solicitar', 'funcionario_id_solicitar');
     setupBusca('busca-enviar', 'resultados-enviar', 'funcionario_id_enviar');
     setupBusca('busca-consulta', 'resultados-consulta', null);
 
-    // --- LÓGICA DA ABA DE CONSULTA ---
     const historicoContainer = document.getElementById('historico-container');
     async function carregarHistorico(funcionarioId) {
         historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
@@ -255,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <th>Arquivo</th>
                             <th>Data Envio</th>
                             <th>Status</th>
-                            <th class="text-end">Ação</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -266,15 +262,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (doc.status === 'Pendente de Revisão') statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
             else if (doc.status === 'Aprovado') statusBadge = '<span class="badge bg-success">Aprovado</span>';
             
+            const btnDownload = `<a href="${doc.url_download}" class="btn btn-sm btn-outline-secondary" title="Baixar"><i class="bi bi-download"></i></a>`;
+            const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-doc" data-doc-id="${doc.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
+            
             tableHtml += `
-                <tr>
+                <tr id="doc-row-${doc.id}">
                     <td>${doc.tipo_documento}</td>
                     <td>${doc.nome_arquivo}</td>
                     <td>${doc.data_upload}</td>
                     <td>${statusBadge}</td>
-                    <td class="text-end">
-                        <a href="${doc.url_download}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i></a>
-                    </td>
+                    <td class="text-end">${btnDownload} ${btnRemover}</td>
                 </tr>
             `;
         });
@@ -282,6 +279,26 @@ document.addEventListener('DOMContentLoaded', function() {
         tableHtml += '</tbody></table></div>';
         historicoContainer.innerHTML = tableHtml;
     }
+
+    historicoContainer.addEventListener('click', function(event) {
+        const target = event.target.closest('.btn-remover-doc');
+        if (!target) return;
+        
+        const docId = target.dataset.docId;
+        if (confirm('Tem certeza que deseja remover este documento permanentemente? Esta ação é irreversível.')) {
+            fetch(`/documentos/api/documento/${docId}/remover`, {
+                method: 'DELETE'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`doc-row-${docId}`).remove();
+                } else {
+                    alert(data.message || 'Ocorreu um erro.');
+                }
+            });
+        }
+    });
 });
 </script>
 {% endblock %}
