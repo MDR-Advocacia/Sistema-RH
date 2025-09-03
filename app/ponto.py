@@ -66,6 +66,16 @@ def gestao_ponto():
         funcionario = Funcionario.query.get(funcionario_id)
         registrar_log(f"Solicitou ajuste de ponto ({tipo_ajuste} em {data_ajuste.strftime('%d/%m/%Y')}) para '{funcionario.nome}'.")
 
+        # --- LÓGICA DE NOTIFICAÇÃO POR E-MAIL ADICIONADA ---
+        try:
+            if funcionario and funcionario.usuario:
+                send_email(funcionario.email,
+                           f"Nova Solicitação de Ajuste de Ponto: {tipo_ajuste}",
+                           'email/nova_solicitacao_ponto',
+                           solicitacao=nova_solicitacao)
+        except Exception as e:
+            current_app.logger.error(f"Falha ao enviar e-mail de solicitação de ponto: {e}")
+        # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
 
         flash(f'Solicitação de ajuste ({tipo_ajuste}) para {data_ajuste.strftime("%d/%m/%Y")} enviada!', 'success')
         return redirect(url_for('ponto.gestao_ponto'))
@@ -120,7 +130,17 @@ def reprovar_ponto(ponto_id):
 
     # LOG
     registrar_log(f"Reprovou o ajuste de ponto ({ponto.tipo_ajuste} de {ponto.data_ajuste.strftime('%d/%m/%Y')}) do funcionário '{ponto.funcionario.nome}' pelo motivo: '{motivo}'.")
-  
+    
+    # --- LÓGICA DE NOTIFICAÇÃO POR E-MAIL ADICIONADA ---
+    try:
+        if ponto.funcionario and ponto.funcionario.usuario:
+            send_email(ponto.funcionario.email,
+                       f"Correção Necessária no Ajuste de Ponto",
+                       'email/ponto_reprovado',
+                       ponto=ponto, motivo=motivo)
+    except Exception as e:
+        current_app.logger.error(f"Falha ao enviar e-mail de reprovação de ponto: {e}")
+    # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
 
     flash(f'Ajuste de {ponto.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
     return redirect(url_for('ponto.gestao_ponto'))

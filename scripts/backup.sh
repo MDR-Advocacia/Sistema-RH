@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o pipefail
+
 FILENAME="backup-$(date +%Y-%m-%d_%H-%M-%S).sql.gz"
 BACKUP_DIR="/backups"
 

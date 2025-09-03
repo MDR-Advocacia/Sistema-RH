@@ -1,0 +1,16 @@
+Olá {{ ponto.funcionario.nome }},
+
+Seu recente ajuste de ponto foi revisado pelo RH e precisa de correção.
+
+Tipo do Ajuste: {{ ponto.tipo_ajuste }}
+Data do Ajuste: {{ ponto.data_ajuste.strftime('%d/%m/%Y') }}
+Status: Reprovado
+
+Motivo da reprovação:
+{{ motivo }}
+
+Por favor, acesse a dashboard do sistema MDRH, verifique a pendência e envie novamente o documento assinado com as correções necessárias.
+{{ url_for('main.index', _external=True) }}
+
+Atenciosamente,
+Sistema MDRH

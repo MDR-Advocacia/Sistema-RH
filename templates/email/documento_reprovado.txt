@@ -1,0 +1,15 @@
+Olá {{ documento.funcionario.nome }},
+
+Sua recente submissão de documento foi revisada pelo RH e precisa de correção.
+
+Documento: {{ documento.tipo_documento }}
+Status: Reprovado
+
+Motivo da reprovação:
+{{ motivo }}
+
+Por favor, acesse a dashboard do sistema MDRH, verifique a pendência e envie o documento correto.
+{{ url_for('main.index', _external=True) }}
+
+Atenciosamente,
+Sistema MDRH

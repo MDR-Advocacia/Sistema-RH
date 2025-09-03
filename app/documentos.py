@@ -378,6 +378,16 @@ def reprovar_documento(documento_id):
         # LOG
         registrar_log(f"Reprovou o documento '{documento.tipo_documento}' do funcionário '{documento.funcionario.nome}' pelo motivo: '{motivo}'.")
 
+        # --- LÓGICA DE NOTIFICAÇÃO POR E-MAIL ADICIONADA ---
+        try:
+            send_email(funcionario_email,
+                       f"Correção Necessária no Documento: {documento_tipo}",
+                       'email/documento_reprovado',
+                       documento=documento, motivo=motivo)
+        except Exception as e:
+            current_app.logger.error(f"Falha ao enviar e-mail de reprovação de documento: {e}")
+        # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
+
         flash(f'Documento de {documento.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
     except Exception as e:
         db.session.rollback()
