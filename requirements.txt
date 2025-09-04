@@ -12,4 +12,5 @@ PyJWT
 PyPDF2
 docxtpl
 ldap3
+pytz 
 #pip install -r requirements.txt

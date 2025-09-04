@@ -4,6 +4,7 @@ import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app # type: ignore
 from flask_login import login_user, logout_user, login_required, current_user # type: ignore
 from flask_mail import Message
+from sqlalchemy import func # <-- ADICIONADO: Import necessário para a correção
 from . import mail
 from .models import Usuario, Funcionario
 from . import db
@@ -59,7 +60,8 @@ def login_post():
         user = Usuario.query.filter_by(email=ad_email).first()
 
         if not user:
-            funcionario_existente = Funcionario.query.filter_by(nome=ad_full_name).first()
+            # CORREÇÃO: Utilizando func.lower() para busca case-insensitive
+            funcionario_existente = Funcionario.query.filter(func.lower(Funcionario.nome) == func.lower(ad_full_name)).first()
             
             if funcionario_existente:
                 # Se o funcionário existe, verifica se ele JÁ TEM um usuário
@@ -140,53 +142,3 @@ def change_password_post():
 
     flash('Senha atualizada com sucesso! Bem-vindo(a) ao sistema.', 'success')
     return redirect(url_for('main.index'))
-
-""" @auth.route('/esqueci-senha', methods=['GET', 'POST'])
-def esqueci_senha():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        user = Usuario.query.filter_by(email=email).first()
-        if user:
-            # Gerar token e enviar e-mail
-            token = user.get_reset_password_token()
-            msg = Message(
-                'Redefinição de Senha - MDRH',
-                sender=current_app.config['MAIL_SENDER'],
-                recipients=[user.email]
-            )
-            msg.body = f'''Para redefinir sua senha, visite o seguinte link:
-{url_for('auth.redefinir_senha', token=token, _external=True)}
-
-Se você não solicitou esta alteração, ignore este e-mail.
-'''
-            mail.send(msg)
-        
-        flash('Se o e-mail estiver cadastrado em nosso sistema, um link de redefinição de senha foi enviado.', 'info')
-        return redirect(url_for('auth.login'))
-        
-    return render_template('auth/esqueci_senha.html')
-
-
-@auth.route('/redefinir-senha/<token>', methods=['GET', 'POST'])
-def redefinir_senha(token):
-    user = Usuario.verify_reset_password_token(token)
-    if not user:
-        flash('O link de redefinição de senha é inválido ou expirou.', 'danger')
-        return redirect(url_for('auth.login'))
-    
-    if request.method == 'POST':
-        nova_senha = request.form.get('nova_senha')
-        confirmacao = request.form.get('confirmacao_senha')
-
-        if not nova_senha or nova_senha != confirmacao:
-            flash('As senhas não conferem ou estão em branco.', 'danger')
-            return redirect(url_for('auth.redefinir_senha', token=token))
-
-        user.set_password(nova_senha)
-        user.senha_provisoria = False # Garante que a flag seja desativada
-        db.session.commit()
-
-        flash('Sua senha foi atualizada com sucesso! Você já pode fazer login.', 'success')
-        return redirect(url_for('auth.login'))
-        
-    return render_template('auth/redefinir_senha.html') """
