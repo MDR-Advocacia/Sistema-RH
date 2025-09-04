@@ -1,40 +1,60 @@
-/* static/custom_style.css */
+/* static/custom_style.css - VERSÃO COMPLETA E CORRIGIDA */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --cor-primaria: #0a2240; /* Azul escuro do site MDR */
-    --cor-acento: #c5a47e;   /* Dourado/Ocre do site MDR */
-    --cor-fundo: #f4f7f6;    /* Um cinza muito claro para o fundo */
-    --cor-superficie: #ffffff; /* Branco para cards e tabelas */
-    --cor-texto-principal: #333333;
+    /* Tema Claro (Padrão) */
+    --cor-fundo: #f4f7f6;
+    --cor-superficie: #ffffff;
+    --cor-superficie-levemente-escura: #f8f9fa;
+    --cor-primaria: #0a2240;
+    --cor-acento: #c5a47e;
+    --cor-texto-principal: #212529;
     --cor-texto-secundario: #555555;
     --cor-borda: #dee2e6;
+    --cor-sucesso: #198754;
+    --cor-erro: #dc3545;
 }
 
+body.dark-theme {
+    /* Tema Escuro */
+    --cor-fundo: #414144;
+    --cor-superficie: #d3d4d6;
+    --cor-superficie-levemente-escura: #212838;
+    --cor-primaria: #292a2e;
+    --cor-acento: #c5a47e;
+    --cor-texto-principal: #f0f2f5;
+    --cor-texto-secundario: #121214;
+    --cor-borda: #3e4a63;
+    --cor-sucesso: #28a745;
+    --cor-erro: #dc3545;
+}
+
+/* Estilos Gerais */
 body {
     font-family: 'Poppins', sans-serif;
     display: flex;
     background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 
+a {
+    color: var(--cor-acento);
+}
+
+/* --- COMPONENTES PRINCIPAIS --- */
+
+/* Sidebar */
 .sidebar {
     width: 260px;
     min-height: 100vh;
+    position: sticky;
+    top: 0;
     background-color: var(--cor-primaria);
     color: #fff;
 }
-
-.sidebar .sidebar-header {
-    padding: 1.5rem 1rem;
-    text-align: center;
-}
-
-/* ESTILO PARA A LOGO DA SIDEBAR */
-.sidebar-logo {
-    max-width: 150px; /* Ajuste o tamanho conforme necessário */
-    height: auto;
-}
-
+.sidebar-logo { max-width: 150px; height: auto; }
+.sidebar .sidebar-header { padding: 1.5rem 1rem; text-align: center; }
 .sidebar .nav-link {
     color: rgba(255, 255, 255, 0.7);
     padding: 0.75rem 1rem;
@@ -42,134 +62,90 @@ body {
     align-items: center;
     transition: all 0.2s ease-in-out;
 }
+.sidebar .nav-link .bi { margin-right: 12px; font-size: 1.2rem; }
+.sidebar .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); color: #fff; }
+.sidebar .nav-link.active { background-color: var(--cor-acento); color: #fff; font-weight: 500; }
+.sidebar .dropdown-toggle { color: #fff; }
+.dropdown-menu { background-color: var(--cor-primaria); }
+.dropdown-item:hover { background-color: rgba(255, 255, 255, 0.1); }
 
-.sidebar .nav-link .bi {
-    margin-right: 12px;
-    font-size: 1.2rem;
-}
+/* Conteúdo Principal */
+.content { flex-grow: 1; padding: 2rem; }
 
-.sidebar .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-
-.sidebar .nav-link.active {
-    background-color: var(--cor-acento);
-    color: #fff;
-    font-weight: 500;
-}
-
-.sidebar .dropdown-toggle {
-    color: #fff;
-}
-
-.content {
-    flex-grow: 1;
-    padding: 2rem;
-}
-
+/* Cards */
 .card {
     border: 1px solid var(--cor-borda);
+    background-color: var(--cor-superficie);
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
+.card-header {
+    background-color: transparent; /* Remove o fundo específico */
+    border-bottom: 1px solid var(--cor-borda);
+    color: var(--cor-texto-principal);
+}
+body.dark-theme .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
 
+/* Tabelas */
 .table {
-    background-color: var(--cor-superficie);
+    color: var(--cor-texto-principal);
+    border-color: var(--cor-borda);
 }
-
 .table thead {
-    background-color: #f8f9fa;
+    background-color: var(--cor-superficie-levemente-escura);
 }
-
-.table th {
-    font-weight: 600;
+/* ADIÇÃO: Garante que a tabela no tema escuro tenha fundo escuro e texto claro */
+body.dark-theme .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--cor-texto-principal);
+    --bs-table-border-color: var(--cor-borda);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-striped-color: var(--cor-texto-principal);
+    --bs-table-hover-bg: var(--cor-superficie-levemente-escura);
+    --bs-table-hover-color: var(--cor-texto-principal);
+}
+.table th { color: var(--cor-texto-principal); font-weight: 600; }
+.table-hover tbody tr:hover {
+    background-color: var(--cor-superficie-levemente-escura);
     color: var(--cor-texto-principal);
 }
-
-.btn-brand {
-    background-color: var(--cor-primaria);
-    border-color: var(--cor-primaria);
-    color: #fff;
-}
-.btn-brand:hover {
-    background-color: #081b33; /* Um pouco mais escuro */
-    border-color: #081b33;
-    color: #fff;
+body.dark-theme .table-striped>tbody>tr:nth-of-type(odd)>* {
+    --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
 }
 
-.btn-accent {
-    background-color: var(--cor-acento);
+/* Botões */
+.btn-brand { background-color: var(--cor-primaria); border-color: var(--cor-primaria); color: #fff; }
+.btn-brand:hover { filter: brightness(1.2); color: #fff; }
+.btn-accent { background-color: var(--cor-acento); border-color: var(--cor-acento); color: #fff; }
+.btn-accent:hover { filter: brightness(1.1); color: #fff; }
+
+/* Formulários */
+.form-control, .form-select, .form-control-plaintext {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+    border-color: var(--cor-borda);
+}
+.form-control:focus, .form-select:focus {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
     border-color: var(--cor-acento);
-    color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(197, 164, 126, 0.25);
 }
+body.dark-theme .form-check-label, body.dark-theme label { color: var(--cor-texto-principal); }
+body.dark-theme .form-control-plaintext { color: var(--cor-texto-secundario); }
 
-.btn-accent:hover {
-    background-color: #b8956b; /* Um pouco mais escuro */
-    border-color: #b8956b;
-    color: #fff;
-}
+/* --- PÁGINAS ESPECÍFICAS --- */
 
-/* Estilos Adicionais para a Página de Login */
-.login-page-container {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
-    margin: -2rem; /* Remove o padding do .content do base.html */
-}
+/* Página de Login */
+.login-page-container { display: flex; width: 100vw; height: 100vh; margin: -2rem; background-color: var(--cor-superficie); }
+.login-branding-side { width: 45%; background-color: var(--cor-primaria); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; }
+.login-logo { max-width: 200px; height: auto; }
+.login-form-side { width: 55%; display: flex; justify-content: center; align-items: center; padding: 40px; }
+.login-form-container { max-width: 400px; width: 100%; }
+.login-form-container h2 { font-weight: 600; color: var(--cor-texto-principal); margin-bottom: 2rem; text-align: center; }
 
-.login-branding-side {
-    width: 45%;
-    background-color: var(--cor-primaria);
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-    text-align: center;
-}
-
-/* ESTILO PARA A LOGO DO LOGIN */
-.login-logo {
-    max-width: 200px; /* Ajuste o tamanho conforme necessário */
-    height: auto;
-}
-
-.login-branding-side h1 {
-    font-weight: 700;
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.login-branding-side p {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.login-form-side {
-    width: 55%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-    background-color: var(--cor-superficie);
-}
-
-.login-form-container {
-    max-width: 400px;
-    width: 100%;
-}
-
-.login-form-container h2 {
-    font-weight: 600;
-    color: var(--cor-texto-principal);
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.form-control-lg {
-    min-height: calc(1.5em + 1rem + 2px);
-    padding: 0.5rem 1rem;
-    font-size: 1.25rem;
-    border-radius: 0.5rem;
+/* Utilitários */
+body.dark-theme .text-muted {
+    color: var(--cor-texto-secundario) !important;
 }

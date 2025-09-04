@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='custom_style.css') }}">
 </head>
-<body>
+<body class="{{ current_user.theme ~ '-theme' if current_user.is_authenticated and current_user.theme else 'light-theme' }}">
     <div class="d-flex flex-column flex-shrink-0 sidebar">
         <div class="sidebar-header">
             <h2>MDRH</h2>
@@ -84,6 +84,9 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
                 <li><a class="dropdown-item" href="{{ url_for('perfil.editar_perfil') }}">Meu Perfil</a></li>
+                <li><a class="dropdown-item" href="#" id="theme-switcher">
+                    <i class="bi bi-moon-stars-fill me-2"></i> Mudar para Tema Escuro
+                </a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sair</a></li>
             </ul>
@@ -112,18 +115,54 @@
     {% block scripts %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Seleciona todos os alertas que podem ser dispensados
+            // Script para fechar alertas automaticamente
             const alerts = document.querySelectorAll('.alert.alert-dismissible');
-    
             alerts.forEach(function(alert) {
-                // Define um temporizador para fechar o alerta após 5 segundos (5000 milissegundos)
                 setTimeout(function() {
-                    // Cria uma instância do componente de alerta do Bootstrap para o elemento
                     const bsAlert = new bootstrap.Alert(alert);
-                    // Aciona o método 'close' para fechar o alerta com a animação de fade
                     bsAlert.close();
                 }, 5000);
             });
+
+            // --- SCRIPT DO SELETOR DE TEMA (VERSÃO CORRIGIDA E ROBUSTA) ---
+            const themeSwitcher = document.getElementById('theme-switcher');
+            const body = document.body;
+
+            const updateSwitcherAppearance = () => {
+                if (body.classList.contains('dark-theme')) {
+                    themeSwitcher.innerHTML = `<i class="bi bi-sun-fill me-2"></i> Mudar para Tema Claro`;
+                } else {
+                    themeSwitcher.innerHTML = `<i class="bi bi-moon-stars-fill me-2"></i> Mudar para Tema Escuro`;
+                }
+            };
+            
+            updateSwitcherAppearance();
+
+            if (themeSwitcher) {
+                themeSwitcher.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    let newTheme;
+                    if (body.classList.contains('dark-theme')) {
+                        body.classList.remove('dark-theme');
+                        body.classList.add('light-theme');
+                        newTheme = 'light';
+                    } else {
+                        body.classList.remove('light-theme');
+                        body.classList.add('dark-theme');
+                        newTheme = 'dark';
+                    }
+
+                    updateSwitcherAppearance();
+
+                    const themeUrl = "{{ url_for('perfil.change_theme') }}";
+                    fetch(themeUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ theme: newTheme })
+                    }).catch(err => console.error("Falha ao salvar o tema:", err));
+                });
+            }
         });
     </script>
     {% endblock %}

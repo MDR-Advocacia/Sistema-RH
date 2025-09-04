@@ -1,7 +1,8 @@
 import os
 import uuid
+# ADICIONADO: jsonify para responder às requisições da API
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, current_app, send_from_directory)
+                   flash, current_app, send_from_directory, jsonify)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -47,8 +48,6 @@ def editar_perfil():
                 # Salva a nova foto
                 upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], FOTOS_PERFIL_FOLDER)
                 
-                # --- LINHA CORRIGIDA ---
-                # Garante que o diretório de upload exista
                 os.makedirs(upload_path, exist_ok=True)
                 
                 file.save(os.path.join(upload_path, nome_unico))
@@ -66,4 +65,20 @@ def editar_perfil():
 @perfil_bp.route('/uploads/fotos_perfil/<filename>')
 def uploaded_file(filename):
     """Rota para servir os arquivos de foto de perfil."""
-    return send_from_directory(os.path.join(current_app.config['UPLOAD_FOLDER'], FOTOS_PERFIL_FOLDER), filename)
+    photo_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], FOTOS_PERFIL_FOLDER)
+    return send_from_directory(photo_dir, filename)
+
+# --- ROTA ADICIONADA PARA O SELETOR DE TEMA ---
+@perfil_bp.route('/change-theme', methods=['POST'])
+@login_required
+def change_theme():
+    """Rota para salvar a preferência de tema do usuário."""
+    theme = request.json.get('theme')
+    
+    if theme in ['light', 'dark']:
+        current_user.theme = theme
+        db.session.commit()
+        return jsonify({'success': True, 'theme': theme})
+    
+    # Retorna um erro se o tema for inválido
+    return jsonify({'success': False, 'message': 'Tema inválido'}), 400
