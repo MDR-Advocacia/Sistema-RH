@@ -32,7 +32,7 @@ body.dark-theme {
 /* Estilos Gerais */
 body {
     font-family: 'Poppins', sans-serif;
-    display: flex;
+    /* REMOVIDO: display: flex; - Esta era a causa do sidebar "esticado" */
     background-color: var(--cor-fundo);
     color: var(--cor-texto-principal);
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
@@ -47,9 +47,11 @@ a {
 /* Sidebar */
 .sidebar {
     width: 260px;
-    min-height: 100vh;
-    position: sticky;
+    height: 100vh; /* AJUSTADO: Garante 100% da altura da TELA */
+    position: fixed;  /* AJUSTADO: Fixa o sidebar na tela */
     top: 0;
+    left: 0;
+    z-index: 1030; /* ADICIONADO: Garante que fique por cima de tudo */
     background-color: var(--cor-primaria);
     color: #fff;
 }
@@ -70,7 +72,11 @@ a {
 .dropdown-item:hover { background-color: rgba(255, 255, 255, 0.1); }
 
 /* Conteúdo Principal */
-.content { flex-grow: 1; padding: 2rem; }
+.content {
+    margin-left: 260px; /* ADICIONADO: Empurra o conteúdo para a direita, abrindo espaço para o sidebar */
+    flex-grow: 1; 
+    padding: 2rem; 
+}
 
 /* Cards */
 .card {
@@ -138,7 +144,7 @@ body.dark-theme .form-control-plaintext { color: var(--cor-texto-secundario); }
 /* --- PÁGINAS ESPECÍFICAS --- */
 
 /* Página de Login */
-.login-page-container { display: flex; width: 100vw; height: 100vh; margin: -2rem; background-color: var(--cor-superficie); }
+.login-page-container { display: flex; width: 100vw; height: 100vh; margin: 0; /* AJUSTADO: Remove a margem negativa que não é mais necessária */ background-color: var(--cor-superficie); }
 .login-branding-side { width: 45%; background-color: var(--cor-primaria); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; }
 .login-logo { max-width: 200px; height: auto; }
 .login-form-side { width: 55%; display: flex; justify-content: center; align-items: center; padding: 40px; }
