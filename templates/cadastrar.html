@@ -10,7 +10,7 @@
             <form method="POST" action="{{ url_for('main.processar_cadastro') }}" id="form-cadastro">
                 
                 <input type="hidden" name="ad_username_manual" id="ad_username_manual">
-                <input type="hidden" name="vincular_ad_existente" id="vincular_ad_existente">
+                <input type="hidden" name="vincular_ad_existente" id="vincular_ad_existente" value="false">
 
                 <h5 class="mb-3">Dados Pessoais e Profissionais</h5>
                 <div class="row g-3">
@@ -63,10 +63,14 @@
                 <h5 class="mb-3">Acesso ao Sistema</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
+                        <label for="username" class="form-label">Usuário de Rede (Login)</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="form-text">Sugestão: nome.sobrenome.</div>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Senha Inicial</label>
                         <p class="form-control-plaintext">
-                            Senha: Mudar@12345 . O usuário deverá alterá-la no primeiro login.
-                            
+                            A senha padrão será definida. O usuário deverá alterá-la no primeiro login.
                         </p>
                     </div>
                     <div class="col-md-6">
@@ -135,47 +139,75 @@
 </div>
 {% endblock %}
 
+
 {% block scripts %}
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('form-cadastro');
+    const nomeInput = document.getElementById('nome');
+    const usernameInput = document.getElementById('username'); // Pega o novo campo
+
+    // Lógica para auto-preenchimento do username
+    if (nomeInput && usernameInput) {
+        function removerAcentos(texto) {
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+        nomeInput.addEventListener('keyup', function() {
+            const nomeCompleto = removerAcentos(nomeInput.value.trim().toLowerCase());
+            const nomeParts = nomeCompleto.split(' ').filter(n => n);
+            
+            if (nomeParts.length > 1) {
+                usernameInput.value = `${nomeParts[0]}.${nomeParts[nomeParts.length - 1]}`;
+            } else if (nomeParts.length === 1) {
+                usernameInput.value = nomeParts[0];
+            } else {
+                usernameInput.value = '';
+            }
+        });
+    }
+
     const btnSubmit = document.getElementById('btn-submit-cadastro');
     const spinner = btnSubmit.querySelector('.spinner-border');
-    
     const hiddenManualUsername = document.getElementById('ad_username_manual');
     const hiddenVincularFlag = document.getElementById('vincular_ad_existente');
-    
     const conflitoModalEl = document.getElementById('modal-conflito-ad');
     const conflitoModal = new bootstrap.Modal(conflitoModalEl);
 
     form.addEventListener('submit', async function(e) {
-        e.preventDefault(); // Impede o envio padrão do formulário
+        e.preventDefault();
         
         btnSubmit.disabled = true;
         spinner.classList.remove('d-none');
         
-        const nomeCompleto = document.getElementById('nome').value.trim().toLowerCase();
-        const nomeParts = nomeCompleto.split(' ');
-        const usernamePadrao = nomeParts.length > 1 
-            ? `${nomeParts[0]}.${nomeParts[nomeParts.length - 1]}`
-            : nomeParts[0];
+        const usernameParaVerificar = usernameInput.value.trim();
+        if (!usernameParaVerificar) {
+            form.submit();
+            return;
+        }
 
-        const response = await fetch(`/api/ad/check-username?username=${encodeURIComponent(usernamePadrao)}`);
-        const data = await response.json();
+        try {
+            const response = await fetch(`/api/ad/check-username?username=${encodeURIComponent(usernameParaVerificar)}`);
+            const data = await response.json();
 
-        if (data.existe) {
-            document.getElementById('ad-username-conflito').textContent = usernamePadrao;
-            document.getElementById('ad-displayname-conflito').textContent = data.displayName;
-            
-            btnSubmit.disabled = false;
-            spinner.classList.add('d-none');
-            conflitoModal.show();
-        } else {
+            if (data.existe) {
+                document.getElementById('ad-username-conflito').textContent = usernameParaVerificar;
+                document.getElementById('ad-displayname-conflito').textContent = data.displayName;
+                
+                btnSubmit.disabled = false;
+                spinner.classList.add('d-none');
+                conflitoModal.show();
+            } else {
+                form.submit();
+            }
+        } catch (error) {
+            console.error("Erro ao verificar usuário no AD:", error);
+            alert("Não foi possível conectar ao serviço de verificação. O formulário será enviado sem a checagem no Active Directory.");
             form.submit();
         }
     });
     
+    // Listeners para os botões do Modal
     document.getElementById('btn-vincular-conta').addEventListener('click', function() {
         hiddenVincularFlag.value = 'true';
         conflitoModal.hide();
@@ -186,13 +218,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const manualUsername = document.getElementById('input-username-manual').value.trim();
         if (manualUsername) {
             hiddenManualUsername.value = manualUsername;
+            usernameInput.value = manualUsername; // Atualiza o campo visível
             conflitoModal.hide();
             form.submit();
         } else {
             alert('Por favor, digite um nome de usuário manual.');
         }
     });
-
 });
 </script>
 {% endblock %}

@@ -27,6 +27,10 @@ funcionario_sistemas = db.Table('funcionario_sistemas',
 class Usuario(db.Model, UserMixin):
     __tablename__ = 'usuario'
     id = db.Column(db.Integer, primary_key=True)
+
+    # CAMPO ADICIONADO: Essencial para o login e vínculo com o AD
+    username = db.Column(db.String(120), unique=True, nullable=True, index=True)
+
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True)
@@ -45,6 +49,7 @@ class Usuario(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def tem_permissao(self, nome_permissao):
+        """Verifica se o usuário tem uma permissão específica."""
         if isinstance(nome_permissao, list):
             return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)

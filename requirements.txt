@@ -12,5 +12,8 @@ PyJWT
 PyPDF2
 docxtpl
 ldap3
-pytz 
+pytz
+pytest
+pytest-mock 
+unidecode
 #pip install -r requirements.txt

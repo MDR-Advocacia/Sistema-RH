@@ -104,91 +104,84 @@ def check_ad_username():
     return jsonify(resultado)    
 
 # ROTA DE CADASTRO
+
 @main.route('/cadastrar', methods=['POST'])
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
-    # Captura dos dados do formulário
-    nome = request.form.get('nome')
-    cpf = request.form.get('cpf')
-    email_contato = request.form.get('email')
-    telefone = request.form.get('telefone')
-    cargo = request.form.get('cargo')
-    setor = request.form.get('setor')
-    data_nascimento_str = request.form.get('data_nascimento')
-    contato_emergencia_nome = request.form.get('contato_emergencia_nome')
-    contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
-    permissoes_selecionadas_ids = request.form.getlist('permissoes')
+    try:
+        # Coleta de dados do formulário
+        nome = request.form.get('nome')
+        cpf = request.form.get('cpf')
+        email_contato = request.form.get('email')
+        username_form = request.form.get('username')
+        ad_username_manual = request.form.get('ad_username_manual')
+        vincular_ad_existente = request.form.get('vincular_ad_existente') == 'true'
 
-    # Captura dos novos campos de controle do AD
-    ad_username_manual = request.form.get('ad_username_manual')
-    vincular_ad_existente = request.form.get('vincular_ad_existente') == 'true'
+        username_final = ad_username_manual or username_form
 
-    if not all([nome, cpf, email_contato]):
-        flash('Nome, CPF e Email são obrigatórios.')
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-
-    if Funcionario.query.filter(or_(Funcionario.cpf == cpf, Funcionario.email == email_contato)).first():
-        flash('CPF ou Email de contato já cadastrado no sistema.')
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-
-    novo_funcionario = Funcionario(
-        nome=nome, cpf=cpf, email=email_contato, telefone=telefone, cargo=cargo, setor=setor,
-        data_nascimento=datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None,
-        contato_emergencia_nome=contato_emergencia_nome,
-        contato_emergencia_telefone=contato_emergencia_telefone
-    )
-    
-    # Adiciona o funcionário à sessão para poder usá-lo, mas não commita ainda
-    db.session.add(novo_funcionario)
-
-    # Lógica de provisionamento/vinculação no AD
-    sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
-        novo_funcionario, 
-        username_manual=ad_username_manual,
-        vincular=vincular_ad_existente
-    )
-
-    if not sucesso_ad:
-        db.session.rollback() # Desfaz a adição do funcionário se o AD falhar
-        flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}. O usuário não foi criado.", "danger")
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-    
-    # Se chegou aqui, a operação no AD foi um sucesso (criar, atualizar ou validar para vincular)
-    db.session.commit() # Agora sim, salva o novo funcionário no banco
-
-    # Se a opção for vincular...
-    if vincular_ad_existente:
-        usuario_existente = Usuario.query.filter_by(email=email_ad).first()
-        if usuario_existente:
-            usuario_existente.funcionario_id = novo_funcionario.id
-            db.session.commit()
-            flash(f"Funcionário {novo_funcionario.nome} criado e vinculado à conta AD existente de {email_ad}.", "success")
-            return redirect(url_for('main.listar_funcionarios'))
-        else:
-            # Este é um caso de erro raro, mas importante de tratar
-            flash(f"Erro: A conta AD {email_ad} existe, mas não foi encontrada no sistema para vinculação.", "danger")
+        # Validações iniciais
+        if not all([nome, cpf, email_contato, username_final]):
+            flash('Nome, CPF, Email e Usuário de Rede são obrigatórios.', 'danger')
             return redirect(url_for('main.exibir_formulario_cadastro'))
 
-    # Se não era para vincular, cria um novo usuário no sistema
-    novo_usuario = Usuario(
-        email=email_ad,
-        funcionario_id=novo_funcionario.id,
-        senha_provisoria=False # A senha já foi definida no AD
-    )
-    novo_usuario.set_password(uuid.uuid4().hex) # Define uma senha interna aleatória e segura
-    
-    if permissoes_selecionadas_ids:
-        permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
-        novo_usuario.permissoes = permissoes_a_adicionar
+        if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(username=username_final).first():
+            flash('CPF ou Usuário de Rede já cadastrado no sistema.', 'danger')
+            return redirect(url_for('main.exibir_formulario_cadastro'))
 
-    db.session.add(novo_usuario)
-    db.session.commit()
+        # Cria o objeto funcionário (ainda não salvo no banco)
+        novo_funcionario = Funcionario(
+            nome=nome, cpf=cpf, email=email_contato,
+            telefone=request.form.get('telefone'),
+            cargo=request.form.get('cargo'),
+            setor=request.form.get('setor'),
+            data_nascimento=datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d') if request.form.get('data_nascimento') else None,
+            contato_emergencia_nome=request.form.get('contato_emergencia_nome'),
+            contato_emergencia_telefone=request.form.get('contato_emergencia_telefone')
+        )
+        
+        # Provisiona no AD
+        sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
+            novo_funcionario, 
+            username_manual=username_final,
+            vincular=vincular_ad_existente
+        )
 
-    # Log ao final, se tudo deu certo
-    registrar_log(f"Cadastrou o funcionário '{nome}' (CPF: {cpf}) e provisionou o usuário AD '{email_ad}'.")
-    
-    flash(f'Funcionário {nome} criado com sucesso! Login no AD: {email_ad}')
+        if not sucesso_ad:
+            flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}", "danger")
+            return redirect(url_for('main.exibir_formulario_cadastro'))
+        
+        # Se tudo correu bem, adiciona o funcionário e cria o usuário no sistema
+        db.session.add(novo_funcionario)
+
+        novo_usuario = Usuario(
+            username=username_final,
+            email=email_ad,
+            funcionario=novo_funcionario,
+            senha_provisoria=False 
+        )
+        novo_usuario.set_password(str(uuid.uuid4()))
+        
+        permissoes_ids = request.form.getlist('permissoes')
+        if permissoes_ids:
+            permissoes = Permissao.query.filter(Permissao.id.in_(permissoes_ids)).all()
+            novo_usuario.permissoes = permissoes
+
+        db.session.add(novo_usuario)
+        
+        # Efetiva as mudanças no banco de dados
+        db.session.commit()
+
+        registrar_log(f"Cadastrou o funcionário '{nome}' e provisionou o usuário AD '{username_final}'.")
+        flash(f'Funcionário {nome} criado com sucesso! Login no AD: {username_final}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        # A linha de log que você já tem é excelente para depuração
+        current_app.logger.error(f"Erro ao cadastrar funcionário: {e}") 
+        flash(f"Ocorreu um erro inesperado durante o cadastro: {e}", "danger")
+        return redirect(url_for('main.exibir_formulario_cadastro'))
+
     return redirect(url_for('main.listar_funcionarios'))
 # --- FIM DA CORREÇÃO ---
 
@@ -681,9 +674,9 @@ def toggle_status(funcionario_id):
     
     # --- Alteração aqui: Sincroniza o status com o AD ---
     if novo_status == 'Suspenso':
-        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
+        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.usuario.username)
     else:
-        sucesso_ad, msg_ad = habilitar_usuario_ad(funcionario.email)
+        sucesso_ad, msg_ad = habilitar_usuario_ad(funcionario.usuario.username)
 
     if not sucesso_ad:
         flash(f'Falha ao sincronizar status com o Active Directory: {msg_ad}', 'danger')
@@ -730,7 +723,7 @@ def anonimizar_dados_funcionario(funcionario):
     funcionario.data_nascimento = None
     funcionario.contato_emergencia_nome = "Anonimizado"
     funcionario.contato_emergencia_telefone = "Anonimizado"
-    funcionario.cpf = "Anonimizado"
+    
     funcionario.apelido = None
     funcionario.email = "Anonimizado"
     # Apaga a foto de perfil se existir
@@ -748,14 +741,29 @@ def anonimizar_dados_funcionario(funcionario):
 @login_required
 @permission_required('admin_rh')
 def desligar_funcionario(funcionario_id):
+    """
+    Processa o desligamento de um funcionário, o que inclui:
+    1. Desabilitar o usuário no Active Directory usando o username.
+    2. Anonimizar dados pessoais sensíveis no sistema local.
+    3. Mudar o status do funcionário para 'Desligado'.
+    4. Remover todas as permissões de login do usuário associado.
+    """
     funcionario = Funcionario.query.get_or_404(funcionario_id)
 
     try:
-        # 1. Desabilita a conta no Active Directory
-        sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.email)
-        if not sucesso_ad:
-            flash(f"Falha ao desabilitar o usuário no Active Directory: {msg_ad}", "danger")
-            return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+        # 1. Desabilita a conta no Active Directory usando o USERNAME
+        # Verifica se existe um usuário do sistema vinculado e se ele tem um username.
+        if funcionario.usuario and funcionario.usuario.username:
+            # Chama a desabilitação no AD usando o USERNAME, que é o identificador correto.
+            sucesso_ad, msg_ad = desabilitar_usuario_ad(funcionario.usuario.username)
+            if not sucesso_ad:
+                # Se a desabilitação no AD falhar, interrompe o processo e avisa o admin.
+                flash(f"ERRO CRÍTICO: Falha ao desabilitar o usuário no Active Directory: {msg_ad}. O processo de desligamento foi interrompido.", "danger")
+                return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
+        else:
+            # Se não houver um usuário vinculado, não há conta no AD para desabilitar.
+            # Apenas avisa o admin e continua com o processo local.
+            flash(f"Atenção: O funcionário {funcionario.nome} não possui um usuário de sistema vinculado. A desabilitação no AD foi ignorada.", "warning")
 
         # 2. Anonimiza os dados pessoais não essenciais
         anonimizar_dados_funcionario(funcionario)
@@ -768,7 +776,7 @@ def desligar_funcionario(funcionario_id):
         if funcionario.usuario:
             funcionario.usuario.permissoes = []
 
-        # REGISTRAR LOG
+        # 5. Registra o log do evento
         registrar_log(f"Realizou o processo de desligamento para o funcionário '{funcionario.nome}' (ID: {funcionario.id}).")
 
         db.session.commit()
@@ -776,8 +784,8 @@ def desligar_funcionario(funcionario_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erro no processo de desligamento para o funcionário {funcionario_id}: {e}")
-        flash("Ocorreu um erro inesperado durante o processo de desligamento.", "danger")
+        current_app.logger.error(f"Erro no processo de desligamento para o funcionário {funcionario_id}: {e}", exc_info=True)
+        flash("Ocorreu um erro inesperado durante o processo de desligamento. Consulte os logs.", "danger")
 
     return redirect(url_for('main.perfil_funcionario', funcionario_id=funcionario_id))
 
