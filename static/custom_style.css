@@ -32,7 +32,6 @@ body.dark-theme {
 /* Estilos Gerais */
 body {
     font-family: 'Poppins', sans-serif;
-    /* REMOVIDO: display: flex; - Esta era a causa do sidebar "esticado" */
     background-color: var(--cor-fundo);
     color: var(--cor-texto-principal);
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
@@ -122,7 +121,7 @@ body.dark-theme .table-striped>tbody>tr:nth-of-type(odd)>* {
 
 /* Botões */
 .btn-brand { background-color: var(--cor-primaria); border-color: var(--cor-primaria); color: #fff; }
-.btn-brand:hover { filter: brightness(1.2); color: #fff; }
+.btn-brand:hover { filter: brightness(1.2); color: #2d3955; }
 .btn-accent { background-color: var(--cor-acento); border-color: var(--cor-acento); color: #fff; }
 .btn-accent:hover { filter: brightness(1.1); color: #fff; }
 

@@ -29,25 +29,39 @@ def allowed_file(filename):
 def gestao_documentos():
     """Página unificada para gestão de documentos: revisar, solicitar e consultar."""
     if request.method == 'POST':
-        # Esta lógica agora lida com o formulário da aba "Solicitar"
-        funcionario_id = request.form.get('funcionario_id')
-        tipo_documento = request.form.get('tipo_documento_solicitado')
-        
-        if not funcionario_id or not tipo_documento:
-            flash('Funcionário e Tipo de Documento são obrigatórios.', 'danger')
-            return redirect(url_for('documentos.gestao_documentos'))
+        try:
+            # Lida com o formulário da aba "Solicitar"
+            funcionario_id = request.form.get('funcionario_id')
+            tipo_documento = request.form.get('tipo_documento_solicitado')
+            
+            # Validação dos campos do formulário
+            if not funcionario_id or not tipo_documento:
+                flash('Erro: Funcionário e Tipo de Documento são obrigatórios.', 'danger')
+                return redirect(url_for('documentos.gestao_documentos'))
 
-        nova_requisicao = RequisicaoDocumento(
-            tipo_documento=tipo_documento,
-            solicitante_id=current_user.id,
-            destinatario_id=funcionario_id
-        )
-        db.session.add(nova_requisicao)
-        db.session.commit()
+            # 2. Busca o objeto funcionário no banco de dados
+            funcionario = db.session.get(Funcionario, int(funcionario_id))
+            if not funcionario:
+                flash('Erro: Funcionário selecionado não foi encontrado no sistema.', 'danger')
+                return redirect(url_for('documentos.gestao_documentos'))
+            
+            nova_requisicao = RequisicaoDocumento(
+                tipo_documento=tipo_documento,
+                solicitante_id=current_user.id,
+                destinatario_id=int(funcionario_id)
+            )
+            db.session.add(nova_requisicao)
+            db.session.commit()
 
-        # LOG
-        registrar_log(f"Solicitou o documento '{tipo_documento}' para o funcionário '{funcionario.nome}'.")
-        flash(f'Solicitação de "{tipo_documento}" enviada com sucesso!', 'success')
+            # 3. Agora a variável 'funcionario' existe e pode ser usada no log
+            registrar_log(f"Solicitou o documento '{tipo_documento}' para o funcionário '{funcionario.nome}'.")
+            flash(f'Solicitação de "{tipo_documento}" enviada com sucesso para {funcionario.nome}!', 'success')
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Erro ao criar requisição de documento: {e}", exc_info=True)
+            flash('Ocorreu um erro inesperado ao tentar criar a requisição.', 'danger')
+
         return redirect(url_for('documentos.gestao_documentos'))
 
     # Para GET, carrega os documentos para revisão e renderiza a página

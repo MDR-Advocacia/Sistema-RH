@@ -98,20 +98,30 @@ def test_edicao_de_funcionario_com_sucesso(app, client, mocker):
     Teste de Integração: Garante que um admin de RH consegue editar
     os dados de um funcionário e que a alteração é salva no banco.
     """
-    # --- Verifique se este patch está correto ---
     mocker.patch('app.routes.habilitar_usuario_ad', return_value=(True, "OK"))
     
     id_funcionario_editado = None
     id_admin = None
     with app.app_context():
-        # 1. Setup
+        # 1. Setup: Cria todos os dados necessários
         p_admin_rh = Permissao(nome='admin_rh')
         admin_user = Usuario(username='admin', email='admin@example.com', data_consentimento=datetime.utcnow())
         admin_user.set_password('admin123')
         admin_user.permissoes.append(p_admin_rh)
         admin_func = Funcionario(nome='Admin RH', cpf='999.999.999-99', email='admin@example.com', usuario=admin_user)
         
-        func_para_editar = Funcionario(nome='Fulano Original', cpf='111.222.333-44', cargo='Assistente', email='fulano@teste.com')
+        # Cria o funcionário com dados originais completos
+        func_para_editar = Funcionario(
+            nome='Fulano Original',
+            cpf='111.222.333-44',
+            email='fulano@teste.com',
+            cargo='Assistente',
+            setor='Administrativo',
+            telefone='(84) 99999-8888',
+            data_nascimento=datetime(1990, 1, 1).date(),
+            contato_emergencia_nome='Beltrano',
+            contato_emergencia_telefone='(84) 99999-9999'
+        )
         user_para_editar = Usuario(username='fulano.original', email='fulano.original@teste.com', funcionario=func_para_editar)
         user_para_editar.set_password('senha123')
         
@@ -126,23 +136,36 @@ def test_edicao_de_funcionario_com_sucesso(app, client, mocker):
         session['_user_id'] = id_admin
         session['_fresh'] = True
 
-    # 3. Prepara os dados do formulário
-    dados_edicao = { 'nome': 'Fulano Editado', 'cpf': '111.222.333-44', 'email': 'fulano_editado@example.com', 'cargo': 'Analista Pleno' }
+    # --- INÍCIO DA CORREÇÃO ---
+    # 3. Prepara os dados do formulário COMPLETOS, como se viessem da tela
+    dados_edicao = { 
+        'nome': 'Fulano Editado',  # <-- Valor alterado
+        'cargo': 'Analista Pleno', # <-- Valor alterado
+        'cpf': '111.222.333-44',
+        'email': 'fulano@teste.com', # <-- Email original, como você sugeriu
+        'setor': 'Administrativo',
+        'telefone': '(84) 99999-8888',
+        'data_nascimento': '1990-01-01',
+        'contato_emergencia_nome': 'Beltrano',
+        'contato_emergencia_telefone': '(84) 99999-9999'
+    }
+    # --- FIM DA CORREÇÃO ---
 
-    # 4. --- INÍCIO DA CORREÇÃO FINAL ---
-    # Geramos a URL e fazemos o POST dentro de um contexto de requisição de teste
+    # 4. Executa a Ação
     with app.test_request_context():
         url_edicao = url_for('main.editar_funcionario', funcionario_id=id_funcionario_editado)
     
     response = client.post(url_edicao, data=dados_edicao, follow_redirects=True)
-    # --- FIM DA CORREÇÃO FINAL ---
 
     # 5. Verifica os Resultados
     assert response.status_code == 200
-    assert b'Dados do funcion\xc3\xa1rio atualizados com sucesso' in response.data
+    nome_editado = dados_edicao['nome']
+    mensagem_esperada = f'Dados de {nome_editado} atualizados e sincronizados com sucesso!'.encode('utf-8')
+    assert mensagem_esperada in response.data
 
     # 6. Verifica no Banco de Dados
     with app.app_context():
         funcionario_atualizado = db.session.get(Funcionario, id_funcionario_editado)
         assert funcionario_atualizado.nome == 'Fulano Editado'
         assert funcionario_atualizado.cargo == 'Analista Pleno'
+        assert funcionario_atualizado.email == 'fulano@teste.com'
