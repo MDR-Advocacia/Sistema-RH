@@ -68,7 +68,67 @@ def gestao_documentos():
 
     # Para GET, carrega os documentos para revisão e renderiza a página
     documentos_para_revisar = Documento.query.filter_by(status='Pendente de Revisão').order_by(Documento.data_upload.asc()).all()
-    return render_template('documentos/gestao.html', documentos_para_revisar=documentos_para_revisar)
+    
+    # --- ADIÇÕES AQUI ---
+    # Buscamos todos os funcionários ativos para a lista de seleção
+    funcionarios = Funcionario.query.filter_by(status='Ativo').order_by(Funcionario.nome).all()
+    # Buscamos todos os tipos de documento para o dropdown
+    tipos_documento = TipoDocumento.query.order_by(TipoDocumento.nome).all()
+    # --- FIM DAS ADIÇÕES ---
+
+    return render_template(
+        'documentos/gestao.html',
+        documentos_para_revisar=documentos_para_revisar,
+        funcionarios=funcionarios,          # <-- Passa a lista para o template
+        tipos_documento=tipos_documento   # <-- Passa a lista para o template
+    )
+
+# SOLICITAÇÃO EM LOTE
+@documentos_bp.route('/solicitar-em-lote', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def solicitar_em_lote():
+    ids_funcionarios = request.form.getlist('funcionarios_selecionados')
+    tipo_documento_id = request.form.get('tipo_documento_id')
+
+    if not ids_funcionarios or not tipo_documento_id:
+        flash('Você precisa selecionar pelo menos um funcionário e um tipo de documento.', 'warning')
+        return redirect(url_for('documentos.gestao_documentos'))
+
+    tipo_doc = db.session.get(TipoDocumento, tipo_documento_id)
+    if not tipo_doc:
+        flash('Tipo de documento inválido.', 'danger')
+        return redirect(url_for('documentos.gestao_documentos'))
+
+    sucessos = 0
+    erros = 0
+    
+    for funcionario_id in ids_funcionarios:
+        existe_pendencia = RequisicaoDocumento.query.filter_by(
+            destinatario_id=funcionario_id,
+            tipo_documento_id=tipo_documento_id,
+            status='Pendente'
+        ).first()
+
+        if not existe_pendencia:
+            nova_requisicao = RequisicaoDocumento(
+                destinatario_id=funcionario_id,
+                tipo_documento_id=tipo_documento_id,
+                solicitante_id=current_user.id,
+                status='Pendente'
+            )
+            db.session.add(nova_requisicao)
+            sucessos += 1
+        else:
+            erros += 1
+
+    db.session.commit()
+    if sucessos > 0:
+        flash(f'Documento "{tipo_doc.nome}" solicitado para {sucessos} funcionário(s) com sucesso!', 'success')
+    if erros > 0:
+        flash(f'{erros} funcionário(s) já possuíam uma pendência para este documento.', 'info')
+
+    return redirect(url_for('documentos.gestao_documentos'))    
 
 
 # NOVO: API para a aba de consulta

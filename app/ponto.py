@@ -15,6 +15,7 @@ from . import db
 from .decorators import permission_required
 from .models import Funcionario, Ponto
 
+
 ponto_bp = Blueprint('ponto', __name__)
 
 # --- Função Auxiliar ---
@@ -82,7 +83,51 @@ def gestao_ponto():
 
     # Se for GET, exibe a página de gestão
     pontos_para_revisar = Ponto.query.filter_by(status='Em Revisão').order_by(Ponto.data_upload.asc()).all()
-    return render_template('ponto/gestao.html', pontos_para_revisar=pontos_para_revisar)
+    
+    # Adicionamos a busca de funcionários para popular o novo formulário em lote
+    funcionarios = Funcionario.query.filter_by(status='Ativo').order_by(Funcionario.nome).all()
+    
+    return render_template(
+        'ponto/gestao.html', 
+        pontos_para_revisar=pontos_para_revisar,
+        funcionarios=funcionarios  # Passamos a lista para o template
+    )
+
+# SOLICITAR AJUSTE EM LOTE
+@ponto_bp.route('/solicitar-ajuste-em-lote', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def solicitar_ajuste_em_lote():
+    ids_funcionarios = request.form.getlist('funcionarios_selecionados')
+    data_str = request.form.get('data_ajuste')
+    tipo_ajuste = request.form.get('tipo_ajuste') # <-- MUDANÇA 1
+
+    if not all([ids_funcionarios, data_str, tipo_ajuste]): # <-- MUDANÇA 2
+        flash('É necessário selecionar funcionários, uma data e o tipo do ajuste.', 'warning')
+        return redirect(url_for('ponto.gestao_ponto'))
+
+    try:
+        data_ajuste = datetime.strptime(data_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Formato de data inválido.', 'danger')
+        return redirect(url_for('ponto.gestao_ponto'))
+
+    sucessos = 0
+    for funcionario_id in ids_funcionarios:
+        novo_ajuste = Ponto(
+            funcionario_id=funcionario_id,
+            data_ajuste=data_ajuste,
+            tipo_ajuste=tipo_ajuste, # <-- MUDANÇA 3
+            status='Pendente',
+            solicitante_id=current_user.id
+        )
+        db.session.add(novo_ajuste)
+        sucessos += 1
+
+    db.session.commit()
+    flash(f'Solicitação de ajuste de ponto ({tipo_ajuste}) enviada para {sucessos} funcionário(s) com sucesso!', 'success') # <-- MUDANÇA 4 (Opcional, melhora o feedback)
+
+    return redirect(url_for('ponto.gestao_ponto')) 
 
 
 @ponto_bp.route('/<int:ponto_id>/aprovar', methods=['POST'])

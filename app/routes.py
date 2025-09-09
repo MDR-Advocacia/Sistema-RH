@@ -284,7 +284,7 @@ def perfil_funcionario(funcionario_id):
     
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(destinatario_id=funcionario.id, status='Pendente').all()
     for req in requisicoes_pendentes:
-        pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo_documento}'", 'status': 'Pendente'})
+        pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo.nome}'", 'status': 'Pendente'})
     
     # Adiciona a busca pelo histórico de pontos
     pontos = Ponto.query.filter_by(funcionario_id=funcionario.id).order_by(Ponto.data_ajuste.desc()).all()
@@ -486,7 +486,7 @@ def detalhes_funcionario(funcionario_id):
     
     requisicoes_pendentes = RequisicaoDocumento.query.filter_by(destinatario_id=funcionario.id, status='Pendente').all()
     for req in requisicoes_pendentes:
-        pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo_documento}'", 'status': 'Pendente'})
+        pendencias_list.append({'id': f'requisicao_{req.id}', 'descricao': f"Envio pendente do documento: '{req.tipo.nome}'", 'status': 'Pendente'})
 
     documentos_list = [{'id': doc.id, 'nome_arquivo': doc.nome_arquivo, 'tipo_documento': doc.tipo_documento, 'data_upload': format_datetime_local(doc.data_upload), 'url_download': url_for('documentos.download_documento', filename=doc.path_armazenamento)} for doc in funcionario.documentos]
     

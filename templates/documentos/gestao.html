@@ -90,25 +90,61 @@
     <div class="tab-pane fade" id="solicitar" role="tabpanel" aria-labelledby="solicitar-tab">
         <div class="card shadow-sm card-tab">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-send-plus-fill"></i> Solicitar Documento</h5>
+                <h5 class="mb-0"><i class="bi bi-send-plus-fill"></i> Solicitar Documento em Lote</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('documentos.gestao_documentos') }}">
-                    <div class="mb-3">
-                        <label for="busca-solicitar" class="form-label">Funcionário</label>
-                        <input type="text" class="form-control" id="busca-solicitar" placeholder="Comece a digitar o nome..." autocomplete="off">
-                        <div id="resultados-solicitar" class="list-group mt-1"></div>
-                        <input type="hidden" name="funcionario_id" id="funcionario_id_solicitar">
+                <p class="card-text">Selecione os funcionários e o documento que deseja solicitar.</p>
+                
+                <form action="{{ url_for('documentos.solicitar_em_lote') }}" method="POST">
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>1. Selecione o Documento</h6>
+                            <div class="mb-3">
+                                <select name="tipo_documento_id" class="form-select" required>
+                                    <option value="" selected disabled>-- Tipo de Documento --</option>
+                                    {% for tipo in tipos_documento %}
+                                        <option value="{{ tipo.id }}">{{ tipo.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-brand w-100">
+                                <i class="fas fa-paper-plane"></i> Enviar Solicitação
+                            </button>
+                        </div>
+
+                        <div class="col-md-8">
+                            <h6>2. Selecione os Funcionários</h6>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 10%;"><input type="checkbox" class="form-check-input" id="selecionar-todos"></th>
+                                            <th>Nome</th>
+                                            <th>Setor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for func in funcionarios %}
+                                        <tr>
+                                            <td><input type="checkbox" class="form-check-input" name="funcionarios_selecionados" value="{{ func.id }}"></td>
+                                            <td>{{ func.nome }}</td>
+                                            <td>{{ func.setor }}</td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center">Nenhum funcionário ativo encontrado.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="tipo_documento_solicitado" class="form-label">Tipo de Documento a Solicitar</label>
-                        <input type="text" class="form-control" name="tipo_documento_solicitado" placeholder="Ex: Comprovante de Residência" required>
-                    </div>
-                    <button type="submit" class="btn btn-brand w-100">Enviar Solicitação</button>
                 </form>
             </div>
         </div>
-    </div>
+    </div>       
 
     <div class="tab-pane fade" id="enviar" role="tabpanel" aria-labelledby="enviar-tab">
         <div class="card shadow-sm card-tab">
@@ -194,6 +230,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultadosDiv = document.getElementById(resultadosId);
         const hiddenInput = document.getElementById(hiddenInputId);
         let searchTimeout;
+        const selecionarTodos = document.getElementById('selecionar-todos');
+
+        if (selecionarTodos) {
+            selecionarTodos.addEventListener('change', function(e) {
+                const isChecked = e.target.checked;
+                const checkboxes = document.querySelectorAll('input[name="funcionarios_selecionados"]');
+                checkboxes.forEach(checkbox => checkbox.checked = isChecked);
+            });
+        }
 
         buscaInput.addEventListener('keyup', () => {
             clearTimeout(searchTimeout);
@@ -241,6 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
         historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
         const res = await fetch(`/documentos/api/funcionario/${funcionarioId}/documentos`);
         const documentos = await res.json();
+
+        
 
         if (documentos.length === 0) {
             historicoContainer.innerHTML = '<p class="text-muted text-center">Nenhum documento encontrado para este funcionário.</p>';

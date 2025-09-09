@@ -20,6 +20,11 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
+        <button class="nav-link" id="solicitar-lote-tab" data-bs-toggle="tab" data-bs-target="#solicitar-lote" type="button" role="tab">
+            <i class="bi bi-send-plus-fill"></i> Solicitar Ajuste em Lote
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
         <button class="nav-link" id="consultar-tab" data-bs-toggle="tab" data-bs-target="#consultar" type="button" role="tab" aria-controls="consultar" aria-selected="false">
             Consultar Histórico
         </button>
@@ -111,6 +116,67 @@
             </div>
         </div>
     </div>
+
+    <div class="tab-pane fade" id="solicitar-lote" role="tabpanel" aria-labelledby="solicitar-lote-tab">
+        <div class="card shadow-sm card-tab">
+            <div class="card-header">
+                <h5 class="mb-0">Solicitar Ajuste de Ponto em Lote</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Selecione os funcionários e informe os detalhes do ajuste a ser solicitado.</p>
+                
+                <form action="{{ url_for('ponto.solicitar_ajuste_em_lote') }}" method="POST">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>1. Detalhes do Ajuste</h6>
+                            <div class="mb-3">
+                                <label for="data_ajuste" class="form-label">Data do Ajuste</label>
+                                <input type="date" class="form-control" name="data_ajuste" id="data_ajuste" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="tipo_ajuste" class="form-label">Tipo do Ajuste</label>
+                                <select name="tipo_ajuste" id="tipo_ajuste" class="form-select" required>
+                                    <option value="" selected disabled>-- Selecione o Motivo --</option>
+                                    <option value="Atestado Médico">Atestado Médico</option>
+                                    <option value="Esquecimento de marcação">Esquecimento de marcação</option>
+                                    <option value="Visita Externa">Visita Externa</option>
+                                    <option value="Problema no Registrador">Problema no Registrador</option>
+                                    <option value="Outros">Outros</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-brand w-100">
+                                <i class="fas fa-paper-plane"></i> Enviar Solicitação
+                            </button>
+                        </div>
+
+                        <div class="col-md-8">
+                            <h6>2. Selecione os Funcionários</h6>
+                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 10%;"><input type="checkbox" class="form-check-input" id="selecionar-todos-ponto"></th>
+                                            <th>Nome</th>
+                                            <th>Setor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for func in funcionarios %}
+                                        <tr>
+                                            <td><input type="checkbox" class="form-check-input" name="funcionarios_selecionados" value="{{ func.id }}"></td>
+                                            <td>{{ func.nome }}</td>
+                                            <td>{{ func.setor }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     
     <div class="tab-pane fade" id="consultar" role="tabpanel" aria-labelledby="consultar-tab">
         <div class="card shadow-sm card-tab">
@@ -170,6 +236,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultadosDiv = document.getElementById(resultadosId);
         const hiddenInput = document.getElementById(hiddenInputId);
         let searchTimeout;
+
+        const selecionarTodosPonto = document.getElementById('selecionar-todos-ponto');
+        if (selecionarTodosPonto) {
+            selecionarTodosPonto.addEventListener('change', function(e) {
+                const isChecked = e.target.checked;
+                // Importante: seleciona apenas os checkboxes DENTRO do formulário de ponto
+                const checkboxes = document.querySelectorAll('#solicitar-lote input[name="funcionarios_selecionados"]');
+                checkboxes.forEach(checkbox => checkbox.checked = isChecked);
+            });
+        }
 
         buscaInput.addEventListener('keyup', () => {
             clearTimeout(searchTimeout);
