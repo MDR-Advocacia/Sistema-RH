@@ -9,7 +9,9 @@ from .email import send_email
 from .utils import registrar_log  # <-- Importar a função de log
 from . import db
 from .decorators import permission_required
-from .models import Documento, Funcionario, RequisicaoDocumento
+from .models import Funcionario, Documento, RequisicaoDocumento, TipoDocumento 
+from app.forms import TipoDocumentoForm
+
 
 documentos_bp = Blueprint('documentos', __name__)
 
@@ -316,7 +318,7 @@ def responder_requisicao(req_id):
 
         novo_documento = Documento(
             nome_arquivo=filename_seguro,
-            tipo_documento=requisicao.tipo_documento,
+            tipo_documento=requisicao.tipo.nome,
             path_armazenamento=nome_unico,
             funcionario_id=current_user.funcionario.id,
             requisicao_id=requisicao.id,
@@ -409,3 +411,91 @@ def reprovar_documento(documento_id):
         current_app.logger.error(f"Erro ao reprovar documento {documento_id}: {e}")
 
     return redirect(url_for('documentos.gestao_documentos'))
+
+
+# --- ROTAS PARA GERENCIAR TIPOS DE DOCUMENTO ---
+
+@documentos_bp.route('/tipos', methods=['GET', 'POST'])
+@login_required
+@permission_required('admin_rh')
+def gerenciar_tipos_documento():
+    """
+    Página para gerenciar (CRUD) os Tipos de Documento.
+    """
+    form = TipoDocumentoForm()
+    
+    if form.validate_on_submit():
+        # Lógica para adicionar um novo tipo de documento
+        novo_tipo = TipoDocumento(
+            nome=form.nome.data,
+            descricao=form.descricao.data,
+            obrigatorio_na_admissao=form.obrigatorio_na_admissao.data
+        )
+        db.session.add(novo_tipo)
+        try:
+            db.session.commit()
+            flash('Novo tipo de documento cadastrado com sucesso!', 'success')
+        except IntegrityError:
+            db.session.rollback()
+            flash('Erro: Já existe um tipo de documento com este nome.', 'danger')
+        return redirect(url_for('documentos.gerenciar_tipos_documento'))
+
+    tipos_documento = TipoDocumento.query.order_by(TipoDocumento.nome).all()
+    return render_template(
+        'documentos/gerenciar_tipos.html', 
+        tipos=tipos_documento, 
+        form=form
+    )
+
+@documentos_bp.route('/tipos/<int:id>/editar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def editar_tipo_documento(id):
+    """
+    Rota para editar um Tipo de Documento existente.
+    """
+    tipo_doc = db.session.get(TipoDocumento, id)
+    if not tipo_doc:
+        flash('Tipo de documento não encontrado.', 'danger')
+        return redirect(url_for('documentos.gerenciar_tipos_documento'))
+    
+    form = TipoDocumentoForm(request.form) # Carrega os dados do POST
+    
+    if form.validate():
+        tipo_doc.nome = form.nome.data
+        tipo_doc.descricao = form.descricao.data
+        tipo_doc.obrigatorio_na_admissao = form.obrigatorio_na_admissao.data
+        try:
+            db.session.commit()
+            flash('Tipo de documento atualizado com sucesso!', 'success')
+        except IntegrityError:
+            db.session.rollback()
+            flash('Erro: Já existe um tipo de documento com este nome.', 'danger')
+    else:
+        # Se a validação falhar, exibe os erros.
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Erro no campo '{getattr(form, field).label.text}': {error}", 'danger')
+
+    return redirect(url_for('documentos.gerenciar_tipos_documento'))
+
+
+@documentos_bp.route('/tipos/<int:id>/deletar', methods=['POST'])
+@login_required
+@permission_required('admin_rh')
+def deletar_tipo_documento(id):
+    """
+    Rota para deletar um Tipo de Documento.
+    """
+    tipo_doc = db.session.get(TipoDocumento, id)
+    if tipo_doc:
+        if tipo_doc.requisicoes:
+            flash('Não é possível excluir este tipo de documento, pois ele já está associado a requisições existentes.', 'danger')
+        else:
+            db.session.delete(tipo_doc)
+            db.session.commit()
+            flash('Tipo de documento excluído com sucesso!', 'success')
+    else:
+        flash('Tipo de documento não encontrado.', 'danger')
+        
+    return redirect(url_for('documentos.gerenciar_tipos_documento'))

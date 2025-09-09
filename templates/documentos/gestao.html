@@ -4,7 +4,12 @@
 
 {% block content %}
 <h1 class="h2 mb-4">Gestão de Documentos</h1>
-
+<div class="d-flex justify-content-between align-items-center mb-3">
+    
+    <a href="{{ url_for('documentos.gerenciar_tipos_documento') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-cog"></i> Configurar Tipos de Documento
+    </a>
+</div>
 <ul class="nav nav-tabs" id="gestaoTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="revisao-tab" data-bs-toggle="tab" data-bs-target="#revisao" type="button" role="tab" aria-controls="revisao" aria-selected="true">

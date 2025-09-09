@@ -71,8 +71,10 @@
                     {% for req in dados.requisicoes_pendentes %}
                         <li class="list-group-item">
                             <div class="d-flex justify-content-between align-items-center">
-                                <span>{{ req.tipo_documento }}</span>
-                                <button class="btn btn-sm btn-brand btn-responder-doc" data-bs-toggle="modal" data-bs-target="#modal-responder-requisicao" data-req-id="{{ req.id }}" data-req-tipo="{{ req.tipo_documento }}">
+                                
+                                <span>{{ req.tipo.nome }}</span>
+                                
+                                <button class="btn btn-sm btn-brand btn-responder-doc" data-bs-toggle="modal" data-bs-target="#modal-responder-requisicao" data-req-id="{{ req.id }}" data-req-tipo="{{ req.tipo.nome }}">
                                     Enviar Documento
                                 </button>
                             </div>

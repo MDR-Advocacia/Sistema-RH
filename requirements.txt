@@ -16,4 +16,5 @@ pytz
 pytest
 pytest-mock 
 unidecode
+Flask-WTF
 #pip install -r requirements.txt

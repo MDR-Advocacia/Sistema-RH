@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar Tipos de Documento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Configurar Tipos de Documento</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoTipo">
+            <i class="fas fa-plus"></i> Novo Tipo
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th class="text-center">Obrigatório na Admissão?</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tipo in tipos %}
+                    <tr>
+                        <td>{{ tipo.nome }}</td>
+                        <td>{{ tipo.descricao or 'N/A' }}</td>
+                        <td class="text-center">
+                            {% if tipo.obrigatorio_na_admissao %}
+                                <span class="badge bg-success">Sim</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Não</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEditar-{{ tipo.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeletar-{{ tipo.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">Nenhum tipo de documento cadastrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNovoTipo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Tipo de Documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('documentos.gerenciar_tipos_documento') }}" method="POST">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        {{ form.nome.label(class="form-label") }}
+                        {{ form.nome(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.descricao.label(class="form-label") }}
+                        {{ form.descricao(class="form-control", rows=3) }}
+                    </div>
+                    <div class="form-check mb-3">
+                        {{ form.obrigatorio_na_admissao(class="form-check-input") }}
+                        {{ form.obrigatorio_na_admissao.label(class="form-check-label") }}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for tipo in tipos %}
+    <div class="modal fade" id="modalEditar-{{ tipo.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar: {{ tipo.nome }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('documentos.editar_tipo_documento', id=tipo.id) }}" method="POST">
+                        {# Usando o token do formulário principal #}
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="nome-{{ tipo.id }}" class="form-label">Nome</label>
+                            <input type="text" id="nome-{{ tipo.id }}" name="nome" class="form-control" value="{{ tipo.nome }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="descricao-{{ tipo.id }}" class="form-label">Descrição</label>
+                            <textarea id="descricao-{{ tipo.id }}" name="descricao" class="form-control" rows="3">{{ tipo.descricao or '' }}</textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" id="obrigatorio-{{ tipo.id }}" name="obrigatorio_na_admissao" class="form-check-input" {% if tipo.obrigatorio_na_admissao %}checked{% endif %}>
+                            <label for="obrigatorio-{{ tipo.id }}" class="form-check-label">Obrigatório na Admissão?</label>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDeletar-{{ tipo.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Você tem certeza que deseja excluir o tipo de documento "<strong>{{ tipo.nome }}</strong>"?</p>
+                    <p class="text-danger">Esta ação não pode ser desfeita.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form action="{{ url_for('documentos.deletar_tipo_documento', id=tipo.id) }}" method="POST" style="display: inline;">
+                        {# Usando o token do formulário principal #}
+                        {{ form.csrf_token }}
+                        <button type="submit" class="btn btn-danger">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+{% endblock %}

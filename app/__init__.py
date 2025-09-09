@@ -57,7 +57,7 @@ def create_app(config_name='default'):
     @login_manager.user_loader
     def load_user(user_id):
         # AVISO DE LEGADO: A forma moderna é db.session.get(Usuario, int(user_id))
-        return Usuario.query.get(int(user_id))
+        return db.session.get(Usuario, int(user_id))
 
     # --- Registro dos Blueprints ---
     from .routes import main as main_blueprint
