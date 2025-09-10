@@ -67,7 +67,7 @@
                             {% for f in funcionarios %}
                             <tr data-id="{{ f.id }}">
                                 <td class="text-center"><input class="form-check-input check-item" type="checkbox" value="{{ f.id }}"></td>
-                                <td class="funcionario-link" style="cursor: pointer;">{{ f.apelido or f.nome }}</td>
+                                <td class="funcionario-link" style="cursor: pointer;">{{ f.nome or f.apelido}}</td>
                                 <td>{{ f.cargo or 'N/A' }}</td>
                                 <td>{{ f.setor or 'N/A' }}</td>
                                 <td>{{ f.email }}</td>
