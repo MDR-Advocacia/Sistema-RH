@@ -17,5 +17,5 @@ COPY . .
 EXPOSE 5000
 
 # Comando para rodar a aplicação quando o container iniciar
-# CMD ["flask", "run", "--host=0.0.0.0"]
-CMD ["flask", "run", "--host=0.0.0.0", "--debug"]
+ CMD ["flask", "run", "--host=0.0.0.0"]
+# CMD ["flask", "run", "--host=0.0.0.0", "--debug"]
