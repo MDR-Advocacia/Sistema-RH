@@ -230,20 +230,34 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
+
+    // --- Lógica do "Selecionar Todos" movida para fora da função reutilizável ---
+    const selecionarTodos = document.getElementById('selecionar-todos');
+    if (selecionarTodos) {
+        selecionarTodos.addEventListener('change', function(e) {
+            const isChecked = e.target.checked;
+            // Usamos um seletor mais específico para garantir que só pegamos os checkboxes corretos
+            const checkboxes = document.querySelectorAll('input[name="funcionarios_selecionados"]');
+            checkboxes.forEach(checkbox => checkbox.checked = isChecked);
+        });
+    }
+
+    /**
+     * Configura a funcionalidade de busca para um campo de input.
+     * @param {string} inputId O ID do campo de busca.
+     * @param {string} resultadosId O ID do elemento que exibirá os resultados.
+     * @param {string|null} hiddenInputId O ID do campo hidden para armazenar o ID do item selecionado (ou null).
+     */
     function setupBusca(inputId, resultadosId, hiddenInputId) {
         const buscaInput = document.getElementById(inputId);
         const resultadosDiv = document.getElementById(resultadosId);
-        const hiddenInput = document.getElementById(hiddenInputId);
+        const hiddenInput = hiddenInputId ? document.getElementById(hiddenInputId) : null;
         let searchTimeout;
-        const selecionarTodos = document.getElementById('selecionar-todos');
 
-        if (selecionarTodos) {
-            selecionarTodos.addEventListener('change', function(e) {
-                const isChecked = e.target.checked;
-                const checkboxes = document.querySelectorAll('input[name="funcionarios_selecionados"]');
-                checkboxes.forEach(checkbox => checkbox.checked = isChecked);
-            });
+        // Se algum dos elementos essenciais não for encontrado, interrompe a função para evitar erros.
+        if (!buscaInput || !resultadosDiv) {
+            console.error(`Elementos não encontrados para a busca: ${inputId}, ${resultadosId}`);
+            return;
         }
 
         buscaInput.addEventListener('keyup', () => {
@@ -251,112 +265,159 @@ document.addEventListener('DOMContentLoaded', function() {
             searchTimeout = setTimeout(async () => {
                 const termo = buscaInput.value.trim();
                 resultadosDiv.innerHTML = '';
-                if(hiddenInput) hiddenInput.value = '';
+                if (hiddenInput) hiddenInput.value = '';
 
                 if (termo.length < 2) return;
 
-                const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
-                const colaboradores = await res.json();
-                
-                if (colaboradores.length > 0) {
-                    colaboradores.forEach(colab => {
-                        const item = document.createElement('a');
-                        item.href = '#';
-                        item.className = 'list-group-item list-group-item-action';
-                        item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
-                        item.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            buscaInput.value = colab.nome;
-                            if(hiddenInput) {
-                                hiddenInput.value = colab.id;
-                            } else {
-                                carregarHistorico(colab.id);
-                            }
-                            resultadosDiv.innerHTML = '';
+                // --- Adicionado TRY...CATCH para a busca de funcionários ---
+                try {
+                    const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
+                    if (!res.ok) { // Verifica se a resposta da API foi bem-sucedida (status 2xx)
+                        throw new Error(`Erro na busca: ${res.statusText}`);
+                    }
+                    const colaboradores = await res.json();
+
+                    if (colaboradores.length > 0) {
+                        colaboradores.forEach(colab => {
+                            const item = document.createElement('a');
+                            item.href = '#';
+                            item.className = 'list-group-item list-group-item-action';
+                            item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
+                            item.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                buscaInput.value = colab.nome;
+                                if (hiddenInput) {
+                                    hiddenInput.value = colab.id;
+                                } else {
+                                    // Esta chamada é para a aba de consulta
+                                    carregarHistorico(colab.id);
+                                }
+                                resultadosDiv.innerHTML = ''; // Limpa os resultados após a seleção
+                            });
+                            resultadosDiv.appendChild(item);
                         });
-                        resultadosDiv.appendChild(item);
-                    });
-                } else {
-                    resultadosDiv.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
+                    } else {
+                        resultadosDiv.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
+                    }
+                } catch (error) {
+                    console.error('Falha ao buscar colaboradores:', error);
+                    resultadosDiv.innerHTML = '<p class="list-group-item text-danger">Erro ao carregar os dados. Tente novamente.</p>';
                 }
             }, 300);
         });
     }
 
+    /**
+     * Carrega e exibe o histórico de documentos de um funcionário.
+     * @param {number} funcionarioId O ID do funcionário.
+     */
+    async function carregarHistorico(funcionarioId) {
+        const historicoContainer = document.getElementById('historico-container');
+        if (!historicoContainer) return; // Segurança
+
+        historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+        // --- Adicionado TRY...CATCH para carregar o histórico ---
+        try {
+            const res = await fetch(`/documentos/api/funcionario/${funcionarioId}/documentos`);
+            if (!res.ok) {
+                throw new Error(`Erro na API: ${res.statusText}`);
+            }
+            const documentos = await res.json();
+
+            if (documentos.length === 0) {
+                historicoContainer.innerHTML = '<p class="text-muted text-center">Nenhum documento encontrado para este funcionário.</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Arquivo</th>
+                                <th>Data Envio</th>
+                                <th>Status</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            documentos.forEach(doc => {
+                let statusBadge = '';
+                // --- Lógica de status melhorada para incluir um caso padrão ---
+                if (doc.status === 'Pendente de Revisão') {
+                    statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
+                } else if (doc.status === 'Aprovado') {
+                    statusBadge = '<span class="badge bg-success">Aprovado</span>';
+                } else {
+                    // Caso para outros status como 'Rejeitado' ou qualquer outro
+                    statusBadge = `<span class="badge bg-secondary">${doc.status}</span>`;
+                }
+
+                const btnDownload = `<a href="${doc.url_download}" class="btn btn-sm btn-outline-secondary" title="Baixar" download><i class="bi bi-download"></i></a>`;
+                const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-doc" data-doc-id="${doc.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
+
+                tableHtml += `
+                    <tr id="doc-row-${doc.id}">
+                        <td>${doc.tipo_documento || 'N/A'}</td>
+                        <td>${doc.nome_arquivo || 'N/A'}</td>
+                        <td>${doc.data_upload || 'N/A'}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end">${btnDownload} ${btnRemover}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table></div>';
+            historicoContainer.innerHTML = tableHtml;
+
+        } catch (error) {
+            console.error('Falha ao carregar histórico de documentos:', error);
+            historicoContainer.innerHTML = '<p class="text-danger text-center"><strong>Erro!</strong> Não foi possível carregar os documentos. Verifique o console para mais detalhes.</p>';
+        }
+    }
+
+    // --- Delegação de evento para remoção de documento ---
+    const historicoContainer = document.getElementById('historico-container');
+    if (historicoContainer) {
+        historicoContainer.addEventListener('click', function(event) {
+            const target = event.target.closest('.btn-remover-doc');
+            if (!target) return;
+
+            const docId = target.dataset.docId;
+            if (confirm('Tem certeza que deseja remover este documento permanentemente? Esta ação é irreversível.')) {
+                // Tratamento de erro também é bom aqui, embora menos crítico que no GET
+                fetch(`/documentos/api/documento/${docId}/remover`, {
+                    method: 'DELETE'
+                })
+                .then(res => {
+                    if (!res.ok) { // Lança um erro se a resposta não for OK
+                        return res.json().then(err => { throw new Error(err.message || 'Erro no servidor') });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`doc-row-${docId}`).remove();
+                    } else {
+                        alert(data.message || 'Ocorreu um erro ao remover o documento.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao remover documento:', error);
+                    alert(`Não foi possível remover o documento: ${error.message}`);
+                });
+            }
+        });
+    }
+
+    // --- Inicialização das buscas ---
     setupBusca('busca-solicitar', 'resultados-solicitar', 'funcionario_id_solicitar');
     setupBusca('busca-enviar', 'resultados-enviar', 'funcionario_id_enviar');
     setupBusca('busca-consulta', 'resultados-consulta', null);
-
-    const historicoContainer = document.getElementById('historico-container');
-    async function carregarHistorico(funcionarioId) {
-        historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-        const res = await fetch(`/documentos/api/funcionario/${funcionarioId}/documentos`);
-        const documentos = await res.json();
-
-        
-
-        if (documentos.length === 0) {
-            historicoContainer.innerHTML = '<p class="text-muted text-center">Nenhum documento encontrado para este funcionário.</p>';
-            return;
-        }
-
-        let tableHtml = `
-            <div class="table-responsive">
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>Tipo</th>
-                            <th>Arquivo</th>
-                            <th>Data Envio</th>
-                            <th>Status</th>
-                            <th class="text-end">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        documentos.forEach(doc => {
-            let statusBadge = '';
-            if (doc.status === 'Pendente de Revisão') statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
-            else if (doc.status === 'Aprovado') statusBadge = '<span class="badge bg-success">Aprovado</span>';
-            
-            const btnDownload = `<a href="${doc.url_download}" class="btn btn-sm btn-outline-secondary" title="Baixar"><i class="bi bi-download"></i></a>`;
-            const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-doc" data-doc-id="${doc.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
-            
-            tableHtml += `
-                <tr id="doc-row-${doc.id}">
-                    <td>${doc.tipo_documento}</td>
-                    <td>${doc.nome_arquivo}</td>
-                    <td>${doc.data_upload}</td>
-                    <td>${statusBadge}</td>
-                    <td class="text-end">${btnDownload} ${btnRemover}</td>
-                </tr>
-            `;
-        });
-
-        tableHtml += '</tbody></table></div>';
-        historicoContainer.innerHTML = tableHtml;
-    }
-
-    historicoContainer.addEventListener('click', function(event) {
-        const target = event.target.closest('.btn-remover-doc');
-        if (!target) return;
-        
-        const docId = target.dataset.docId;
-        if (confirm('Tem certeza que deseja remover este documento permanentemente? Esta ação é irreversível.')) {
-            fetch(`/documentos/api/documento/${docId}/remover`, {
-                method: 'DELETE'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById(`doc-row-${docId}`).remove();
-                } else {
-                    alert(data.message || 'Ocorreu um erro.');
-                }
-            });
-        }
-    });
 });
 </script>
 {% endblock %}
