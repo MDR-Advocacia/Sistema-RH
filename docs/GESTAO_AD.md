@@ -2,21 +2,23 @@
 
 ## 1. Visão Geral
 
-O sistema MDRH está integrado ao Active Directory (AD) da empresa para centralizar a gestão de identidades e automatizar o ciclo de vida dos usuários, seguindo as melhores práticas de segurança. A integração funciona em duas vias principais: **Provisionamento (MDRH → AD)** e **Autenticação (Sistema → AD)**.
+A integração do MDRH com o Active Directory (AD) da empresa foi projetada para criar um ecossistema de gerenciamento de identidades seguro e automatizado. O sistema opera em duas vias principais, tratando o MDRH como a fonte da verdade para os dados cadastrais e o AD como a fonte da verdade para a autenticação.
 
+1. **Provisionamento (MDRH → AD):** O ciclo de vida de um colaborador (criação, atualização, desligamento) gerenciado no MDRH é automaticamente espelhado no Active Directory.
+2. **Autenticação e Vinculação (AD → MDRH):** O login no sistema é feito primariamente contra o AD, garantindo uma senha única e centralizada para o colaborador.
 ---
 
 ## 2. Provisionamento de Usuários (MDRH → AD)
 
-O sistema de RH é a **fonte da verdade** para os dados cadastrais dos colaboradores.
+Este fluxo ocorre quando um administrador do RH realiza ações dentro do sistema MDRH.
 
 ### 2.1. Criação de Usuário
 
-1.  Quando um administrador do RH cadastra um **"Novo Funcionário"** no sistema MDRH, uma série de ações automáticas são disparadas:
-    -   O sistema gera um nome de usuário padronizado no formato **`nome.sobrenome`**.
+1.  QQuando um administrador do RH cadastra um **"Novo Funcionário"** através do formulário no MDRH:
+    -   O sistema primeiramente cria os registros  **`Funcionario`** e **`Usuario`** no banco de dados local.
     -   O sistema se conecta ao AD e cria uma nova conta de usuário na pasta `Users`.
-    -   Os dados preenchidos no formulário (Nome Completo, Cargo, Setor) são sincronizados com os campos correspondentes no AD.
-    -   Uma senha inicial (fornecida no formulário) é definida para o usuário no AD.
+    -   Os dados preenchidos (Nome Completo, Cargo, Setor) são sincronizados com os campos correspondentes no AD (`displayName`, `title`, `department`).
+    -   Uma senha inicial padrão (`AD_DEFAULT_PASSWORD` definida no `.env`) é atribuída à conta no AD.
     -   A conta é criada como **ATIVADA** e com a flag **"O usuário deve alterar a senha no próximo logon"** marcada.
 
 ### 2.2. Atualização de Usuário
@@ -28,25 +30,29 @@ O sistema de RH é a **fonte da verdade** para os dados cadastrais dos colaborad
 
 ### 2.3. Desligamento e Suspensão
 
-1.  **Suspender:** Quando o RH clica em **"Suspender"** no perfil do funcionário, a conta correspondente no AD é **desativada** (disabled).
+1.  **Suspender:** Quando o RH clica em **"Suspender"** no perfil do funcionário, a conta correspondente no AD é imediatamente **desativada** (disabled).
 2.  **Reativar:** Ao clicar em **"Reativar"**, a conta no AD é **ativada** novamente (enabled).
-3.  **Desligar:** A ação de **"Desligar"** também **desativa** permanentemente a conta no AD.
-4.  **Remover:** Ao remover um funcionário do MDRH, o objeto do usuário correspondente é **excluído** do Active Directory.
+3.  **Desligar:** A ação de **"Desligar"** executa um processo de offboarding:.
+    - A conta no AD é permanentemente **desativada**.
+    - Dados pessoais sensíveis no banco de dados do MDRH são **anonimizados** para conformidade com a LGPD.
 
 ---
 
-## 3. Autenticação Centralizada (Sistema → AD)
+## 3. Autenticação e Vinculação (Fluxo: Usuário para o Sistema)
 
-O Active Directory é a **fonte da verdade** para as senhas e a autenticação.
+Este fluxo ocorre quando qualquer colaborador tenta fazer login no sistema.
 
 ### 3.1. Fluxo de Login
 
-1.  O usuário acessa a tela de login do MDRH e insere seu **Usuário de Rede** (`nome.sobrenome`) e sua **senha do AD** (a mesma que usa para logar no computador).
-2.  O sistema MDRH se conecta ao AD e valida as credenciais.
-3.  Se a autenticação no AD for bem-sucedida, o sistema procura um usuário com o e-mail correspondente (`nome.sobrenome@mdr.local`) em seu banco de dados local.
+1.  O usuário acessa a tela de login do MDRH e insere seu **Usuário de Rede** (ex: `pedro.alecrim`) e sua **senha do AD** (a mesma que usa para logar no computador).
+2.  O sistema MDRH tenta se autenticar diretamente no Active Directory com as credenciais fornecidas.
+3.  Se a autenticação no AD for bem-sucedida, o sistema prossegue para a vinculação.
+4.  **Fallback:** Se a conexão com o AD falhar (servidor offline, etc.), o sistema tenta uma autenticação secundária no banco de dados local. Isso garante que administradores com contas locais (criadas via comando create-admin) possam sempre acessar o sistema para manutenção.
 
 ### 3.2. Vinculação e Provisionamento Just-in-Time
+Após uma autenticação bem-sucedida no AD, o sistema verifica a situação do usuário no banco de dados local:
 
 -   **Cenário 1: Vinculação (Usuário AD já tem cadastro no RH):** Se um usuário do AD faz login pela primeira vez e o sistema encontra um `Funcionário` no banco de dados com o mesmo nome completo, ele automaticamente cria a conta de `Usuario` no sistema e a vincula ao cadastro existente.
 -   **Cenário 2: Provisionamento (Usuário AD não tem cadastro no RH):** Se um usuário do AD faz login e não há um funcionário correspondente, o sistema cria um cadastro básico de `Funcionario` para ele.
--   **Cenário 3: Fallback Local:** Se a autenticação com o AD falhar (por qualquer motivo, como o servidor estar offline), o sistema tenta validar as credenciais no banco de dados local. Isso garante que os administradores de sistema (como `admin@sistema.com`) sempre consigam acessar o MDRH.
+-   **Cenário 3 (Provisionamento Just-in-Time):** Se o usuário do AD não existe no MDRH e não há nenhum funcionário com nome correspondente, o sistema cria um novo cadastro básico de Funcionario e um novo Usuario para ele. Este cenário é útil para novos colaboradores que ainda não foram formalmente cadastrados pelo RH.
+-   **Cenário 4: Fallback Local:** Se a autenticação com o AD falhar (por qualquer motivo, como o servidor estar offline), o sistema tenta validar as credenciais no banco de dados local. Isso garante que os administradores de sistema (como `admin@sistema.com`) sempre consigam acessar o MDRH.
