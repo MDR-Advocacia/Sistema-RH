@@ -159,7 +159,8 @@ def historico_documentos_funcionario(funcionario_id):
 def upload_manual_documento():
     """Processa o upload de um novo documento pelo RH a partir da tela de gestão."""
     funcionario_id = request.form.get('funcionario_id')
-    tipo_documento = request.form.get('tipo_documento')
+    # --- MUDANÇA 1: Obter o ID em vez do texto ---
+    tipo_documento_id = request.form.get('tipo_documento_id')
     
     if 'arquivo' not in request.files:
         flash('Nenhum arquivo selecionado.', 'danger')
@@ -167,8 +168,15 @@ def upload_manual_documento():
 
     file = request.files['arquivo']
 
-    if not all([funcionario_id, tipo_documento, file.filename]):
+    # --- MUDANÇA 2: Validar o ID ---
+    if not all([funcionario_id, tipo_documento_id, file.filename]):
         flash('Funcionário, tipo de documento e arquivo são obrigatórios.', 'danger')
+        return redirect(url_for('documentos.gestao_documentos'))
+    
+    # --- MUDANÇA 3: Buscar o nome do tipo de documento no banco ---
+    tipo_doc = db.session.get(TipoDocumento, int(tipo_documento_id))
+    if not tipo_doc:
+        flash('Tipo de documento inválido.', 'danger')
         return redirect(url_for('documentos.gestao_documentos'))
 
     if file and allowed_file(file.filename):
@@ -182,7 +190,7 @@ def upload_manual_documento():
 
         novo_documento = Documento(
             nome_arquivo=filename_seguro,
-            tipo_documento=tipo_documento,
+            tipo_documento=tipo_doc.nome, # <-- MUDANÇA 4: Usar o nome do objeto
             path_armazenamento=nome_unico,
             funcionario_id=funcionario_id,
             status='Aprovado',
@@ -192,9 +200,8 @@ def upload_manual_documento():
         db.session.add(novo_documento)
         db.session.commit()
         
-        # LOG
-        funcionario = Funcionario.query.get(funcionario_id)
-        registrar_log(f"Enviou manualmente o documento '{tipo_documento}' para o funcionário '{funcionario.nome}'.")
+        funcionario = db.session.get(Funcionario, int(funcionario_id))
+        registrar_log(f"Enviou manualmente o documento '{tipo_doc.nome}' para o funcionário '{funcionario.nome}'.")
 
         flash('Documento enviado com sucesso!', 'success')
     else:

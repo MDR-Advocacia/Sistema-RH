@@ -160,8 +160,14 @@
                         <input type="hidden" name="funcionario_id" id="funcionario_id_enviar">
                     </div>
                     <div class="mb-3">
-                        <label for="tipo_documento" class="form-label">Tipo de Documento</label>
-                        <input type="text" class="form-control" name="tipo_documento" placeholder="Ex: Contrato, RG, Holerite" required>
+                        <label for="tipo_documento_id" class="form-label">Tipo de Documento</label>
+                        <!-- Substituído o input por um select -->
+                        <select class="form-select" name="tipo_documento_id" id="tipo_documento_id" required>
+                            <option value="" selected disabled>Selecione um tipo...</option>
+                            {% for tipo in tipos_documento %}
+                                <option value="{{ tipo.id }}">{{ tipo.nome }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label for="arquivo" class="form-label">Selecione o arquivo</label>
