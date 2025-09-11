@@ -156,6 +156,7 @@ def reprovar_ponto(ponto_id):
     motivo = request.form.get('motivo_reprovacao')
 
     if not motivo:
+        registrar_log(f"Reprovou a solicitação de ponto (ID: {ponto.id}) do funcionário '{ponto.funcionario.nome}'. Motivo: {motivo}")
         flash('O motivo da reprovação é obrigatório.', 'danger')
         return redirect(url_for('ponto.gestao_ponto'))
 
@@ -209,6 +210,7 @@ def remover_ponto(ponto_id):
                 os.remove(caminho_arquivo)
         db.session.delete(ponto)
         db.session.commit()
+        registrar_log(f"Removeu a solicitação de ponto (ID: {ponto.id}) do funcionário '{funcionario_nome}'.")
         flash('Solicitação de ajuste de ponto removida com sucesso!', 'success')
     except Exception as e:
         db.session.rollback()
@@ -232,6 +234,7 @@ def remover_ponto_api(ponto_id):
                 os.remove(caminho_arquivo)
         db.session.delete(ponto)
         db.session.commit()
+        registrar_log(f"Removeu a solicitação de ponto (ID: {ponto.id}) do funcionário '{funcionario_nome}'.")
         return jsonify({'success': True, 'message': 'Ajuste de ponto removido com sucesso!'})
     except Exception as e:
         db.session.rollback()
@@ -275,6 +278,7 @@ def responder_ponto(ponto_id):
         ponto.justificativa = justificativa_texto
 
         db.session.commit()
+        registrar_log(f"Respondeu à solicitação de ponto (ID: {ponto.id}) com a justificativa: '{ponto.justificativa}'.")
         return jsonify({'success': True, 'message': 'Ajuste de ponto enviado para revisão!'})
     except Exception as e:
         db.session.rollback()

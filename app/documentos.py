@@ -536,6 +536,7 @@ def gerenciar_tipos_documento():
         db.session.add(novo_tipo)
         try:
             db.session.commit()
+            registrar_log(f"Criou um novo tipo de documento: '{novo_tipo.nome}'.")
             flash('Novo tipo de documento cadastrado com sucesso!', 'success')
         except IntegrityError:
             db.session.rollback()
@@ -569,6 +570,7 @@ def editar_tipo_documento(id):
         tipo_doc.obrigatorio_na_admissao = form.obrigatorio_na_admissao.data
         try:
             db.session.commit()
+            registrar_log(f"Editou o tipo de documento ID {id} para: '{tipo_doc.nome}'.")
             flash('Tipo de documento atualizado com sucesso!', 'success')
         except IntegrityError:
             db.session.rollback()
@@ -594,6 +596,7 @@ def deletar_tipo_documento(id):
         if tipo_doc.requisicoes:
             flash('Não é possível excluir este tipo de documento, pois ele já está associado a requisições existentes.', 'danger')
         else:
+            registrar_log(f"Deletou o tipo de documento: '{tipo_doc.nome}' (ID: {id}).")
             db.session.delete(tipo_doc)
             db.session.commit()
             flash('Tipo de documento excluído com sucesso!', 'success')

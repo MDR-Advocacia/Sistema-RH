@@ -256,6 +256,7 @@ def editar_funcionario(funcionario_id):
         if not sucesso_ad:
             flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
         
+        registrar_log(f"Editou os dados do funcionário '{funcionario.nome}' (ID: {id}).")
         flash(f'Dados de {funcionario.nome} atualizados e sincronizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
 
