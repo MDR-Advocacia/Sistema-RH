@@ -1,0 +1,11 @@
+Prezada equipe de RH,
+
+Uma nova denúncia anônima foi registrada no portal MDRH.
+
+Categoria: {{ denuncia.categoria }}
+Protocolo para consulta: {{ denuncia.protocolo }}
+
+Por favor, acesse a área de gestão de denúncias no sistema para revisar os detalhes.
+
+Atenciosamente,
+Sistema MDRH

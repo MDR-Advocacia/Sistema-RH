@@ -4,7 +4,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 from . import db
-from .models import Denuncia, DenunciaAnexo
+from .models import Denuncia, DenunciaAnexo, Usuario, Permissao
+from .email import send_email
 from .decorators import permission_required
 
 denuncias_bp = Blueprint('denuncias', __name__)
@@ -53,6 +54,30 @@ def canal():
                     db.session.add(novo_anexo)
 
             db.session.commit()
+
+            # --- LÓGICA DE NOTIFICAÇÃO CORRIGIDA ---
+            try:
+                # 1. Encontra todos os usuários com a permissão 'admin_rh'
+                admins_rh = Usuario.query.join(Usuario.permissoes).filter(Permissao.nome == 'admin_rh').all()
+                
+                if admins_rh:
+                    emails_enviados = 0
+                    for admin_user in admins_rh:
+                        # 2. Acessa o perfil de funcionário vinculado ao usuário
+                        if admin_user.funcionario and admin_user.funcionario.email:
+                            # 3. Usa o e-mail do FUNCIONÁRIO como destinatário
+                            send_email(
+                                to=admin_user.funcionario.email,
+                                subject="Nova Denúncia Anônima Registrada",
+                                template='email/nova_denuncia',
+                                denuncia=nova_denuncia
+                            )
+                            emails_enviados += 1
+                    current_app.logger.info(f"Notificação de nova denúncia (Protocolo: {nova_denuncia.protocolo}) enviada para {emails_enviados} admin(s) de RH.")
+            except Exception as e:
+                current_app.logger.error(f"Falha ao enviar e-mail de notificação de nova denúncia: {e}")
+            # --- FIM DA CORREÇÃO ---
+
             return redirect(url_for('denuncias.envio_sucesso', protocolo=protocolo))
         
         # Lógica para o formulário de CONSULTA
