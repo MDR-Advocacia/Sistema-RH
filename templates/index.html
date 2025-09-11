@@ -78,11 +78,13 @@
                                     Enviar Documento
                                 </button>
                             </div>
-                            {% if req.observacao %}
+                            
+                            {% if req.observacoes_rh %}
                             <small class="d-block text-danger mt-1">
-                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação:</strong> {{ req.observacao }}
+                                <i class="bi bi-exclamation-circle-fill"></i> <strong>Motivo da reprovação:</strong> {{ req.observacoes_rh }}
                             </small>
                             {% endif %}
+                            
                         </li>
                     {% else %}
                         <li class="list-group-item text-center text-muted">Nenhum documento solicitado.</li>

@@ -89,7 +89,7 @@ def gestao_documentos():
 @permission_required('admin_rh')
 def solicitar_em_lote():
     ids_funcionarios = request.form.getlist('funcionarios_selecionados')
-    tipo_documento_id = request.form.get('tipo_documento_id')
+    tipo_documento_id = request.form.get('tipo_documento_id') # Alterado para tipo_documento_id
 
     if not ids_funcionarios or not tipo_documento_id:
         flash('Você precisa selecionar pelo menos um funcionário e um tipo de documento.', 'warning')
@@ -103,6 +103,10 @@ def solicitar_em_lote():
     sucessos = 0
     erros = 0
     
+    # --- CORREÇÃO ADICIONADA AQUI ---
+    # Lista para guardar as novas requisições para enviar e-mail depois
+    requisicoes_criadas = []
+
     for funcionario_id in ids_funcionarios:
         existe_pendencia = RequisicaoDocumento.query.filter_by(
             destinatario_id=funcionario_id,
@@ -118,17 +122,34 @@ def solicitar_em_lote():
                 status='Pendente'
             )
             db.session.add(nova_requisicao)
+            requisicoes_criadas.append(nova_requisicao) # Adiciona à lista
             sucessos += 1
         else:
             erros += 1
 
     db.session.commit()
+
+    # --- CORREÇÃO ADICIONADA AQUI ---
+    # Loop para enviar e-mail para cada nova requisição criada
+    for req in requisicoes_criadas:
+        try:
+            # O 'req.destinatario' já é o objeto funcionário por causa do relationship
+            if req.destinatario and req.destinatario.email:
+                 send_email(req.destinatario.email,
+                           f"Nova Solicitacao de Documento: {tipo_doc.nome}",
+                           'email/nova_solicitacao_documento',
+                           requisicao=req,
+                           destinatario=req.destinatario)
+        except Exception as e:
+            current_app.logger.error(f"Falha ao enviar e-mail de solicitacao em lote para funcionario {req.destinatario_id}: {e}")
+    # --- FIM DA CORREÇÃO ---
+
     if sucessos > 0:
         flash(f'Documento "{tipo_doc.nome}" solicitado para {sucessos} funcionário(s) com sucesso!', 'success')
     if erros > 0:
         flash(f'{erros} funcionário(s) já possuíam uma pendência para este documento.', 'info')
 
-    return redirect(url_for('documentos.gestao_documentos'))    
+    return redirect(url_for('documentos.gestao_documentos'))
 
 
 # NOVO: API para a aba de consulta
@@ -435,7 +456,11 @@ def aprovar_documento(documento_id):
 @permission_required('admin_rh')
 def reprovar_documento(documento_id):
     """Reprova um documento, exclui o arquivo e devolve a pendência ao funcionário."""
-    documento = Documento.query.get_or_404(documento_id)
+    documento = db.session.get(Documento, documento_id)
+    if not documento:
+        flash('Documento não encontrado.', 'danger')
+        return redirect(url_for('documentos.gestao_documentos'))
+
     motivo = request.form.get('motivo_reprovacao')
 
     if not motivo:
@@ -443,43 +468,53 @@ def reprovar_documento(documento_id):
         return redirect(url_for('documentos.gestao_documentos'))
 
     try:
+        # --- ETAPA 1: Coletar todas as informações necessárias ---
+        funcionario_nome = documento.funcionario.nome
+        funcionario_email = documento.funcionario.email
+        documento_tipo = documento.tipo_documento
         caminho_arquivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.path_armazenamento)
-
-        if documento.requisicao_id:
-            requisicao = RequisicaoDocumento.query.get(documento.requisicao_id)
-            if requisicao:
-                requisicao.status = 'Pendente' 
-                requisicao.observacao = motivo
-
-        db.session.delete(documento)
+        requisicao_original_id = documento.requisicao_id
         
-        if os.path.exists(caminho_arquivo):
-            os.remove(caminho_arquivo)
-
-        db.session.commit()
-
-        # LOG
-        registrar_log(f"Reprovou o documento '{documento.tipo_documento}' do funcionário '{documento.funcionario.nome}' pelo motivo: '{motivo}'.")
-
-        # --- LÓGICA DE NOTIFICAÇÃO POR E-MAIL ADICIONADA ---
+        # --- ETAPA 2: Enviar o e-mail ANTES de qualquer alteração no banco ---
+        # Esta é a correção crucial. A notificação agora acontece primeiro.
         try:
             send_email(funcionario_email,
                        f"Correção Necessária no Documento: {documento_tipo}",
                        'email/documento_reprovado',
-                       documento=documento, motivo=motivo)
+                       nome_funcionario=funcionario_nome,
+                       tipo_documento=documento_tipo,
+                       motivo=motivo)
         except Exception as e:
+            # Mesmo que o e-mail falhe, o log de erro é registrado, mas a operação continua.
             current_app.logger.error(f"Falha ao enviar e-mail de reprovação de documento: {e}")
-        # --- FIM DA LÓGICA DE NOTIFICAÇÃO ---
 
-        flash(f'Documento de {documento.funcionario.nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
+        # --- ETAPA 3: Preparar e executar as alterações no banco de dados ---
+        if requisicao_original_id:
+            requisicao = db.session.get(RequisicaoDocumento, requisicao_original_id)
+            if requisicao:
+                requisicao.status = 'Pendente' 
+                requisicao.observacoes_rh = motivo
+
+        # Marcamos o documento para exclusão
+        db.session.delete(documento)
+        
+        # Deletamos o arquivo físico
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+
+        # Efetivamos tudo no banco de uma só vez
+        db.session.commit()
+
+        # --- ETAPA 4: Ações Pós-Sucesso (Log e Flash) ---
+        registrar_log(f"Reprovou o documento '{documento_tipo}' do funcionário '{funcionario_nome}' pelo motivo: '{motivo}'.")
+        flash(f'Documento de {funcionario_nome} foi reprovado e a pendência retornou ao colaborador.', 'warning')
+
     except Exception as e:
-        db.session.rollback()
+        db.session.rollback() # Desfaz qualquer alteração no banco se algo der errado
         flash('Ocorreu um erro ao processar a reprovação.', 'danger')
-        current_app.logger.error(f"Erro ao reprovar documento {documento_id}: {e}")
+        current_app.logger.error(f"Erro ao reprovar documento {documento_id}: {e}", exc_info=True)
 
     return redirect(url_for('documentos.gestao_documentos'))
-
-
 # --- ROTAS PARA GERENCIAR TIPOS DE DOCUMENTO ---
 
 @documentos_bp.route('/tipos', methods=['GET', 'POST'])

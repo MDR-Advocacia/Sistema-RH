@@ -1,8 +1,8 @@
-Olá {{ documento.funcionario.nome }},
+Olá {{ nome_funcionario }},
 
 Sua recente submissão de documento foi revisada pelo RH e precisa de correção.
 
-Documento: {{ documento.tipo_documento }}
+Documento: {{ tipo_documento }}
 Status: Reprovado
 
 Motivo da reprovação:
