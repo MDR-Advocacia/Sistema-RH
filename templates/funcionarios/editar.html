@@ -62,13 +62,19 @@
                 <div class="col-md-12">
                     <label class="form-label">Permissões</label>
                     <div>
-                    {% for permissao in permissoes %}
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" name="permissoes" value="{{ permissao.id }}" 
-                                   id="perm_{{ permissao.id }}" {% if permissao.id in permissoes_usuario_ids %}checked{% endif %}>
-                            <label class="form-check-label" for="perm_{{ permissao.id }}">{{ permissao.nome }}</label>
-                        </div>
-                    {% endfor %}
+                        {% if usuario %}
+                            {% for p in permissoes %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="permissoes" value="{{ p.id }}" 
+                                        id="perm_{{ p.id }}" {% if p in usuario.permissoes %}checked{% endif %}>
+                                    <label class="form-check-label" for="perm_{{ p.id }}">{{ p.nome.replace('_', ' ') | title }}</label>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info mt-2">
+                                Este funcionário não possui um usuário de sistema associado para gerenciar permissões.
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

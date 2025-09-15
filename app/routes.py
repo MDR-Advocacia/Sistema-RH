@@ -105,84 +105,92 @@ def check_ad_username():
 
 # ROTA DE CADASTRO
 
-@main.route('/cadastrar', methods=['POST'])
+@main.route('/cadastrar', methods=['GET', 'POST'])
 @login_required
 @permission_required('admin_rh')
 def processar_cadastro():
-    try:
-        # Coleta de dados do formulário
-        nome = request.form.get('nome')
-        cpf = request.form.get('cpf')
-        email_contato = request.form.get('email')
-        username_form = request.form.get('username')
-        ad_username_manual = request.form.get('ad_username_manual')
-        vincular_ad_existente = request.form.get('vincular_ad_existente') == 'true'
+    if request.method == 'POST':
+        try:
+            # Coleta de dados do formulário
+            nome = request.form.get('nome')
+            cpf = request.form.get('cpf')
+            email_contato = request.form.get('email')
+            username_form = request.form.get('username')
+            ad_username_manual = request.form.get('ad_username_manual')
+            vincular_ad_existente = request.form.get('vincular_ad_existente') == 'true'
 
-        username_final = ad_username_manual or username_form
+            username_final = ad_username_manual or username_form
 
-        # Validações iniciais
-        if not all([nome, cpf, email_contato, username_final]):
-            flash('Nome, CPF, Email e Usuário de Rede são obrigatórios.', 'danger')
+            # Validações iniciais
+            if not all([nome, cpf, email_contato, username_final]):
+                flash('Nome, CPF, Email e Usuário de Rede são obrigatórios.', 'danger')
+                return redirect(url_for('main.exibir_formulario_cadastro'))
+
+            if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(username=username_final).first():
+                flash('CPF ou Usuário de Rede já cadastrado no sistema.', 'danger')
+                return redirect(url_for('main.exibir_formulario_cadastro'))
+
+            # Cria o objeto funcionário (ainda não salvo no banco)
+            novo_funcionario = Funcionario(
+                nome=nome, cpf=cpf, email=email_contato,
+                telefone=request.form.get('telefone'),
+                cargo=request.form.get('cargo'),
+                setor=request.form.get('setor'),
+                data_nascimento=datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d') if request.form.get('data_nascimento') else None,
+                contato_emergencia_nome=request.form.get('contato_emergencia_nome'),
+                contato_emergencia_telefone=request.form.get('contato_emergencia_telefone')
+            )
+            
+            # Provisiona no AD
+            sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
+                novo_funcionario, 
+                username_manual=username_final,
+                vincular=vincular_ad_existente
+            )
+
+            if not sucesso_ad:
+                flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}", "danger")
+                return redirect(url_for('main.exibir_formulario_cadastro'))
+            
+            # Se tudo correu bem, adiciona o funcionário e cria o usuário no sistema
+            db.session.add(novo_funcionario)
+
+            novo_usuario = Usuario(
+                username=username_final,
+                email=email_ad,
+                funcionario=novo_funcionario,
+                senha_provisoria=False 
+            )
+            novo_usuario.set_password(str(uuid.uuid4()))
+            
+            permissoes_ids = request.form.getlist('permissoes')
+            if permissoes_ids:
+                permissoes = Permissao.query.filter(Permissao.id.in_(permissoes_ids)).all()
+                novo_usuario.permissoes = permissoes
+
+            db.session.add(novo_usuario)
+            
+            # Efetiva as mudanças no banco de dados
+            db.session.commit()
+
+            registrar_log(f"Cadastrou o funcionário '{nome}' e provisionou o usuário AD '{username_final}'.")
+            flash(f'Funcionário {nome} criado com sucesso! Login no AD: {username_final}', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            # A linha de log que você já tem é excelente para depuração
+            current_app.logger.error(f"Erro ao cadastrar funcionário: {e}") 
+            flash(f"Ocorreu um erro inesperado durante o cadastro: {e}", "danger")
             return redirect(url_for('main.exibir_formulario_cadastro'))
 
-        if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(username=username_final).first():
-            flash('CPF ou Usuário de Rede já cadastrado no sistema.', 'danger')
-            return redirect(url_for('main.exibir_formulario_cadastro'))
+        return redirect(url_for('main.listar_funcionarios'))    
 
-        # Cria o objeto funcionário (ainda não salvo no banco)
-        novo_funcionario = Funcionario(
-            nome=nome, cpf=cpf, email=email_contato,
-            telefone=request.form.get('telefone'),
-            cargo=request.form.get('cargo'),
-            setor=request.form.get('setor'),
-            data_nascimento=datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d') if request.form.get('data_nascimento') else None,
-            contato_emergencia_nome=request.form.get('contato_emergencia_nome'),
-            contato_emergencia_telefone=request.form.get('contato_emergencia_telefone')
-        )
-        
-        # Provisiona no AD
-        sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
-            novo_funcionario, 
-            username_manual=username_final,
-            vincular=vincular_ad_existente
-        )
+    # --- LÓGICA DE PERMISSÕES ADICIONADA AQUI (GET) ---
+    # Busca todas as permissões para exibir no formulário
+    permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
+    return render_template('cadastrar.html', permissoes=permissoes_disponiveis)
 
-        if not sucesso_ad:
-            flash(f"ERRO NO ACTIVE DIRECTORY: {msg_ad}", "danger")
-            return redirect(url_for('main.exibir_formulario_cadastro'))
-        
-        # Se tudo correu bem, adiciona o funcionário e cria o usuário no sistema
-        db.session.add(novo_funcionario)
-
-        novo_usuario = Usuario(
-            username=username_final,
-            email=email_ad,
-            funcionario=novo_funcionario,
-            senha_provisoria=False 
-        )
-        novo_usuario.set_password(str(uuid.uuid4()))
-        
-        permissoes_ids = request.form.getlist('permissoes')
-        if permissoes_ids:
-            permissoes = Permissao.query.filter(Permissao.id.in_(permissoes_ids)).all()
-            novo_usuario.permissoes = permissoes
-
-        db.session.add(novo_usuario)
-        
-        # Efetiva as mudanças no banco de dados
-        db.session.commit()
-
-        registrar_log(f"Cadastrou o funcionário '{nome}' e provisionou o usuário AD '{username_final}'.")
-        flash(f'Funcionário {nome} criado com sucesso! Login no AD: {username_final}', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        # A linha de log que você já tem é excelente para depuração
-        current_app.logger.error(f"Erro ao cadastrar funcionário: {e}") 
-        flash(f"Ocorreu um erro inesperado durante o cadastro: {e}", "danger")
-        return redirect(url_for('main.exibir_formulario_cadastro'))
-
-    return redirect(url_for('main.listar_funcionarios'))
+    
 # --- FIM DA CORREÇÃO ---
 
 
@@ -244,9 +252,11 @@ def editar_funcionario(funcionario_id):
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
         
         if usuario:
-            permissoes_selecionadas_ids = request.form.getlist('permissoes')
-            permissoes_a_adicionar = Permissao.query.filter(Permissao.id.in_(permissoes_selecionadas_ids)).all()
-            usuario.permissoes = permissoes_a_adicionar
+            ids_permissoes = request.form.getlist('permissoes')
+            usuario.permissoes.clear() # Limpa as permissões antigas
+            novas_permissoes = Permissao.query.filter(Permissao.id.in_(ids_permissoes)).all()
+            usuario.permissoes = novas_permissoes # Adiciona as novas
+        
         
         db.session.commit()
 
@@ -260,11 +270,10 @@ def editar_funcionario(funcionario_id):
         flash(f'Dados de {funcionario.nome} atualizados e sincronizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
 
-    permissoes_usuario_ids = {p.id for p in usuario.permissoes} if usuario else set()
-    return render_template('funcionarios/editar.html',
-                           funcionario=funcionario,
-                           permissoes=permissoes,
-                           permissoes_usuario_ids=permissoes_usuario_ids)
+    # --- LÓGICA DE PERMISSÕES ADICIONADA AQUI (GET) ---
+    # Busca todas as permissões para exibir no formulário
+    permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
+    return render_template('funcionarios/editar.html', funcionario=funcionario, usuario=usuario, permissoes=permissoes_disponiveis)
 
 
 @main.route('/funcionario/<int:funcionario_id>/perfil')
