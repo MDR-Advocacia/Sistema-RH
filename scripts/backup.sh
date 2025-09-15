@@ -1,24 +1,26 @@
 #!/bin/bash
+set -e
 
-set -o pipefail
-
-FILENAME="backup-$(date +%Y-%m-%d_%H-%M-%S).sql.gz"
+# O diretório para salvar os backups dentro do contêiner,
+# que está mapeado para a sua pasta local 'backups'
 BACKUP_DIR="/backups"
+TIMESTAMP=$(date +"_%d-%m-%Y_%H-%M-%S")
+FILE_NAME="backup-${TIMESTAMP}.sql"
+FILE_PATH="${BACKUP_DIR}/${FILE_NAME}"
 
+echo "Iniciando o backup do banco de dados '${POSTGRES_DB}'..."
+
+# Garante que o diretório de backups exista
 mkdir -p ${BACKUP_DIR}
 
-echo "Iniciando backup do banco de dados ${POSTGRES_DB}..."
+# --- COMANDO PRINCIPAL CORRIGIDO ---
+# Removemos o 'docker-compose exec'. O pg_dump é executado diretamente
+# dentro do contêiner 'backup' e se conecta ao 'db' através da rede do Docker.
+pg_dump -h "${PGHOST}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -F c -b -v -f "${FILE_PATH}"
 
-# Adicionamos o nome do banco de dados ($POSTGRES_DB) ao final do comando
-pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}" | gzip > "${BACKUP_DIR}/${FILENAME}"
+echo "Backup concluído com sucesso: ${FILE_PATH}"
 
-if [ $? -eq 0 ]; then
-  echo "Backup [${FILENAME}] criado com sucesso."
-else
-  echo "ERRO: Falha ao criar o backup."
-  exit 1
-fi
-
-echo "Limpando backups com mais de 7 dias..."
-find ${BACKUP_DIR} -type f -name "*.sql.gz" -mtime +7 -delete
+# Limpa backups antigos (mantém os 7 mais recentes)
+echo "Limpando backups antigos..."
+ls -tp ${BACKUP_DIR}/backup-*.sql | tail -n +8 | xargs -I {} rm -- {}
 echo "Limpeza concluída."

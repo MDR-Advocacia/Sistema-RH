@@ -10,28 +10,45 @@ def register_commands(app):
     @click.argument("senha")
     @with_appcontext
     def create_admin(email, senha):
-        """Cria um usuário administrador inicial."""
+        """Cria um usuário administrador inicial e garante que todas as permissões existam."""
 
         # 1. Verifica se o usuário já existe
         if Usuario.query.filter_by(email=email).first():
             print(f"O usuário {email} já existe.")
-            return
-
-        # 2. Cria as permissões básicas se não existirem
-        permissoes_necessarias = ['admin_rh', 'admin_ti', 'colaborador']
+            # Mesmo que o usuário exista, continuamos para garantir que as permissões estão atualizadas.
+        
+        # --- CORREÇÃO APLICADA AQUI ---
+        # 2. Garante que TODAS as permissões necessárias existam no sistema
+        permissoes_necessarias = {
+            'admin_rh': 'Acesso total ao sistema, incluindo configurações de usuários e permissões.',
+            'admin_ti': 'Acesso a configurações técnicas do sistema, logs e integrações.',
+            'colaborador': 'Acesso básico para visualizar seus próprios dados e responder a solicitações.',
+            'supervisor': 'Permite visualizar dados e aprovar solicitações de sua equipe direta.',
+            'depto_pessoal': 'Acesso a rotinas de departamento pessoal, como gestão de documentos e ponto.'
+        }
+        
+        print("Verificando e criando permissões...")
         mapa_permissoes = {}
-        for nome_permissao in permissoes_necessarias:
-            permissao = Permissao.query.filter_by(nome=nome_permissao).first()
+        for nome, desc in permissoes_necessarias.items():
+            permissao = Permissao.query.filter_by(nome=nome).first()
             if not permissao:
-                permissao = Permissao(nome=nome_permissao, descricao=f"Permissão de {nome_permissao}")
+                permissao = Permissao(nome=nome, descricao=desc)
                 db.session.add(permissao)
-            mapa_permissoes[nome_permissao] = permissao
+                print(f"  - Permissão '{nome}' criada.")
+            else:
+                permissao.descricao = desc # Atualiza a descrição se já existir
+                print(f"  - Permissão '{nome}' já existe.")
+            mapa_permissoes[nome] = permissao
         
         # Salva as permissões no banco para garantir que elas tenham IDs
         db.session.commit()
+        print("Permissões verificadas com sucesso.")
+
+        # Se o usuário admin já existe, não precisamos criá-lo de novo.
+        if Usuario.query.filter_by(email=email).first():
+            return
 
         # 3. Cria um registro de funcionário para o admin
-        # Usamos o CPF como um placeholder, já que é um campo obrigatório
         cpf_admin = "000.000.000-00"
         funcionario_admin = Funcionario.query.filter_by(cpf=cpf_admin).first()
         if not funcionario_admin:
@@ -43,7 +60,6 @@ def register_commands(app):
                 setor="TI/RH"
             )
             db.session.add(funcionario_admin)
-            # Salva o funcionário para garantir que ele tenha um ID
             db.session.commit()
 
         # 4. Cria o objeto do usuário

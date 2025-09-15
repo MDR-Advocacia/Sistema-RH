@@ -29,22 +29,39 @@ services:
       - .env  # Carrega as variáveis do banco (POSTGRES_USER, etc.)  
 
   backup:
-    image: postgres:16 # Usamos a mesma imagem para ter acesso ao pg_dump
+    image: postgres:16
     volumes:
       - ./scripts:/scripts
-      - backups_data:/backups # Mapeia o novo volume onde os backups serão salvos
-      #- /D:\Backups\MDRH-BACKUP   
+      - ./backups:/backups
     env_file:
-      - .env # Carrega as credenciais do banco
+      - .env
     environment:
-      # Diz ao pg_dump para onde se conectar (o nome do serviço do banco)
       - PGHOST=db
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - PGPASSWORD=${POSTGRES_PASSWORD}
     depends_on:
-      - db  
-    entrypoint: ["/scripts/backup.sh"] # Comando que será executado ao iniciar
+      - db
+    command: ["/scripts/backup.sh"]
+
+    # --- NOVO SERVIÇO ADICIONADO AQUI ---
+  restore:
+    image: postgres:16
+    volumes:
+      # Mapeia a pasta de backups para que o pg_restore possa lê-la
+      - ./backups:/backups
+    env_file:
+      - .env
+    environment:
+      - PGHOST=db
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      - db
+    # O entrypoint é o comando que será executado.
+    # Ele espera receber o nome do arquivo como argumento.
+    entrypoint: ["pg_restore", "-U", "admin", "-d", "mdrh_db", "--clean", "--if-exists"]
 
 volumes:
   postgres_data:

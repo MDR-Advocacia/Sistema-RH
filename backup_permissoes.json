@@ -2,16 +2,31 @@
     {
         "id": 1,
         "nome": "admin_rh",
-        "descricao": "Permissão de admin_rh"
+        "descricao": "Acesso total ao sistema, incluindo configurações de usuários e permissões."
     },
     {
         "id": 2,
         "nome": "admin_ti",
-        "descricao": "Permissão de admin_ti"
+        "descricao": "Acesso a configurações técnicas do sistema, logs e integrações."
     },
     {
         "id": 3,
         "nome": "colaborador",
-        "descricao": "Permissão de colaborador"
+        "descricao": "Acesso básico para visualizar seus próprios dados e responder a solicitações."
+    },
+    {
+        "id": 4,
+        "nome": "supervisor",
+        "descricao": "Permite visualizar dados e aprovar solicitações de sua equipe direta."
+    },
+    {
+        "id": 5,
+        "nome": "depto_pessoal",
+        "descricao": "Acesso a rotinas de departamento pessoal, como gestão de documentos e ponto."
+    },
+    {
+        "id": 6,
+        "nome": "inventei",
+        "descricao": "Acesso a rotinas de departamento pessoal, como gestão de documentos e ponto."
     }
 ]

@@ -1,65 +1,89 @@
-import json
-from datetime import datetime
-from app import create_app, db
-from app.models import Funcionario, Usuario, Permissao
+import os
+import sys
+import subprocess
+from app import create_app
 
+# Carrega a configuração da aplicação para obter os detalhes do banco de dados
 app = create_app()
 app.app_context().push()
 
-def restore_data():
-    """Limpa as tabelas, importa dados dos backups e sincroniza as sequências de ID."""
+def restore_from_sql(backup_file_path):
+    """
+    Restaura o banco de dados a partir de um arquivo de backup .sql.
+    Esta é uma operação destrutiva que apaga o banco atual primeiro.
+    """
+    if not os.path.exists(backup_file_path):
+        print(f"ERRO: O arquivo de backup '{backup_file_path}' não foi encontrado.")
+        sys.exit(1)
 
-    # Limpa os dados existentes
-    print("Limpando tabelas existentes...")
-    db.session.query(Usuario).delete()
-    db.session.query(Funcionario).delete()
-    db.session.query(Permissao).delete()
-    db.session.commit()
-    print("Tabelas limpas.")
-
-    # Restaurar Permissoes
-    with open('backup_permissoes.json', 'r', encoding='utf-8') as f:
-        permissoes_data = json.load(f)
-    for p_data in permissoes_data:
-        p = Permissao(**p_data)
-        db.session.add(p)
-    db.session.commit()
-    print(f"{len(permissoes_data)} permissões restauradas.")
-
-    # Restaurar Funcionarios
-    with open('backup_funcionarios.json', 'r', encoding='utf-8') as f:
-        funcionarios_data = json.load(f)
-    for f_data in funcionarios_data:
-        if f_data.get('data_nascimento'):
-            f_data['data_nascimento'] = datetime.strptime(f_data['data_nascimento'], '%Y-%m-%d').date()
-        f = Funcionario(**f_data)
-        db.session.add(f)
-    db.session.commit()
-    print(f"{len(funcionarios_data)} funcionários restaurados.")
-
-    # Restaurar Usuarios
-    with open('backup_usuarios.json', 'r', encoding='utf-8') as f:
-        usuarios_data = json.load(f)
-    for u_data in usuarios_data:
-        permissoes_nomes = u_data.pop('permissoes', [])
-        user = Usuario(**u_data)
-        if permissoes_nomes:
-            permissoes_objs = Permissao.query.filter(Permissao.nome.in_(permissoes_nomes)).all()
-            user.permissoes.extend(permissoes_objs)
-        db.session.add(user)
-    db.session.commit()
-    print(f"{len(usuarios_data)} usuários restaurados.")
-
-    # --- SINCRONIZAÇÃO DOS CONTADORES DE ID (NOVO) ---
-    print("Sincronizando contadores de ID do PostgreSQL...")
+    # Pega as variáveis de conexão do ambiente, exatamente como o app faz
+    db_uri = app.config.get('SQLALCHEMY_DATABASE_URI')
+    
+    # Extrai os detalhes da URI de conexão
     try:
-        db.session.execute(db.text("SELECT setval('funcionario_id_seq', (SELECT MAX(id) FROM funcionario));"))
-        db.session.execute(db.text("SELECT setval('usuario_id_seq', (SELECT MAX(id) FROM usuario));"))
-        db.session.commit()
-        print("Contadores sincronizados com sucesso!")
+        # Formato: postgresql://user:password@host:port/dbname
+        parts = db_uri.split('//')[1]
+        user_pass, host_db = parts.split('@')
+        user, password = user_pass.split(':')
+        host, dbname = host_db.split('/')
+    except ValueError:
+        print("ERRO: Formato inválido para a DATABASE_URL. Não foi possível extrair os detalhes de conexão.")
+        sys.exit(1)
+
+    print(f"Iniciando a restauração do banco de dados '{dbname}' a partir do arquivo '{backup_file_path}'...")
+    print("AVISO: Todos os dados atuais no banco de dados serão apagados e substituídos.")
+
+    # Define a senha para o comando psql
+    os.environ['PGPASSWORD'] = password
+    
+    # Comandos para dropar o banco existente e criar um novo
+    # Isso garante uma restauração limpa
+    drop_command = f"dropdb -h {host} -U {user} -w --if-exists {dbname}"
+    create_command = f"createdb -h {host} -U {user} -w {dbname}"
+    # Comando para restaurar o backup
+    restore_command = f"psql -h {host} -U {user} -d {dbname} -w < {backup_file_path}"
+
+    try:
+        # Executa os comandos
+        print("1/3 - Removendo banco de dados antigo...")
+        subprocess.run(drop_command, shell=True, check=True, capture_output=True, text=True)
+        
+        print("2/3 - Criando banco de dados novo...")
+        subprocess.run(create_command, shell=True, check=True, capture_output=True, text=True)
+        
+        print("3/3 - Restaurando dados do backup...")
+        # Usamos Popen para lidar com o redirecionamento de entrada '<'
+        with open(backup_file_path, 'r') as f:
+            proc = subprocess.Popen(
+                ["psql", "-h", host, "-U", user, "-d", dbname, "-w"],
+                stdin=f,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            stdout, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception(f"Erro no psql: {stderr.decode('utf-8')}")
+
+        print("\nBanco de dados restaurado com sucesso!")
+    
+    except subprocess.CalledProcessError as e:
+        print("\n--- ERRO DURANTE A RESTAURAÇÃO ---")
+        print(f"Comando que falhou: {e.cmd}")
+        print(f"Saída de erro:\n{e.stderr}")
+        sys.exit(1)
     except Exception as e:
-        print(f"Aviso: Não foi possível sincronizar os contadores de ID. Erro: {e}")
-        db.session.rollback()
+        print(f"\n--- UM ERRO INESPERADO OCORREU ---")
+        print(str(e))
+        sys.exit(1)
+    finally:
+        # Remove a senha da variável de ambiente por segurança
+        if 'PGPASSWORD' in os.environ:
+            del os.environ['PGPASSWORD']
 
 if __name__ == '__main__':
-    restore_data()
+    if len(sys.argv) < 2:
+        print("Uso: python restore.py <caminho_para_o_arquivo_de_backup.sql>")
+        sys.exit(1)
+    
+    backup_file = sys.argv[1]
+    restore_from_sql(backup_file)
