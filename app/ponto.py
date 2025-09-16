@@ -28,7 +28,7 @@ def allowed_file(filename):
 
 @ponto_bp.route('/gestao', methods=['GET', 'POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def gestao_ponto():
     """Página unificada para o RH gerenciar pontos: solicitar e revisar."""
     if request.method == 'POST':
@@ -96,7 +96,7 @@ def gestao_ponto():
 # SOLICITAR AJUSTE EM LOTE
 @ponto_bp.route('/solicitar-ajuste-em-lote', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def solicitar_ajuste_em_lote():
     ids_funcionarios = request.form.getlist('funcionarios_selecionados')
     data_str = request.form.get('data_ajuste')
@@ -132,7 +132,7 @@ def solicitar_ajuste_em_lote():
 
 @ponto_bp.route('/<int:ponto_id>/aprovar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def aprovar_ponto(ponto_id):
     """Aprova um ajuste de ponto."""
     ponto = Ponto.query.get_or_404(ponto_id)
@@ -149,7 +149,7 @@ def aprovar_ponto(ponto_id):
 
 @ponto_bp.route('/<int:ponto_id>/reprovar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def reprovar_ponto(ponto_id):
     """Reprova um ajuste de ponto e devolve a pendência ao colaborador."""
     ponto = Ponto.query.get_or_404(ponto_id)
@@ -194,7 +194,7 @@ def reprovar_ponto(ponto_id):
 # REMOÇÃO VIA FORMULARIO
 @ponto_bp.route('/<int:ponto_id>/remover', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def remover_ponto(ponto_id):
     """Remove uma solicitação de ajuste de ponto."""
     ponto = Ponto.query.get_or_404(ponto_id)
@@ -222,7 +222,7 @@ def remover_ponto(ponto_id):
 # REMOÇÃO VIA API
 @ponto_bp.route('/api/ponto/<int:ponto_id>/remover', methods=['DELETE'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def remover_ponto_api(ponto_id):
     """Remove uma solicitação de ajuste de ponto via API."""
     ponto = Ponto.query.get_or_404(ponto_id)
@@ -328,7 +328,7 @@ def gerar_e_baixar_documento(ponto_id):
 @login_required
 def download_ponto_assinado(filename):
     """Permite o download do ponto assinado (para o RH)."""
-    if not current_user.tem_permissao('admin_rh'):
+    if not current_user.tem_permissao('depto_pessoal'):
         flash('Acesso negado.', 'danger')
         return redirect(url_for('main.index'))
         
@@ -337,7 +337,7 @@ def download_ponto_assinado(filename):
 
 @ponto_bp.route('/api/funcionario/<int:funcionario_id>/historico')
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def historico_ponto_funcionario(funcionario_id):
     """Retorna o histórico de pontos de um funcionário em formato JSON."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
@@ -357,7 +357,7 @@ def historico_ponto_funcionario(funcionario_id):
 # ROTA RESTAURADA PARA FUNCIONAR NA PÁGINA DE PERFIL DO FUNCIONÁRIO
 @ponto_bp.route('/funcionario/<int:funcionario_id>/solicitar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required('depto_pessoal')
 def solicitar_ponto(funcionario_id):
     """Cria uma nova solicitação de ajuste de ponto para um funcionário a partir da página de perfil."""
     data_ajuste_str = request.form.get('data_ajuste')
