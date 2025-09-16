@@ -18,4 +18,6 @@ EXPOSE 5000
 
 # Comando para rodar a aplicação quando o container iniciar
 # CMD ["flask", "run", "--host=0.0.0.0"]
- CMD ["flask", "run", "--host=0.0.0.0", "--debug"]
+#CMD ["flask", "run", "--host=0.0.0.0", "--debug"]
+# SERVIDOR DE PRODUÇÃO:
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gevent", "run:app"]

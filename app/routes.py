@@ -244,6 +244,7 @@ def editar_funcionario(funcionario_id):
         funcionario.nome = request.form.get('nome')
         funcionario.cpf = request.form.get('cpf')
         funcionario.telefone = request.form.get('telefone')
+        funcionario.email = request.form.get('email')
         funcionario.cargo = request.form.get('cargo')
         funcionario.setor = request.form.get('setor')
         data_nascimento_str = request.form.get('data_nascimento')
@@ -266,14 +267,20 @@ def editar_funcionario(funcionario_id):
         if not sucesso_ad:
             flash(f"Atenção: Os dados foram salvos, mas falhou ao sincronizar com o Active Directory: {msg_ad}", "warning")
         
-        registrar_log(f"Editou os dados do funcionário '{funcionario.nome}' (ID: {id}).")
+        registrar_log(f"Editou os dados do funcionário '{funcionario.nome}' (ID: {funcionario.id}).")
         flash(f'Dados de {funcionario.nome} atualizados e sincronizados com sucesso!')
         return redirect(url_for('main.listar_funcionarios'))
 
     # --- LÓGICA DE PERMISSÕES ADICIONADA AQUI (GET) ---
     # Busca todas as permissões para exibir no formulário
     permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
-    return render_template('funcionarios/editar.html', funcionario=funcionario, usuario=usuario, permissoes=permissoes_disponiveis)
+    permissoes_usuario_ids = [p.id for p in usuario.permissoes] if usuario else []
+    
+    return render_template('funcionarios/editar.html', 
+                           funcionario=funcionario, 
+                           usuario=usuario, 
+                           permissoes=permissoes_disponiveis, 
+                           permissoes_usuario_ids=permissoes_usuario_ids)
 
 
 @main.route('/funcionario/<int:funcionario_id>/perfil')

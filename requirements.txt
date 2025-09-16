@@ -17,4 +17,6 @@ pytest
 pytest-mock 
 unidecode
 Flask-WTF
+gunicorn
+gevent
 #pip install -r requirements.txt

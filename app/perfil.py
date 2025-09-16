@@ -24,10 +24,16 @@ def editar_perfil():
     funcionario = current_user.funcionario
 
     if request.method == 'POST':
+
+        print(f"Content-Type da Requisição: {request.content_type}")
+        print(f"Dados de Formulário (request.form): {request.form}")
+        print(f"Dados JSON (request.get_json): {request.get_json(silent=True)}")
+
         # Atualiza os dados do formulário
         funcionario.nome = request.form.get('nome')
         funcionario.apelido = request.form.get('apelido')
         funcionario.telefone = request.form.get('telefone')
+        funcionario.email = request.form.get('email')
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
         funcionario.contato_emergencia_telefone = request.form.get('contato_emergencia_telefone')
 

@@ -33,9 +33,9 @@
                         <div class="form-text">Este nome só aparecerá no menu lateral.</div>
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">E-mail (não pode ser alterado)</label>
-                        <input type="email" class="form-control" id="email" value="{{ funcionario.email }}" required>
-                    </div>
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ funcionario.email }}" required>
+                    </div> 
                     <div class="mb-3">
                         <label for="telefone" class="form-label">Telefone</label>
                         <input type="text" class="form-control" id="telefone" name="telefone" value="{{ funcionario.telefone or '' }}">
