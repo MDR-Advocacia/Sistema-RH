@@ -27,7 +27,7 @@ def allowed_file(filename):
 
 @documentos_bp.route('/gestao', methods=['GET', 'POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def gestao_documentos():
     """Página unificada para gestão de documentos: revisar, solicitar e consultar."""
     if request.method == 'POST':
@@ -86,7 +86,7 @@ def gestao_documentos():
 # SOLICITAÇÃO EM LOTE
 @documentos_bp.route('/solicitar-em-lote', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def solicitar_em_lote():
     ids_funcionarios = request.form.getlist('funcionarios_selecionados')
     tipo_documento_id = request.form.get('tipo_documento_id') # Alterado para tipo_documento_id
@@ -155,7 +155,7 @@ def solicitar_em_lote():
 # NOVO: API para a aba de consulta
 @documentos_bp.route('/api/funcionario/<int:funcionario_id>/documentos')
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def historico_documentos_funcionario(funcionario_id):
     """Retorna o histórico de documentos de um funcionário em formato JSON."""
     documentos = Documento.query.filter_by(funcionario_id=funcionario_id).order_by(Documento.data_upload.desc()).all()
@@ -176,7 +176,7 @@ def historico_documentos_funcionario(funcionario_id):
 # ROTA PARA O NOVO FORMULÁRIO DE UPLOAD MANUAL NA PÁGINA DE GESTÃO
 @documentos_bp.route('/upload-manual', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def upload_manual_documento():
     """Processa o upload de um novo documento pelo RH a partir da tela de gestão."""
     funcionario_id = request.form.get('funcionario_id')
@@ -233,7 +233,7 @@ def upload_manual_documento():
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>')
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def ver_documentos_funcionario(funcionario_id):
     """Exibe os documentos e as requisições pendentes de um funcionário (usado no perfil)."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
@@ -250,7 +250,7 @@ def ver_documentos_funcionario(funcionario_id):
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>/upload', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def upload_documento(funcionario_id):
     """Processa o upload de um novo documento pelo RH."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
@@ -305,7 +305,7 @@ def download_documento(filename):
 
 @documentos_bp.route('/funcionario/<int:funcionario_id>/solicitar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def solicitar_documento(funcionario_id):
     """Cria uma nova requisição de documento para um funcionário."""
     tipo_documento = request.form.get('tipo_documento_solicitado')
@@ -339,7 +339,7 @@ def solicitar_documento(funcionario_id):
 # ROTA   
 @documentos_bp.route('/requisicao/<int:req_id>/remover', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def remover_requisicao(req_id):
     """Remove uma requisição de documento pendente."""
     requisicao = RequisicaoDocumento.query.get_or_404(req_id)
@@ -361,7 +361,7 @@ def remover_requisicao(req_id):
 # NOVA ROTA DE API (remove o DOCUMENTO)
 @documentos_bp.route('/api/documento/<int:documento_id>/remover', methods=['DELETE'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def remover_documento_api(documento_id):
     """Remove um documento e seu arquivo físico via API."""
     documento = Documento.query.get_or_404(documento_id)
@@ -428,7 +428,7 @@ def responder_requisicao(req_id):
 
 @documentos_bp.route('/documento/<int:documento_id>/aprovar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def aprovar_documento(documento_id):
     """Aprova um documento."""
     documento = Documento.query.get_or_404(documento_id)
@@ -453,7 +453,7 @@ def aprovar_documento(documento_id):
 
 @documentos_bp.route('/documento/<int:documento_id>/reprovar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def reprovar_documento(documento_id):
     """Reprova um documento, exclui o arquivo e devolve a pendência ao funcionário."""
     documento = db.session.get(Documento, documento_id)
@@ -519,7 +519,7 @@ def reprovar_documento(documento_id):
 
 @documentos_bp.route('/tipos', methods=['GET', 'POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def gerenciar_tipos_documento():
     """
     Página para gerenciar (CRUD) os Tipos de Documento.
@@ -552,7 +552,7 @@ def gerenciar_tipos_documento():
 
 @documentos_bp.route('/tipos/<int:id>/editar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def editar_tipo_documento(id):
     """
     Rota para editar um Tipo de Documento existente.
@@ -586,7 +586,7 @@ def editar_tipo_documento(id):
 
 @documentos_bp.route('/tipos/<int:id>/deletar', methods=['POST'])
 @login_required
-@permission_required('admin_rh')
+@permission_required(['admin_rh', 'depto_pessoal'])
 def deletar_tipo_documento(id):
     """
     Rota para deletar um Tipo de Documento.
