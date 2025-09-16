@@ -36,37 +36,43 @@
                 </a>
             </li>
             
-            {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
+            {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal']) %}
             <hr class="text-secondary">
+            {% endif %}
+            {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal']) %}
             <li class="nav-item">
                 <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if request.endpoint.startswith('main.') and 'funcionario' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-people-fill"></i> Funcionários
                 </a>
             </li>
+            {% endif %}
+            {% if current_user.tem_permissao(['admin_rh', 'depto_pessoal']) %}
             <li>
                 <a href="{{ url_for('documentos.gestao_documentos') }}" class="nav-link {% if 'documentos' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-file-earmark-zip-fill"></i> Gestão de Documentos
                 </a>
             </li>
+            {% endif %}
+            {% if current_user.tem_permissao('depto_pessoal') %}
             <li>
                 <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-clock-history"></i> Gestão de Ponto
                 </a>
             </li>
+            {% endif %}
+            {% if current_user.tem_permissao('admin_rh') %}
             <li>
                 <a href="{{ url_for('denuncias.gestao_denuncias') }}" class="nav-link {% if 'denuncias.gestao_denuncias' in request.endpoint or 'denuncias.ver_denuncia' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-shield-lock-fill"></i> Gestão de Denúncias
                 </a>
             </li>
-            
+            {% endif %}
             {% if current_user.tem_permissao('admin_ti') %}
             <li>
                 <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-journal-text"></i> Logs do Sistema
                 </a>
             </li>
-            {% endif %}
-            
             {% endif %}
         </ul>
         <hr class="text-secondary">
