@@ -78,6 +78,10 @@ def create_app(config_name='default'):
     from .denuncias import denuncias_bp
     app.register_blueprint(denuncias_bp, url_prefix='/denuncias')
 
+    # --- NOVA LINHA ADICIONADA ---
+    from .cadastros_gerais import cadastros_bp
+    app.register_blueprint(cadastros_bp, url_prefix='/cadastros')
+
     # --- Verificações Globais ---
     @app.before_request
     def check_user_status_before_request():

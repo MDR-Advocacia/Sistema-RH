@@ -48,7 +48,7 @@
         {% endif %}
         <div>
             <h3 class="mb-0">{{ funcionario.nome }}</h3>
-            <p class="mb-0 text-muted">{{ funcionario.cargo or 'Cargo não informado' }} | {{ funcionario.setor or 'Setor não informado' }}</p>
+            <p class="mb-0 text-muted">{{ funcionario.cargo.nome or 'Cargo não informado' }} | {{ funcionario.setor.nome or 'Setor não informado' }}</p>
             {% if funcionario.status != 'Ativo' %}
                 <span class="badge bg-danger mt-2">{{ funcionario.status }}</span>
                 {% if funcionario.data_desligamento %}

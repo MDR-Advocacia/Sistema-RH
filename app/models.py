@@ -75,8 +75,12 @@ class Funcionario(db.Model):
     cpf = db.Column(db.String(25), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
     telefone = db.Column(db.String(50))
-    cargo = db.Column(db.String(100))
-    setor = db.Column(db.String(100))
+
+    cargo_id = db.Column(db.Integer, db.ForeignKey('cargo.id'), nullable=True)
+    setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'), nullable=True)
+    cargo = db.relationship('Cargo', backref='funcionarios')
+    setor = db.relationship('Setor', backref='funcionarios')
+
     data_nascimento = db.Column(db.Date)
     contato_emergencia_nome = db.Column(db.String(120))
     contato_emergencia_telefone = db.Column(db.String(50))
@@ -272,3 +276,22 @@ class LogAtividade(db.Model):
 
     def __repr__(self):
         return f'<Log {self.timestamp}: {self.acao}>'
+
+# --- NOVOS MODELOS ADICIONADOS ---
+class Cargo(db.Model):
+    __tablename__ = 'cargo'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)
+    descricao = db.Column(db.String(255), nullable=True)
+
+    def __repr__(self):
+        return f'<Cargo {self.nome}>'
+
+class Setor(db.Model):
+    __tablename__ = 'setor'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)
+    descricao = db.Column(db.String(255), nullable=True)
+
+    def __repr__(self):
+        return f'<Setor {self.nome}>'       

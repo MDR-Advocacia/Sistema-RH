@@ -68,8 +68,8 @@
                             <tr data-id="{{ f.id }}">
                                 <td class="text-center"><input class="form-check-input check-item" type="checkbox" value="{{ f.id }}"></td>
                                 <td class="funcionario-link" style="cursor: pointer;">{{ f.nome or f.apelido}}</td>
-                                <td>{{ f.cargo or 'N/A' }}</td>
-                                <td>{{ f.setor or 'N/A' }}</td>
+                                <td>{{ f.cargo.nome or 'N/A' }}</td>
+                                <td>{{ f.setor.nome or 'N/A' }}</td>
                                 <td>{{ f.email }}</td>
                                 <td>{{ f.telefone or 'N/A' }}</td>
                             </tr>
@@ -126,8 +126,24 @@
           <div class="modal-body">
             <p>Alterar <strong id="contador-selecionados"></strong> funcionário(s). Preencha apenas os campos que deseja modificar.</p>
             <input type="hidden" name="ids" id="ids-para-alterar">
-            <div class="mb-3"><label for="lote-cargo" class="form-label">Novo Cargo</label><input type="text" class="form-control" name="cargo" id="lote-cargo" placeholder="Deixe em branco para não alterar"></div>
-            <div class="mb-3"><label for="lote-setor" class="form-label">Novo Setor</label><input type="text" class="form-control" name="setor" id="lote-setor" placeholder="Deixe em branco para não alterar"></div>
+            <div class="mb-3">
+                <label for="lote-cargo" class="form-label">Novo Cargo</label>
+                <select class="form-select" id="lote-cargo" name="cargo">
+                    <option value="">-- Manter Inalterado --</option>
+                    {% for cargo in todos_cargos %}
+                        <option value="{{ cargo.id }}">{{ cargo.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="lote-setor" class="form-label">Novo Setor</label>
+                <select class="form-select" id="lote-setor" name="setor">
+                    <option value="">-- Manter Inalterado --</option>
+                    {% for setor in todos_setores %}
+                        <option value="{{ setor.id }}">{{ setor.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -244,19 +260,39 @@ document.addEventListener('DOMContentLoaded', function () {
     if (formEditarLote) {
         formEditarLote.addEventListener('submit', function(event) {
             event.preventDefault();
-            const btnSubmit = this.querySelector('button[type="submit"]');
+            
             const ids = document.getElementById('ids-para-alterar').value.split(',');
             const cargo = document.getElementById('lote-cargo').value;
             const setor = document.getElementById('lote-setor').value;
-            if (ids.length === 0 || ids[0] === '') return;
+            
+            if (ids.length === 0 || ids[0] === '') {
+                alert("Nenhum funcionário selecionado.");
+                return;
+            }
 
-            fetch('/api/funcionarios/editar-em-lote', {
+            // Garante que não envie uma requisição vazia se nada for selecionado
+            if (!cargo && !setor) {
+                alert("Preencha pelo menos um campo (Novo Cargo ou Novo Setor) para alterar.");
+                return;
+            }
+
+            // A URL da sua API estava como 'editar-em-lote', ajustei para o nome da função em routes.py
+            fetch('/api/funcionarios/editar-em-lote', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ids: ids, cargo: cargo, setor: setor })
-            }).then(res => res.json()).then(data => {
-                alert(data.message);
-                if (data.success) window.location.reload();
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Exibe a mensagem recebida da API, evitando o "undefined"
+                alert(data.message || 'Ocorreu um erro desconhecido.');
+                if (data.success) {
+                    window.location.reload(); // Recarrega a página em caso de sucesso
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                alert('Falha de comunicação com o servidor.');
             });
         });
     }

@@ -53,6 +53,29 @@
                 </a>
             </li>
             {% endif %}
+
+            {% if current_user.is_authenticated and current_user.tem_permissao(['admin_rh', 'depto_pessoal', 'admin_ti']) %}
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#submenu-cadastros" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenu-cadastros">
+                    <i class="bi bi-pencil-square"></i>
+                    Cadastros Gerais
+                </a>
+                <div class="collapse" id="submenu-cadastros">
+                    <ul class="nav flex-column ms-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('cadastros.gerenciar_cargos') }}">Cargos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('cadastros.gerenciar_setores') }}">Setores</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('documentos.gerenciar_tipos_documento') }}">Tipos de Documento</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+
             {% if current_user.tem_permissao('depto_pessoal') %}
             <li>
                 <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">

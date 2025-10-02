@@ -28,12 +28,26 @@
                     <input type="text" class="form-control" id="telefone" name="telefone" value="{{ funcionario.telefone or '' }}">
                 </div>
                 <div class="col-md-6">
-                    <label for="cargo" class="form-label">Cargo</label>
-                    <input type="text" class="form-control" id="cargo" name="cargo" value="{{ funcionario.cargo or '' }}">
+                    <label for="cargo_id" class="form-label">Cargo</label>
+                    <select class="form-select" id="cargo_id" name="cargo_id">
+                        <option value="">Selecione um cargo...</option>
+                        {% for cargo in cargos %}
+                            <option value="{{ cargo.id }}" {% if funcionario.cargo_id == cargo.id %}selected{% endif %}>
+                                {{ cargo.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-6">
-                    <label for="setor" class="form-label">Setor</label>
-                    <input type="text" class="form-control" id="setor" name="setor" value="{{ funcionario.setor or '' }}">
+                    <label for="setor_id" class="form-label">Setor</label>
+                    <select class="form-select" id="setor_id" name="setor_id">
+                        <option value="">Selecione um setor...</option>
+                        {% for setor in setores %}
+                            <option value="{{ setor.id }}" {% if funcionario.setor_id == setor.id %}selected{% endif %}>
+                                {{ setor.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-6">
                     <label for="data_nascimento" class="form-label">Data de Nascimento</label>

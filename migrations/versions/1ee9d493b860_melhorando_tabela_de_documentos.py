@@ -39,8 +39,10 @@ def upgrade():
                nullable=True)
         batch_op.create_index(batch_op.f('ix_requisicao_documento_destinatario_id'), ['destinatario_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_requisicao_documento_status'), ['status'], unique=False)
-        batch_op.create_foreign_key(None, 'documento', ['documento_enviado_id'], ['id'])
-        batch_op.create_foreign_key(None, 'tipo_documento', ['tipo_documento_id'], ['id'])
+        # --- CORREÇÃO APLICADA AQUI ---
+        batch_op.create_foreign_key('fk_requisicao_documento_enviado_id', 'documento', ['documento_enviado_id'], ['id'])
+        batch_op.create_foreign_key('fk_requisicao_tipo_documento_id', 'tipo_documento', ['tipo_documento_id'], ['id'])
+        # --- FIM DA CORREÇÃO ---
         batch_op.drop_column('tipo_documento')
         batch_op.drop_column('observacao')
 
@@ -60,8 +62,10 @@ def downgrade():
     with op.batch_alter_table('requisicao_documento', schema=None) as batch_op:
         batch_op.add_column(sa.Column('observacao', sa.TEXT(), autoincrement=False, nullable=True))
         batch_op.add_column(sa.Column('tipo_documento', sa.VARCHAR(length=100), autoincrement=False, nullable=False))
-        batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.drop_constraint(None, type_='foreignkey')
+        # --- CORREÇÃO APLICADA AQUI ---
+        batch_op.drop_constraint('fk_requisicao_tipo_documento_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_requisicao_documento_enviado_id', type_='foreignkey')
+        # --- FIM DA CORREÇÃO ---
         batch_op.drop_index(batch_op.f('ix_requisicao_documento_status'))
         batch_op.drop_index(batch_op.f('ix_requisicao_documento_destinatario_id'))
         batch_op.alter_column('solicitante_id',

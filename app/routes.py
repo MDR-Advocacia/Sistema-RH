@@ -18,7 +18,7 @@ from . import db, format_datetime_local
 from .decorators import permission_required
 # Adicione LogAtividade e registrar_log às importações
 from .models import (Funcionario, Permissao, Usuario, Aviso,
-                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto, LogAtividade)
+                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto, LogAtividade, Cargo, Setor)
 from .utils import registrar_log
 
 main = Blueprint('main', __name__)
@@ -134,8 +134,10 @@ def processar_cadastro():
             novo_funcionario = Funcionario(
                 nome=nome, cpf=cpf, email=email_contato,
                 telefone=request.form.get('telefone'),
-                cargo=request.form.get('cargo'),
-                setor=request.form.get('setor'),
+
+                cargo_id=request.form.get('cargo_id'),
+                setor_id=request.form.get('setor_id'),
+
                 data_nascimento=datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d') if request.form.get('data_nascimento') else None,
                 contato_emergencia_nome=request.form.get('contato_emergencia_nome'),
                 contato_emergencia_telefone=request.form.get('contato_emergencia_telefone')
@@ -188,6 +190,9 @@ def processar_cadastro():
     # --- LÓGICA DE PERMISSÕES ADICIONADA AQUI (GET) ---
     # Busca todas as permissões para exibir no formulário
     permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
+    cargos = Cargo.query.order_by(Cargo.nome).all()
+    setores = Setor.query.order_by(Setor.nome).all()
+
     return render_template('cadastrar.html', permissoes=permissoes_disponiveis)
 
     
@@ -202,7 +207,7 @@ def listar_funcionarios():
     sort_by = request.args.get('sort', 'nome_asc')
     # NOVO: Lógica do filtro de status
     status_filter = request.args.get('status', 'ativos') # Padrão para 'ativos'
-
+    page = request.args.get('page', 1, type=int)
     query = Funcionario.query
 
     if status_filter == 'ativos':
@@ -218,17 +223,33 @@ def listar_funcionarios():
 
     if termo_busca:
         termo_busca = termo_busca.strip()
-        query = query.filter(or_(
-            Funcionario.nome.ilike(f"%{termo_busca}%"),
-            Funcionario.cpf.ilike(f"%{termo_busca}%"),
-            Funcionario.setor.ilike(f"%{termo_busca}%")
-        ))
+        query = query.join(Funcionario.cargo, isouter=True).join(Funcionario.setor, isouter=True).filter(
+            or_(
+                Funcionario.nome.ilike(f"%{termo_busca}%"),
+                Funcionario.email.ilike(f"%{termo_busca}%"),
+                Funcionario.cpf.ilike(f"%{termo_busca}%"),
+                Cargo.nome.ilike(f"%{termo_busca}%"),
+                Setor.nome.ilike(f"%{termo_busca}%")
+            )
+        )
     if sort_by == 'nome_desc':
         query = query.order_by(Funcionario.nome.desc())
     else:
         query = query.order_by(Funcionario.nome.asc())
+
+    paginacao = query.paginate(page=page, per_page=5000, error_out=False)
+    funcionarios_na_pagina = paginacao.items    
+
     funcionarios = query.all()
-    return render_template('funcionarios.html', funcionarios=funcionarios)
+    todos_cargos = Cargo.query.order_by(Cargo.nome).all()
+    todos_setores = Setor.query.order_by(Setor.nome).all()
+    return render_template('funcionarios.html', 
+                           funcionarios=funcionarios_na_pagina,
+                           paginacao=paginacao,
+                           termo_busca=termo_busca,
+                           status_filter=status_filter,
+                           todos_cargos=todos_cargos,
+                           todos_setores=todos_setores)
 
 
 @main.route('/funcionario/<int:funcionario_id>/editar', methods=['GET', 'POST'])
@@ -245,8 +266,10 @@ def editar_funcionario(funcionario_id):
         funcionario.cpf = request.form.get('cpf')
         funcionario.telefone = request.form.get('telefone')
         funcionario.email = request.form.get('email')
-        funcionario.cargo = request.form.get('cargo')
-        funcionario.setor = request.form.get('setor')
+
+        funcionario.cargo_id = request.form.get('cargo_id')
+        funcionario.setor_id = request.form.get('setor_id')
+
         data_nascimento_str = request.form.get('data_nascimento')
         funcionario.data_nascimento = datetime.strptime(data_nascimento_str, '%Y-%m-%d') if data_nascimento_str else None
         funcionario.contato_emergencia_nome = request.form.get('contato_emergencia_nome')
@@ -275,12 +298,16 @@ def editar_funcionario(funcionario_id):
     # Busca todas as permissões para exibir no formulário
     permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
     permissoes_usuario_ids = [p.id for p in usuario.permissoes] if usuario else []
+    cargos = Cargo.query.order_by(Cargo.nome).all()
+    setores = Setor.query.order_by(Setor.nome).all()
     
     return render_template('funcionarios/editar.html', 
                            funcionario=funcionario, 
                            usuario=usuario, 
                            permissoes=permissoes_disponiveis, 
-                           permissoes_usuario_ids=permissoes_usuario_ids)
+                           permissoes_usuario_ids=permissoes_usuario_ids,
+                           cargos=cargos,
+                           setores=setores)
 
 
 @main.route('/funcionario/<int:funcionario_id>/perfil')
@@ -509,7 +536,9 @@ def detalhes_funcionario(funcionario_id):
     
     return jsonify({
         'id': funcionario.id, 'nome': funcionario.nome, 'cpf': funcionario.cpf, 'email': funcionario.email,
-        'telefone': funcionario.telefone, 'cargo': funcionario.cargo, 'setor': funcionario.setor,
+        'telefone': funcionario.telefone, 
+        'cargo': funcionario.cargo.nome if funcionario.cargo else 'Não informado', 
+        'setor': funcionario.setor.nome if funcionario.setor else 'Não informado',
         'data_nascimento': funcionario.data_nascimento.strftime('%d/%m/%Y') if funcionario.data_nascimento else 'Não informado',
         'contato_emergencia_nome': funcionario.contato_emergencia_nome or 'Não informado',
         'contato_emergencia_telefone': funcionario.contato_emergencia_telefone or 'Não informado',
@@ -525,18 +554,13 @@ def remover_funcionario_api(funcionario_id):
     email_para_remover = funcionario.email
     
     try:
-        # --- Alteração aqui: Primeiro remove do AD ---
-        sucesso_ad, msg_ad = remover_usuario_ad(email_para_remover)
-        if not sucesso_ad:
-            # Se falhar no AD, não continua e avisa o usuário
-            return jsonify({'success': False, 'message': f'Erro no AD: {msg_ad}'}), 500
-
+        
         # Se teve sucesso no AD, remove do banco de dados local
         if funcionario.usuario:
             db.session.delete(funcionario.usuario)
         db.session.delete(funcionario)
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso do sistema e do AD.'})
+        return jsonify({'success': True, 'message': f'Funcionário {funcionario.nome} removido com sucesso do sistema.'})
     except Exception as e:
         db.session.rollback()
         # ... (log de erro) ...
@@ -566,25 +590,37 @@ def remover_funcionarios_lote():
 @login_required
 @permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
 def editar_funcionarios_lote():
-    # (código existente)
-    data = request.get_json()
-    ids, novo_cargo, novo_setor = data.get('ids'), data.get('cargo'), data.get('setor')
-    if not ids:
-        return jsonify({'success': False, 'message': 'Nenhum ID fornecido.'}), 400
+    dados = request.get_json()
+    ids_funcionarios = dados.get('ids')
+    
+    # --- CORREÇÃO APLICADA AQUI ---
+    # Captura os valores de cargo e setor diretamente do JSON
+    novo_cargo_id = dados.get('cargo')
+    novo_setor_id = dados.get('setor')
+
+    if not ids_funcionarios:
+        return jsonify({'success': False, 'message': 'Nenhum funcionário selecionado.'}), 400
+
+    # Monta um dicionário com as atualizações a serem feitas
     campos_para_atualizar = {}
-    if novo_cargo: campos_para_atualizar['cargo'] = novo_cargo
-    if novo_setor: campos_para_atualizar['setor'] = novo_setor
+    if novo_cargo_id: 
+        campos_para_atualizar['cargo_id'] = novo_cargo_id
+    if novo_setor_id: 
+        campos_para_atualizar['setor_id'] = novo_setor_id
+        
     if not campos_para_atualizar:
-        return jsonify({'success': False, 'message': 'Nenhum campo para alterar preenchido.'}), 400
+        return jsonify({'success': False, 'message': 'Nenhum campo para alterar foi preenchido.'}), 400
+
     try:
-        Funcionario.query.filter(Funcionario.id.in_(ids)).update(campos_para_atualizar, synchronize_session=False)
+        # Atualiza os funcionários no banco de dados
+        Funcionario.query.filter(Funcionario.id.in_(ids_funcionarios)).update(campos_para_atualizar, synchronize_session=False)
         db.session.commit()
+        # Retorna as chaves 'success' e 'message' que o JavaScript espera
         return jsonify({'success': True, 'message': 'Funcionários atualizados com sucesso!'})
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erro ao editar em lote: {e}")
-        return jsonify({'success': False, 'message': 'Ocorreu um erro na atualização.'}), 500
-
+        return jsonify({'success': False, 'message': 'Ocorreu um erro na atualização do banco de dados.'}), 500
 
 # --- ROTAS DE IMPORTAÇÃO/EXPORTAÇÃO ---
 # (código existente para importação/exportação)

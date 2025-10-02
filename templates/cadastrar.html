@@ -31,12 +31,22 @@
                         <input type="text" class="form-control" id="telefone" name="telefone">
                     </div>
                     <div class="col-md-6">
-                        <label for="cargo" class="form-label">Cargo</label>
-                        <input type="text" class="form-control" id="cargo" name="cargo">
+                        <label for="cargo_id" class="form-label">Cargo</label>
+                        <select class="form-select" id="cargo_id" name="cargo_id">
+                            <option value="">Selecione um cargo...</option>
+                            {% for cargo in cargos %}
+                                <option value="{{ cargo.id }}">{{ cargo.nome }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-6">
-                        <label for="setor" class="form-label">Setor</label>
-                        <input type="text" class="form-control" id="setor" name="setor">
+                        <label for="setor_id" class="form-label">Setor</label>
+                        <select class="form-select" id="setor_id" name="setor_id">
+                            <option value="">Selecione um setor...</option>
+                            {% for setor in setores %}
+                                <option value="{{ setor.id }}">{{ setor.nome }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-6">
                         <label for="data_nascimento" class="form-label">Data de Nascimento</label>
