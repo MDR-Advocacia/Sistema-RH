@@ -17,6 +17,7 @@
                 <tr>
                     <th>Nome</th>
                     <th>Descrição</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -24,10 +25,18 @@
                 <tr>
                     <td>{{ item.nome }}</td>
                     <td>{{ item.descricao or 'N/A' }}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditar-{{ item.id }}">
+                            <i class="bi bi-pencil-square"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeletar-{{ item.id }}">
+                            <i class="bi bi-trash"></i> Deletar
+                        </button>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="2" class="text-center">Nenhum item cadastrado.</td>
+                    <td colspan="3" class="text-center">Nenhum item cadastrado.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -42,7 +51,7 @@
                 <h5 class="modal-title">Adicionar Novo {{ title.rstrip('s') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for(endpoint) }}" method="POST">
+            <form action="{{ url_for(endpoint_add) }}" method="POST">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="nome" class="form-label">Nome</label>
@@ -61,4 +70,55 @@
         </div>
     </div>
 </div>
+
+{% for item in items %}
+    <div class="modal fade" id="modalEditar-{{ item.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar: {{ item.nome }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for(endpoint_edit, id=item.id) }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nome-{{ item.id }}" class="form-label">Nome</label>
+                            <input type="text" id="nome-{{ item.id }}" name="nome" class="form-control" value="{{ item.nome }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="descricao-{{ item.id }}" class="form-label">Descrição (Opcional)</label>
+                            <textarea id="descricao-{{ item.id }}" name="descricao" class="form-control" rows="3">{{ item.descricao or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDeletar-{{ item.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Você tem certeza que deseja excluir "<strong>{{ item.nome }}</strong>"?</p>
+                    <p class="text-danger">Esta ação não pode ser desfeita.</p>
+                </div>
+                <div class="modal-footer">
+                    <form action="{{ url_for(endpoint_delete, id=item.id) }}" method="POST">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
 {% endblock %}
