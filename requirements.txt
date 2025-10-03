@@ -19,4 +19,5 @@ unidecode
 Flask-WTF
 gunicorn
 gevent
+thefuzz
 #pip install -r requirements.txt

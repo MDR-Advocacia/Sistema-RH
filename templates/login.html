@@ -27,7 +27,7 @@
                     {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="{{ url_for('auth.login') }}">
+                <form method="POST" action="{{ url_for('auth.login_post') }}">
                     <div class="mb-3">
                         {# ALTERADO DE "E-mail" PARA "Usuário de Rede" #}
                         <label for="username" class="form-label">Usuário</label>

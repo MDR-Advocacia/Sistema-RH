@@ -91,6 +91,14 @@
             </li>
             {% endif %}
             {% if current_user.tem_permissao('admin_ti') %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('vinculo_ad.revisao_vinculos') }}">
+                    <i class="bi bi-link-45deg"></i>
+                    Vínculo com AD
+                </a>
+            </li>
+            {% endif %}
+            {% if current_user.tem_permissao('admin_ti') %}
             <li>
                 <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-journal-text"></i> Logs do Sistema

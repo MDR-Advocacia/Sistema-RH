@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Revisão de Vínculos com AD{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Revisão de Vínculos com Active Directory</h1>
+    <form action="{{ url_for('vinculo_ad.executar_analise') }}" method="POST">
+        <button type="submit" class="btn btn-brand">
+            <i class="bi bi-search"></i> Executar Nova Análise
+        </button>
+    </form>
+</div>
+
+<p>Abaixo estão as sugestões de vínculos entre os funcionários cadastrados no sistema e os usuários do Active Directory. Confirme ou rejeite as correspondências.</p>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Funcionário (Sistema)</th>
+                    <th>Usuário Sugerido (AD)</th>
+                    <th class="text-center">Similaridade</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-sugestoes">
+                {% for sugestao in sugestoes %}
+                <tr id="sugestao-{{ sugestao.id }}">
+                    <td>{{ sugestao.funcionario_nome }}</td>
+                    <td>{{ sugestao.ad_display_name }} (<b>Username:</b> {{ sugestao.ad_username }})</td>
+                    <td class="text-center">{{ sugestao.pontuacao }}%</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-success btn-acao" data-url="{{ url_for('vinculo_ad.confirmar_vinculo', sugestao_id=sugestao.id) }}">Confirmar</button>
+                        <button class="btn btn-sm btn-danger btn-acao" data-url="{{ url_for('vinculo_ad.rejeitar_vinculo', sugestao_id=sugestao.id) }}">Rejeitar</button>
+                        </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">Nenhuma sugestão para revisar. Execute uma nova análise.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabela = document.getElementById('tabela-sugestoes');
+
+    tabela.addEventListener('click', function(event) {
+        const target = event.target;
+        
+        // --- SCRIPT ATUALIZADO ---
+        // Verifica se o botão clicado tem a classe 'btn-acao' e pega a URL do atributo 'data-url'
+        if (!target.classList.contains('btn-acao') || !target.dataset.url) {
+            return;
+        }
+
+        const url = target.dataset.url;
+        const sugestaoId = target.closest('tr').id.split('-')[1]; // Pega o ID da linha da tabela
+
+        if (confirm('Você tem certeza?')) {
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.getElementById(`sugestao-${sugestaoId}`);
+                    row.remove();
+                    alert(data.message); // Exibe a mensagem de sucesso
+                } else {
+                    alert('Erro: ' + (data.message || 'Ocorreu um erro desconhecido.'));
+                }
+            })
+            .catch(err => {
+                console.error('Erro na requisição:', err);
+                alert('Falha na comunicação com o servidor.');
+            });
+        }
+        // --- FIM DA ATUALIZAÇÃO ---
+    });
+});
+</script>
+{% endblock %}

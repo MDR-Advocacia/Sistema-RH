@@ -294,4 +294,18 @@ class Setor(db.Model):
     descricao = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
-        return f'<Setor {self.nome}>'       
+        return f'<Setor {self.nome}>'
+
+class VinculoADSugestao(db.Model):
+    __tablename__ = 'vinculo_ad_sugestao'
+    id = db.Column(db.Integer, primary_key=True)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
+    funcionario_nome = db.Column(db.String(120), nullable=False)
+    ad_username = db.Column(db.String(120), nullable=False)
+    ad_display_name = db.Column(db.String(120), nullable=False)
+    pontuacao = db.Column(db.Integer, nullable=False)
+    
+    funcionario = db.relationship('Funcionario')
+
+    def __repr__(self):
+        return f'<VinculoADSugestao {self.funcionario_nome} -> {self.ad_display_name}>'

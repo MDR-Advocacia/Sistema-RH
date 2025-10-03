@@ -19,8 +19,9 @@ import uuid
 
 auth = Blueprint('auth', __name__)
 
-@auth.route('/login')
-def login():
+# --- CORREÇÃO 1: Renomeando a função para evitar conflitos ---
+@auth.route('/login', methods=['GET'])
+def login_get():
     return render_template('login.html')
 
 @auth.route('/login', methods=['POST'])
@@ -31,7 +32,8 @@ def login_post():
 
     if not username or not password:
         flash('Usuário e senha são obrigatórios.')
-        return redirect(url_for('auth.login'))
+        # --- CORREÇÃO 2: Apontando para a nova função ---
+        return redirect(url_for('auth.login_get'))
 
     # --- TENTATIVA 1: Autenticação via Active Directory ---
     try:
@@ -54,42 +56,58 @@ def login_post():
         ad_user = conn.entries[0]
         ad_full_name = ad_user.cn.value
         ad_email = ad_user.mail.value if ad_user.mail else f"{username}@{domain}"
+        ad_username = ad_user.sAMAccountName.value
         conn.unbind()
 
         # --- Lógica de Vinculação e Provisionamento CORRIGIDA ---
-        user = Usuario.query.filter_by(email=ad_email).first()
+        user = Usuario.query.filter(func.lower(Usuario.username) == func.lower(ad_username)).first()
 
-        if not user:
-            # CORREÇÃO: Utilizando func.lower() para busca case-insensitive
-            funcionario_existente = Funcionario.query.filter(func.lower(Funcionario.nome) == func.lower(ad_full_name)).first()
+        if user:
+            # Usuário encontrado! Apenas garantimos que o email e o nome do funcionário estão sincronizados.
+            current_app.logger.info(f"Usuário '{ad_username}' encontrado no DB local (ID: {user.id}).")
+            if user.email.lower() != ad_email.lower():
+                user.email = ad_email
+            if user.funcionario and user.funcionario.nome.lower() != ad_full_name.lower():
+                user.funcionario.nome = ad_full_name
+        else:
+            # Usuário não encontrado pelo username. Agora vamos tentar vincular ou criar.
+            current_app.logger.info(f"Usuário '{ad_username}' não encontrado. Tentando vincular ou provisionar.")
             
-            if funcionario_existente:
-                # Se o funcionário existe, verifica se ele JÁ TEM um usuário
-                if funcionario_existente.usuario:
-                    current_app.logger.info(f"Usuário AD '{ad_email}' corresponde a um funcionário com usuário já existente (ID: {funcionario_existente.usuario.id}). Usando usuário existente.")
-                    user = funcionario_existente.usuario
-                    # Garante que o e-mail esteja sincronizado
-                    if user.email != ad_email:
-                        user.email = ad_email
-                        db.session.commit()
-                else:
-                    # Se o funcionário existe mas NÃO TEM usuário, cria e vincula um novo
-                    current_app.logger.info(f"Vinculando usuário AD '{ad_email}' ao funcionário existente SEM usuário '{ad_full_name}' (ID: {funcionario_existente.id})")
-                    user = Usuario(email=ad_email, funcionario_id=funcionario_existente.id, senha_provisoria=False)
-                    user.set_password(uuid.uuid4().hex)
-                    db.session.add(user)
-                    db.session.commit()
-            
+            # Tenta encontrar um funcionário com nome correspondente que AINDA NÃO TENHA um usuário
+            funcionario_sem_usuario = Funcionario.query.filter(
+                func.lower(Funcionario.nome) == func.lower(ad_full_name),
+                Funcionario.usuario == None
+            ).first()
+
+            if funcionario_sem_usuario:
+                # Encontramos um funcionário correspondente sem usuário. Vamos criar e vincular.
+                current_app.logger.info(f"Vinculando usuário AD '{ad_username}' ao funcionário existente '{ad_full_name}' (ID: {funcionario_sem_usuario.id})")
+                user = Usuario(
+                    email=ad_email, 
+                    username=ad_username,
+                    funcionario_id=funcionario_sem_usuario.id
+                )
+                user.set_password(uuid.uuid4().hex) # Define senha aleatória, pois a auth é via AD
+                db.session.add(user)
             else:
-                # NÃO ENCONTROU: Provisionamento de um novo funcionário
-                current_app.logger.info(f"Provisionando novo funcionário e usuário para '{ad_email}' a partir do AD.")
-                novo_funcionario = Funcionario(nome=ad_full_name, email=ad_email, cpf=f"AD_{ad_user.sAMAccountName.value}", cargo="A Definir", setor="A Definir")
+                # Se não encontramos um funcionário para vincular, criamos um novo funcionário e usuário.
+                current_app.logger.info(f"Provisionando novo funcionário e usuário para '{ad_username}' a partir do AD.")
+                
+                cpf_ficticio = f"AD_{ad_username}"
+                if Funcionario.query.filter_by(cpf=cpf_ficticio).first():
+                    raise LDAPException(f"Erro de provisionamento: funcionário com CPF fictício '{cpf_ficticio}' já existe.")
+
+                novo_funcionario = Funcionario(nome=ad_full_name, email=ad_email, cpf=cpf_ficticio)
                 db.session.add(novo_funcionario)
-                db.session.commit()
-                user = Usuario(email=ad_email, funcionario_id=novo_funcionario.id, senha_provisoria=False)
+                db.session.flush() # Para obter o ID do novo funcionário
+
+                user = Usuario(
+                    email=ad_email, 
+                    username=ad_username,
+                    funcionario_id=novo_funcionario.id
+                )
                 user.set_password(uuid.uuid4().hex)
                 db.session.add(user)
-                db.session.commit()
         
     except (LDAPBindError, LDAPException) as e:
         current_app.logger.warning(f"Falha na autenticação LDAP para '{username}': {e}. Tentando autenticação local.")
@@ -97,60 +115,42 @@ def login_post():
 
     # --- TENTATIVA 2: Fallback para Autenticação Local ---
     if not user:
-        user = Usuario.query.filter_by(email=username).first()
+        # Busca pelo username (que pode ser email para contas antigas)
+        user = Usuario.query.filter(func.lower(Usuario.username) == func.lower(username)).first()
         if not user or not user.check_password(password):
             flash('Usuário ou senha inválidos.')
-            return redirect(url_for('auth.login'))
+            # --- CORREÇÃO 2: Apontando para a nova função ---
+            return redirect(url_for('auth.login_get'))
 
     # --- Verificações Finais e Login ---
     if user.funcionario and user.funcionario.status == 'Suspenso':
         flash('Este usuário está suspenso e não pode acessar o sistema.', 'danger')
-        return redirect(url_for('auth.login'))
+        # --- CORREÇÃO 2: Apontando para a nova função ---
+        return redirect(url_for('auth.login_get'))
     
-    # 1. Verificamos se o processo de primeiro login já foi concluído
-    if not user.primeiro_login_completo:
-        
-        # 2. Usamos o relacionamento direto para obter o funcionário.
-        funcionario = user.funcionario
-        
-        if funcionario:
-            # Buscamos todos os tipos de documento que são obrigatórios na admissão
-            tipos_obrigatorios = TipoDocumento.query.filter_by(obrigatorio_na_admissao=True).all()
-            
-            if tipos_obrigatorios:
-                for tipo in tipos_obrigatorios:
-                    # Verificamos se já não existe uma pendência idêntica
-                    existe = RequisicaoDocumento.query.filter_by(
-                        destinatario_id=funcionario.id,
-                        tipo_documento_id=tipo.id
-                    ).first()
-
-                    if not existe:
-                        nova_requisicao = RequisicaoDocumento(
-                            destinatario_id=funcionario.id,
-                            tipo_documento_id=tipo.id,
-                            status='Pendente'
-                        )
-                        db.session.add(nova_requisicao)
-                
-                flash('Detectamos que este é seu primeiro acesso! Verifique suas pendências de documentos de admissão.', 'info')
-
-        # 3. Marcamos que o processo foi concluído para não rodar novamente
+    # Processo de primeiro login para gerar pendências
+    if not user.primeiro_login_completo and user.funcionario:
+        tipos_obrigatorios = TipoDocumento.query.filter_by(obrigatorio_na_admissao=True).all()
+        if tipos_obrigatorios:
+            for tipo in tipos_obrigatorios:
+                existe = RequisicaoDocumento.query.filter_by(
+                    destinatario_id=user.funcionario.id, tipo_documento_id=tipo.id
+                ).first()
+                if not existe:
+                    db.session.add(RequisicaoDocumento(destinatario_id=user.funcionario.id, tipo_documento_id=tipo.id, status='Pendente'))
+            flash('Detectamos que este é seu primeiro acesso! Verifique suas pendências de documentos de admissão.', 'info')
         user.primeiro_login_completo = True
 
-    # 4. Atualizamos a data do último login em TODOS os acessos
+    # Atualiza a data do último login
     user.ultimo_login_em = datetime.now(timezone.utc)
     
-    # 5. Commitamos as alterações (novo status, data e requisições)
-    #    Este commit é importante que ocorra ANTES do login_user
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erro ao criar requisições/atualizar login para {user.username}: {e}")
-        # A falha aqui não deve impedir o login, mas registramos o erro e avisamos.
-        flash('Ocorreu um erro ao gerar suas pendências de documentos. Por favor, contate o RH.', 'danger')
-
+        current_app.logger.error(f"Erro no commit final do login para {user.username}: {e}")
+        flash('Ocorreu um erro ao finalizar o processo de login. Contate o suporte.', 'danger')
+        return redirect(url_for('auth.login_get'))
 
     login_user(user)
     return redirect(url_for('main.index'))

@@ -16,7 +16,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 mail = Mail()
-login_manager.login_view = 'auth.login'
+login_manager.login_view = 'auth.login_get'
 CORS_INSTANCE = CORS()
 
 def format_datetime_local(utc_dt):
@@ -78,9 +78,12 @@ def create_app(config_name='default'):
     from .denuncias import denuncias_bp
     app.register_blueprint(denuncias_bp, url_prefix='/denuncias')
 
-    # --- NOVA LINHA ADICIONADA ---
     from .cadastros_gerais import cadastros_bp
     app.register_blueprint(cadastros_bp, url_prefix='/cadastros')
+
+    from .vinculo_ad import vinculo_bp
+    app.register_blueprint(vinculo_bp, url_prefix='/vinculo-ad')
+    
 
     # --- Verificações Globais ---
     @app.before_request
