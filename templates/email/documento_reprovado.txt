@@ -9,7 +9,7 @@ Motivo da reprovação:
 {{ motivo }}
 
 Por favor, acesse a dashboard do sistema MDRH, verifique a pendência e envie o documento correto.
-{{ url_for('main.index', _external=True) }}
+http://mdrh.mdr.local/
 
 Atenciosamente,
 Sistema MDRH

@@ -6,7 +6,7 @@ Documento: {{ requisicao.tipo_documento }}
 Data da Solicitação: {{ requisicao.data_requisicao | localtime }}
 
 Por favor, acesse a dashboard do sistema MDRH para fazer o envio.
-{{ url_for('main.index', _external=True) }}
+http://mdrh.mdr.local/
 
 Atenciosamente,
 Sistema MDRH

@@ -8,7 +8,7 @@ Preview:
 {{ aviso.conteudo[:150] }}{% if aviso.conteudo|length > 150 %}...{% endif %}
 
 Acesse o sistema para ler o aviso completo e dar ciência.
-{{ url_for('main.listar_avisos', _external=True) }}
+http://mdrh.mdr.local/avisos
 
 Atenciosamente,
 Sistema MDRH
