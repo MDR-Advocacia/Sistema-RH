@@ -89,7 +89,9 @@ def index():
 def exibir_formulario_cadastro():
     """Apenas exibe o formulário de cadastro."""
     permissoes = Permissao.query.all()
-    return render_template('cadastrar.html', permissoes=permissoes)
+    cargos = Cargo.query.order_by(Cargo.nome).all()
+    setores = Setor.query.order_by(Setor.nome).all()
+    return render_template('cadastrar.html', permissoes=permissoes, cargos=cargos, setores=setores)
 
 # --- NOVA ROTA DE API PARA VERIFICAÇÃO ---
 @main.route('/api/ad/check-username')
