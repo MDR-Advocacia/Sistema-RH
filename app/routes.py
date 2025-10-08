@@ -131,19 +131,29 @@ def processar_cadastro():
             if Funcionario.query.filter_by(cpf=cpf).first() or Usuario.query.filter_by(username=username_final).first():
                 flash('CPF ou Usuário de Rede já cadastrado no sistema.', 'danger')
                 return redirect(url_for('main.exibir_formulario_cadastro'))
+            
+            # Converte string vazia '' para None para salvar corretamente no banco
+            cargo_id = request.form.get('cargo_id') or None
+            setor_id = request.form.get('setor_id') or None
 
+            # Cria o objeto funcionário (ainda não salvo no banco)
             # Cria o objeto funcionário (ainda não salvo no banco)
             novo_funcionario = Funcionario(
                 nome=nome, cpf=cpf, email=email_contato,
                 telefone=request.form.get('telefone'),
 
-                cargo_id=request.form.get('cargo_id'),
-                setor_id=request.form.get('setor_id'),
+                cargo_id=cargo_id,
+                setor_id=setor_id,
 
                 data_nascimento=datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d') if request.form.get('data_nascimento') else None,
                 contato_emergencia_nome=request.form.get('contato_emergencia_nome'),
                 contato_emergencia_telefone=request.form.get('contato_emergencia_telefone')
             )
+
+            if cargo_id:
+                novo_funcionario.cargo = Cargo.query.get(cargo_id)
+            if setor_id:
+                novo_funcionario.setor = Setor.query.get(setor_id)
             
             # Provisiona no AD
             sucesso_ad, msg_ad, email_ad = provisionar_usuario_ad(
