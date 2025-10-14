@@ -115,6 +115,7 @@
 
                         <div class="col-md-8">
                             <h6>2. Selecione os Funcionários</h6>
+                            <input type="text" id="search-funcionarios-doc" class="form-control mb-2" placeholder="Pesquisar funcionário...">
                             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
                                 <table class="table table-sm table-hover">
                                     <thead>
@@ -161,7 +162,6 @@
                     </div>
                     <div class="mb-3">
                         <label for="tipo_documento_id" class="form-label">Tipo de Documento</label>
-                        <!-- Substituído o input por um select -->
                         <select class="form-select" name="tipo_documento_id" id="tipo_documento_id" required>
                             <option value="" selected disabled>Selecione um tipo...</option>
                             {% for tipo in tipos_documento %}
@@ -418,6 +418,20 @@ document.addEventListener('DOMContentLoaded', function() {
     setupBusca('busca-solicitar', 'resultados-solicitar', 'funcionario_id_solicitar');
     setupBusca('busca-enviar', 'resultados-enviar', 'funcionario_id_enviar');
     setupBusca('busca-consulta', 'resultados-consulta', null);
+    
+    // --- Lógica para a busca na aba de solicitar documentos ---
+    document.getElementById('search-funcionarios-doc').addEventListener('keyup', function() {
+        let searchTerm = this.value.toLowerCase();
+        let tableRows = document.querySelectorAll('#solicitar tbody tr');
+        tableRows.forEach(function(row) {
+            let employeeName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            if (employeeName.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

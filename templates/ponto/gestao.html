@@ -98,11 +98,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="data_ajuste" class="form-label">Data do Ajuste</label>
-                            <input type="date" class="form-control" id="data_ajuste" name="data_ajuste" required>
+                            <input type="date" class="form-control" name="data_ajuste" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="tipo_ajuste" class="form-label">Tipo do Ajuste</label>
-                            <select class="form-select" id="tipo_ajuste" name="tipo_ajuste" required>
+                            <select class="form-select" name="tipo_ajuste" required>
                                 <option value="" selected disabled>Selecione...</option>
                                 <option value="Entrada no escritório">Entrada no escritório</option>
                                 <option value="Saída para o intervalo">Saída para o intervalo</option>
@@ -130,12 +130,12 @@
                         <div class="col-md-4">
                             <h6>1. Detalhes do Ajuste</h6>
                             <div class="mb-3">
-                                <label for="data_ajuste" class="form-label">Data do Ajuste</label>
-                                <input type="date" class="form-control" name="data_ajuste" id="data_ajuste" required>
+                                <label for="data_ajuste_lote" class="form-label">Data do Ajuste</label>
+                                <input type="date" class="form-control" name="data_ajuste" id="data_ajuste_lote" required>
                             </div>
                             <div class="mb-3">
-                                <label for="tipo_ajuste" class="form-label">Tipo do Ajuste</label>
-                                <select name="tipo_ajuste" id="tipo_ajuste" class="form-select" required>
+                                <label for="tipo_ajuste_lote" class="form-label">Tipo do Ajuste</label>
+                                <select name="tipo_ajuste" id="tipo_ajuste_lote" class="form-select" required>
                                     <option value="" selected disabled>-- Selecione o Motivo --</option>
                                     <option value="Entrada no escritório">Entrada no escritório</option>
                                     <option value="Saída para o intervalo">Saída para o intervalo</option>
@@ -150,6 +150,7 @@
 
                         <div class="col-md-8">
                             <h6>2. Selecione os Funcionários</h6>
+                            <input type="text" id="search-funcionarios-lote" class="form-control mb-2" placeholder="Pesquisar na lista...">
                             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
                                 <table class="table table-sm table-hover">
                                     <thead>
@@ -159,12 +160,12 @@
                                             <th>Setor</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="lista-funcionarios-lote">
                                         {% for func in funcionarios %}
                                         <tr>
                                             <td><input type="checkbox" class="form-check-input" name="funcionarios_selecionados" value="{{ func.id }}"></td>
                                             <td>{{ func.nome }}</td>
-                                            <td>{{ func.setor }}</td>
+                                            <td>{{ func.setor.nome if func.setor else 'N/A' }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -180,17 +181,35 @@
     <div class="tab-pane fade" id="consultar" role="tabpanel" aria-labelledby="consultar-tab">
         <div class="card shadow-sm card-tab">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-search"></i> Consultar Histórico de Colaborador</h5>
+                <h5 class="mb-0"><i class="bi bi-search"></i> Consultar Histórico de Ponto</h5>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label for="busca-consulta" class="form-label">Funcionário</label>
-                    <input type="text" class="form-control" id="busca-consulta" placeholder="Comece a digitar o nome..." autocomplete="off">
-                    <div id="resultados-consulta" class="list-group mt-1"></div>
-                </div>
-                <hr>
-                <div id="historico-container" class="mt-3">
-                    <p class="text-muted text-center">Selecione um funcionário para ver seu histórico de ajustes.</p>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label for="search-funcionarios-consulta" class="form-label">Funcionário</label>
+                        <input type="text" id="search-funcionarios-consulta" class="form-control mb-2" placeholder="Pesquisar na lista...">
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd;">
+                            <table class="table table-sm table-hover">
+                                <tbody id="lista-funcionarios-consulta">
+                                    {% for func in funcionarios %}
+                                    <tr class="linha-funcionario-ponto" data-id="{{ func.id }}" style="cursor: pointer;">
+                                        <td>{{ func.nome }}</td>
+                                        <td>{{ func.setor.nome if func.setor else 'N/A' }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td class="text-center p-4" colspan="2">Nenhum funcionário ativo.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div id="historico-container" class="mt-4">
+                            <p class="text-muted text-center" style="padding-top: 20px;">Selecione um funcionário à esquerda para ver seu histórico.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -227,24 +246,75 @@
 {% block scripts %}
 {{ super() }}
 <script>
+let linhaPontoSelecionada = null;
+
+async function carregarHistoricoPonto(funcionarioId, linhaClicada) {
+    const historicoContainer = document.getElementById('historico-container');
+    if (!historicoContainer) return;
+
+    if (linhaPontoSelecionada) {
+        linhaPontoSelecionada.classList.remove('table-active');
+    }
+    linhaClicada.classList.add('table-active');
+    linhaPontoSelecionada = linhaClicada;
+    
+    historicoContainer.innerHTML = '<div class="text-center pt-5"><div class="spinner-border" role="status"></div></div>';
+    
+    try {
+        const res = await fetch(`/ponto/api/funcionario/${funcionarioId}/historico`);
+        const pontos = await res.json();
+
+        if (pontos.length === 0) {
+            historicoContainer.innerHTML = `<p class="text-muted text-center pt-5">Nenhum histórico para <strong>${linhaClicada.querySelector('td:first-child').textContent.trim()}</strong>.</p>`;
+            return;
+        }
+
+        let tableHtml = `
+            <h6>Histórico de ${linhaClicada.querySelector('td:first-child').textContent.trim()}</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead><tr><th>Data</th><th>Tipo</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+                    <tbody>
+        `;
+        
+        pontos.forEach(ponto => {
+            let statusBadge = '';
+            if (ponto.status === 'Pendente') statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
+            else if (ponto.status === 'Em Revisão') statusBadge = '<span class="badge bg-info">Em Revisão</span>';
+            else if (ponto.status === 'Aprovado') statusBadge = '<span class="badge bg-success">Aprovado</span>';
+            else statusBadge = `<span class="badge bg-danger">${ponto.status}</span>`;
+            
+            const btnDownload = ponto.path_assinado ? `<a href="${ponto.path_assinado}" class="btn btn-sm btn-outline-secondary" title="Baixar Anexo"><i class="bi bi-download"></i></a>` : '';
+            const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-ponto" data-ponto-id="${ponto.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
+
+            tableHtml += `
+                <tr id="ponto-row-${ponto.id}">
+                    <td>${ponto.data_ajuste}</td>
+                    <td>${ponto.tipo_ajuste}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">${btnDownload} ${ponto.status === 'Pendente' ? btnRemover : ''}</td>
+                </tr>
+            `;
+        });
+
+        tableHtml += '</tbody></table></div>';
+        historicoContainer.innerHTML = tableHtml;
+
+    } catch(e) {
+        historicoContainer.innerHTML = '<p class="text-danger text-center pt-5"><strong>Erro!</strong> Não foi possível carregar o histórico.</p>';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- LÓGICA DE BUSCA GENÉRICA ---
-    function setupBusca(inputId, resultadosId, hiddenInputId) {
+    // Lógica para busca com API (Aba Solicitar Ajuste Individual)
+    function setupApiBusca(inputId, resultadosId, hiddenInputId) {
         const buscaInput = document.getElementById(inputId);
         const resultadosDiv = document.getElementById(resultadosId);
         const hiddenInput = document.getElementById(hiddenInputId);
         let searchTimeout;
 
-        const selecionarTodosPonto = document.getElementById('selecionar-todos-ponto');
-        if (selecionarTodosPonto) {
-            selecionarTodosPonto.addEventListener('change', function(e) {
-                const isChecked = e.target.checked;
-                // Importante: seleciona apenas os checkboxes DENTRO do formulário de ponto
-                const checkboxes = document.querySelectorAll('#solicitar-lote input[name="funcionarios_selecionados"]');
-                checkboxes.forEach(checkbox => checkbox.checked = isChecked);
-            });
-        }
+        if (!buscaInput) return;
 
         buscaInput.addEventListener('keyup', () => {
             clearTimeout(searchTimeout);
@@ -252,12 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const termo = buscaInput.value.trim();
                 resultadosDiv.innerHTML = '';
                 if(hiddenInput) hiddenInput.value = '';
-
                 if (termo.length < 2) return;
-
                 const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
                 const colaboradores = await res.json();
-                
                 if (colaboradores.length > 0) {
                     colaboradores.forEach(colab => {
                         const item = document.createElement('a');
@@ -267,11 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         item.addEventListener('click', (e) => {
                             e.preventDefault();
                             buscaInput.value = colab.nome;
-                            if(hiddenInput) {
-                                hiddenInput.value = colab.id;
-                            } else {
-                                carregarHistorico(colab.id);
-                            }
+                            if(hiddenInput) hiddenInput.value = colab.id;
                             resultadosDiv.innerHTML = '';
                         });
                         resultadosDiv.appendChild(item);
@@ -282,80 +345,59 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         });
     }
+    setupApiBusca('busca-funcionario', 'resultados-busca', 'funcionario_id');
 
-    setupBusca('busca-funcionario', 'resultados-busca', 'funcionario_id');
-    setupBusca('busca-consulta', 'resultados-consulta', null);
-
-    const historicoContainer = document.getElementById('historico-container');
-
-    async function carregarHistorico(funcionarioId) {
-        historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-        const res = await fetch(`/ponto/api/funcionario/${funcionarioId}/historico`);
-        const pontos = await res.json();
-
-        if (pontos.length === 0) {
-            historicoContainer.innerHTML = '<p class="text-muted text-center">Nenhum histórico de ajuste de ponto para este funcionário.</p>';
-            return;
-        }
-
-        let tableHtml = `
-            <div class="table-responsive">
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Tipo</th>
-                            <th>Status</th>
-                            <th class="text-end">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        pontos.forEach(ponto => {
-            let statusBadge = '';
-            if (ponto.status === 'Pendente') statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
-            else if (ponto.status === 'Em Revisão') statusBadge = '<span class="badge bg-info">Em Revisão</span>';
-            else if (ponto.status === 'Aprovado') statusBadge = '<span class="badge bg-success">Aprovado</span>';
-            
-            const btnDownload = ponto.path_assinado 
-                ? `<a href="${ponto.path_assinado}" class="btn btn-sm btn-outline-secondary" title="Baixar Anexo"><i class="bi bi-download"></i></a>` 
-                : '';
-            const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-ponto" data-ponto-id="${ponto.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
-
-            tableHtml += `
-                <tr id="ponto-row-${ponto.id}">
-                    <td>${ponto.data_ajuste}</td>
-                    <td>${ponto.tipo_ajuste}</td>
-                    <td>${statusBadge}</td>
-                    <td class="text-end">${btnDownload} ${btnRemover}</td>
-                </tr>
-            `;
-        });
-
-        tableHtml += '</tbody></table></div>';
-        historicoContainer.innerHTML = tableHtml;
-    }
-
-    historicoContainer.addEventListener('click', function(event) {
-        const target = event.target.closest('.btn-remover-ponto');
-        if (!target) return;
-        
-        const pontoId = target.dataset.pontoId;
-        if (confirm('Tem certeza que deseja remover este registro de ponto? Esta ação é irreversível.')) {
-            fetch(`/ponto/api/ponto/${pontoId}/remover`, {
-                method: 'DELETE'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById(`ponto-row-${pontoId}`).remove();
-                } else {
-                    alert(data.message || 'Ocorreu um erro.');
-                }
+    // LÓGICA DE FILTRO CLIENT-SIDE PARA AS TABELAS
+    function setupTableFilter(inputId, tableBodyId) {
+        const searchInput = document.getElementById(inputId);
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                let searchTerm = this.value.toLowerCase();
+                document.querySelectorAll(`#${tableBodyId} tr`).forEach(row => {
+                    row.style.display = row.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                });
             });
         }
+    }
+
+    // Inicializa os filtros para as abas de "Lote" e "Consulta"
+    setupTableFilter('search-funcionarios-lote', 'lista-funcionarios-lote');
+    setupTableFilter('search-funcionarios-consulta', 'lista-funcionarios-consulta');
+
+
+    const selecionarTodosPonto = document.getElementById('selecionar-todos-ponto');
+    if (selecionarTodosPonto) {
+        selecionarTodosPonto.addEventListener('change', function(e) {
+            document.querySelectorAll('#lista-funcionarios-lote input[name="funcionarios_selecionados"]').forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+
+    // Adiciona evento de clique nas linhas da tabela de consulta
+    document.querySelectorAll('.linha-funcionario-ponto').forEach(linha => {
+        linha.addEventListener('click', function() {
+            carregarHistoricoPonto(this.dataset.id, this);
+        });
     });
+
+    const historicoContainer = document.getElementById('historico-container');
+    if(historicoContainer) {
+        historicoContainer.addEventListener('click', function(event) {
+            const target = event.target.closest('.btn-remover-ponto');
+            if (!target) return;
+            const pontoId = target.dataset.pontoId;
+            if (confirm('Tem certeza que deseja remover este registro pendente?')) {
+                fetch(`/ponto/api/ponto/${pontoId}/remover`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`ponto-row-${pontoId}`).remove();
+                    } else {
+                        alert(data.message || 'Ocorreu um erro.');
+                    }
+                });
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
