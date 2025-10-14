@@ -32,7 +32,6 @@ def login_post():
 
     if not username or not password:
         flash('Usuário e senha são obrigatórios.')
-        # --- CORREÇÃO 2: Apontando para a nova função ---
         return redirect(url_for('auth.login_get'))
 
     # --- TENTATIVA 1: Autenticação via Active Directory ---
@@ -59,38 +58,45 @@ def login_post():
         ad_username = ad_user.sAMAccountName.value
         conn.unbind()
 
-        # --- Lógica de Vinculação e Provisionamento CORRIGIDA ---
         user = Usuario.query.filter(func.lower(Usuario.username) == func.lower(ad_username)).first()
 
         if user:
-            # Usuário encontrado! Apenas garantimos que o email e o nome do funcionário estão sincronizados.
+            # Usuário encontrado! Sincroniza e corrige os dados.
             current_app.logger.info(f"Usuário '{ad_username}' encontrado no DB local (ID: {user.id}).")
-            if user.email.lower() != ad_email.lower():
-                user.email = ad_email
+            
+            # --- ALTERAÇÃO 1: CORREÇÃO AUTOMÁTICA DE E-MAIL ---
+            # Garante que o email do usuário seja sempre igual ao do funcionário (que é a fonte da verdade).
+            if user.funcionario and user.email != user.funcionario.email:
+                user.email = user.funcionario.email
+
             if user.funcionario and user.funcionario.nome.lower() != ad_full_name.lower():
-                user.funcionario.nome = ad_full_name
+                # user.funcionario.nome = ad_full_name # Mantido como no seu original
+                pass
         else:
-            # Usuário não encontrado pelo username. Agora vamos tentar vincular ou criar.
+            # Usuário não encontrado, tenta vincular ou criar.
             current_app.logger.info(f"Usuário '{ad_username}' não encontrado. Tentando vincular ou provisionar.")
             
-            # Tenta encontrar um funcionário com nome correspondente que AINDA NÃO TENHA um usuário
             funcionario_sem_usuario = Funcionario.query.filter(
                 func.lower(Funcionario.nome) == func.lower(ad_full_name),
                 Funcionario.usuario == None
             ).first()
 
             if funcionario_sem_usuario:
-                # Encontramos um funcionário correspondente sem usuário. Vamos criar e vincular.
+                # Encontrou funcionário, vamos criar e vincular o usuário.
                 current_app.logger.info(f"Vinculando usuário AD '{ad_username}' ao funcionário existente '{ad_full_name}' (ID: {funcionario_sem_usuario.id})")
+                
+                # --- ALTERAÇÃO 2: USA O E-MAIL DO FUNCIONÁRIO SE ELE EXISTIR ---
+                email_para_usuario = funcionario_sem_usuario.email if funcionario_sem_usuario.email else ad_email
+                
                 user = Usuario(
-                    email=ad_email, 
+                    email=email_para_usuario, 
                     username=ad_username,
                     funcionario_id=funcionario_sem_usuario.id
                 )
-                user.set_password(uuid.uuid4().hex) # Define senha aleatória, pois a auth é via AD
+                user.set_password(uuid.uuid4().hex)
                 db.session.add(user)
             else:
-                # Se não encontramos um funcionário para vincular, criamos um novo funcionário e usuário.
+                # Não encontrou funcionário, cria um novo.
                 current_app.logger.info(f"Provisionando novo funcionário e usuário para '{ad_username}' a partir do AD.")
                 
                 cpf_ficticio = f"AD_{ad_username}"
@@ -99,7 +105,7 @@ def login_post():
 
                 novo_funcionario = Funcionario(nome=ad_full_name, email=ad_email, cpf=cpf_ficticio)
                 db.session.add(novo_funcionario)
-                db.session.flush() # Para obter o ID do novo funcionário
+                db.session.flush()
 
                 user = Usuario(
                     email=ad_email, 
@@ -115,17 +121,14 @@ def login_post():
 
     # --- TENTATIVA 2: Fallback para Autenticação Local ---
     if not user:
-        # Busca pelo username (que pode ser email para contas antigas)
         user = Usuario.query.filter(func.lower(Usuario.username) == func.lower(username)).first()
         if not user or not user.check_password(password):
             flash('Usuário ou senha inválidos.')
-            # --- CORREÇÃO 2: Apontando para a nova função ---
             return redirect(url_for('auth.login_get'))
 
     # --- Verificações Finais e Login ---
     if user.funcionario and user.funcionario.status == 'Suspenso':
         flash('Este usuário está suspenso e não pode acessar o sistema.', 'danger')
-        # --- CORREÇÃO 2: Apontando para a nova função ---
         return redirect(url_for('auth.login_get'))
     
     # Processo de primeiro login para gerar pendências

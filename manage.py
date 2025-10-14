@@ -77,3 +77,65 @@ def register_commands(app):
         db.session.commit()
 
         print(f"Usuário administrador {email} criado com sucesso!")
+
+    @app.cli.command("fix-ad-emails")
+    @click.option('--dry-run', is_flag=True, help='Mostra quais e-mails seriam corrigidos sem salvar no banco.')
+    def fix_ad_emails(dry_run):
+        """
+        Corrige os e-mails de funcionários que foram sobrescritos incorretamente pelo e-mail do AD.
+        Ele usa o e-mail da tabela Usuario como a fonte da verdade.
+        """
+        from app.models import Funcionario, Usuario, db
+        from flask import current_app
+
+        # Extrai o domínio local do AD a partir da configuração
+        try:
+            domain = '.'.join([dc.split('=')[1] for dc in current_app.config['LDAP_BASE_DN'].split(',')])
+            ad_domain_pattern = f"%@{domain.lower()}"
+        except Exception as e:
+            print(f"ERRO: Não foi possível determinar o domínio do AD a partir de LDAP_BASE_DN. Verifique seu .env. Erro: {e}")
+            return
+
+        print(f"Procurando por funcionários com e-mails terminando em '{ad_domain_pattern}'...")
+
+        # 1. Encontra funcionários cujo e-mail é do AD, mas o e-mail do usuário vinculado é diferente
+        funcionarios_para_corrigir = db.session.query(Funcionario, Usuario).join(
+            Usuario, Funcionario.id == Usuario.funcionario_id
+        ).filter(
+            Funcionario.email.ilike(ad_domain_pattern),
+            Funcionario.email != Usuario.email
+        ).all()
+
+        if not funcionarios_para_corrigir:
+            print("\nNenhum funcionário com e-mail incorreto encontrado. Tudo certo!")
+            return
+
+        print(f"\nEncontrados {len(funcionarios_para_corrigir)} funcionário(s) para corrigir:")
+        print("-" * 50)
+
+        count = 0
+        # 2. Itera sobre os resultados para mostrar e/ou corrigir
+        for funcionario, usuario in funcionarios_para_corrigir:
+            email_antigo = funcionario.email
+            email_novo = usuario.email
+            
+            print(f"Funcionário: {funcionario.nome}")
+            print(f"  -> E-mail incorreto: {email_antigo}")
+            print(f"  -> E-mail correto (será aplicado): {email_novo}\n")
+            
+            if not dry_run:
+                funcionario.email = email_novo
+                count += 1
+                
+        # 3. Salva as alterações no banco de dados se não for um dry-run
+        if not dry_run:
+            try:
+                db.session.commit()
+                print("-" * 50)
+                print(f"\nSUCESSO: {count} registro(s) de funcionário(s) foram corrigidos no banco de dados.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"\nERRO: Ocorreu um problema ao salvar as alterações no banco de dados: {e}")
+        else:
+            print("-" * 50)
+            print("\nDry-run finalizado. Nenhuma alteração foi salva no banco de dados.")
