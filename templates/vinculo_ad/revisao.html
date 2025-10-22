@@ -12,6 +12,53 @@
     </form>
 </div>
 
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-union"></i> Unificar Contas Duplicadas (Corrigir Conflitos)
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('vinculo_ad.unificar_contas') }}" method="POST"
+            onsubmit="return confirm('Tem a certeza que deseja unificar estas duas contas? Esta ação é IRREVERSÍVEL.');">
+            
+            <p class="card-text">
+                Use esta ferramenta para corrigir conflitos (Ex: O funcionário "Célio" tem dois registos).
+                <br>
+                O fluxo irá <b>manter a conta do AD</b> (a que o utilizador acede) e <b>mover todo o histórico</b> (pontos, documentos) da conta antiga para a nova.
+            </p>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="id_duplicado" class="form-label"><b>Conta Antiga/Manual</b> (A ser REMOVIDA):</label>
+                    <select class="form-select" name="id_duplicado" id="id_duplicado" required>
+                        <option value="" selected disabled>Selecione a conta antiga/manual...</option>
+                        
+                        {% for func in funcionarios %}
+                            <option value="{{ func.id }}">
+                                {{ func.nome }} (ID: {{ func.id }} | User: {% if func.usuario %}{{ func.usuario.username }}{% else %}N/A{% endif %})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_correto" class="form-label"><b>Conta Nova/AD</b> (A MANTER):</label>
+                    <select class="form-select" name="id_correto" id="id_correto" required>
+                        <option value="" selected disabled>Selecione a conta nova (do AD)...</option>
+                        
+                        {% for func in funcionarios %}
+                            <option value="{{ func.id }}">
+                                {{ func.nome }} (ID: {{ func.id }} | User: {% if func.usuario %}{{ func.usuario.username }}{% else %}N/A{% endif %})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-danger mt-3">
+                <i class="bi bi-union"></i> Unificar e Apagar Conta Antiga
+            </button>
+        </form>
+    </div>
+</div>
 <p>Abaixo estão as sugestões de vínculos entre os funcionários cadastrados no sistema e os usuários do Active Directory. Confirme ou rejeite as correspondências.</p>
 
 <div class="card shadow-sm">
