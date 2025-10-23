@@ -511,11 +511,15 @@ def buscar_funcionarios():
     if not termo:
         return jsonify([])
     
-    # Monta o termo de busca para o SQL
     search_term = f"%{termo}%"
     
     # A consulta agora faz o JOIN com as tabelas Cargo e Setor
     funcionarios = Funcionario.query.join(Cargo, Funcionario.cargo_id == Cargo.id, isouter=True).join(Setor, Funcionario.setor_id == Setor.id, isouter=True).filter(
+        
+        # --- CORREÇÃO ADICIONADA AQUI ---
+        Funcionario.status == 'Ativo',
+        # ---------------------------------
+        
         or_(
             Funcionario.nome.ilike(search_term),
             Funcionario.cpf.ilike(search_term),
@@ -525,7 +529,6 @@ def buscar_funcionarios():
     ).all()
     
     # O resultado agora inclui o nome do cargo e do setor
-    # Usamos um "if" para evitar erros caso um funcionário não tenha cargo/setor
     resultado = [{
         "id": f.id, 
         "nome": f.nome, 
