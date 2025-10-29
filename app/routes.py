@@ -44,7 +44,7 @@ def index():
         funcionario_id=usuario.funcionario.id, status='Pendente'
     ).all()
 
-    # --- LÓGICA DE ANIVERSARIANTES (CORRIGIDA E PARA TODOS OS USUÁRIOS) ---
+# --- LÓGICA DE ANIVERSARIANTES (CORRIGIDA) ---
     hoje = datetime.utcnow().date()
     inicio_semana = hoje - timedelta(days=hoje.weekday())
     fim_semana = inicio_semana + timedelta(days=6)
@@ -52,21 +52,31 @@ def index():
     dados_dashboard['periodo_semana'] = f"{inicio_semana.strftime('%d/%m')} - {fim_semana.strftime('%d/%m')}"
     
     aniversariantes = []
-    if inicio_semana.year == fim_semana.year:
+
+    # Se a semana inteira estiver dentro do MESMO MÊS (Caso simples)
+    if inicio_semana.month == fim_semana.month:
         aniversariantes = Funcionario.query.filter(
             db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
             db.func.extract('day', Funcionario.data_nascimento).between(inicio_semana.day, fim_semana.day)
         ).all()
-    else: # Lida com a virada do ano
-        dezembro = Funcionario.query.filter(
-            db.func.extract('month', Funcionario.data_nascimento) == 12,
+    
+    # Se a semana atravessar DOIS MESES (Seja Out/Nov ou Dez/Jan)
+    else:
+        # Busca aniversariantes no primeiro mês (ex: Outubro, a partir do dia de início)
+        primeiro_mes = Funcionario.query.filter(
+            db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
             db.func.extract('day', Funcionario.data_nascimento) >= inicio_semana.day
         ).all()
-        janeiro = Funcionario.query.filter(
-            db.func.extract('month', Funcionario.data_nascimento) == 1,
+        
+        # Busca aniversariantes no segundo mês (ex: Novembro, até o dia final)
+        segundo_mes = Funcionario.query.filter(
+            db.func.extract('month', Funcionario.data_nascimento) == fim_semana.month,
             db.func.extract('day', Funcionario.data_nascimento) <= fim_semana.day
         ).all()
-        aniversariantes = dezembro + janeiro
+        
+        aniversariantes = primeiro_mes + segundo_mes
+    
+    # --- FIM DA CORREÇÃO ---
 
     aniversariantes.sort(key=lambda f: (f.data_nascimento.month, f.data_nascimento.day))
     dados_dashboard['aniversariantes'] = aniversariantes
