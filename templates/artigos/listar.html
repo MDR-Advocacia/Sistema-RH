@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Artigos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Artigos</h1>
+    <p class="lead">Base de conhecimento e publicações da equipe.</p>
+    
+    <div class="row">
+        {% if artigos %}
+            {% for artigo in artigos %}
+            <div class="col-md-12">
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ artigo.titulo }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-person-fill"></i> Publicado por: {{ artigo.autor.funcionario.nome }}
+                            <i class="bi bi-calendar-event ms-3"></i> Em: {{ artigo.data_publicacao | format_datetime_local }}
+                        </h6>
+                        
+                        {% if artigo.resumo %}
+                            <p class="card-text mt-3">{{ artigo.resumo | safe }}</p>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('artigos.visualizar', artigo_id=artigo.id) }}" class="btn btn-primary btn-sm mt-2">
+                            <i class="bi bi-eye-fill"></i> Ler Artigo Completo
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    Nenhum artigo foi publicado ainda.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

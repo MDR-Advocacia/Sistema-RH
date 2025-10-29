@@ -309,3 +309,25 @@ class VinculoADSugestao(db.Model):
 
     def __repr__(self):
         return f'<VinculoADSugestao {self.funcionario_nome} -> {self.ad_display_name}>'
+    
+class Artigo(db.Model):
+    __tablename__ = 'artigos'
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(255), nullable=False)
+    resumo = db.Column(db.Text, nullable=True)
+    conteudo = db.Column(db.Text, nullable=False)
+    data_publicacao = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    
+    # --- CORREÇÃO APLICADA AQUI ---
+    # Apontando para 'usuario.id' (singular), conforme definido no seu modelo Usuario.
+    autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
+    # --- FIM DA CORREÇÃO ---
+
+    autor = db.relationship('Usuario', backref='artigos_publicados')
+    
+    link_externo = db.Column(db.String(500), nullable=True)
+    path_anexo = db.Column(db.String(500), nullable=True)
+    nome_anexo_original = db.Column(db.String(255), nullable=True)
+
+    def __repr__(self):
+        return f'<Artigo {self.titulo}>'

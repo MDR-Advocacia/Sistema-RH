@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
 from .config import config
 
+
 # Inicialização das extensões
 db = SQLAlchemy()
 migrate = Migrate()
@@ -50,6 +51,7 @@ def create_app(config_name='default'):
     CORS_INSTANCE.init_app(app)
     login_manager.init_app(app)
 
+    app.jinja_env.filters['format_datetime_local'] = format_datetime_local
     app.jinja_env.filters['localtime'] = format_datetime_local
 
     from .models import Usuario
@@ -83,6 +85,9 @@ def create_app(config_name='default'):
 
     from .vinculo_ad import vinculo_bp
     app.register_blueprint(vinculo_bp, url_prefix='/vinculo-ad')
+
+    from .artigos import artigos as artigos_blueprint
+    app.register_blueprint(artigos_blueprint)
     
 
     # --- Verificações Globais ---
