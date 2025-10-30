@@ -154,3 +154,42 @@ body.dark-theme .form-control-plaintext { color: var(--cor-texto-secundario); }
 body.dark-theme .text-muted {
     color: var(--cor-texto-secundario) !important;
 }
+
+/* --- Estilização da Barra de Scroll da Sidebar --- */
+
+/* 1. Define o layout do container de links (movido do base.html) */
+.sidebar-links-container {
+    flex-grow: 1;          /* Ocupa o espaço disponível */
+    overflow-y: auto;      /* Adiciona scroll vertical QUANDO necessário */
+    overflow-x: hidden;    /* Esconde scroll horizontal */
+
+    /* 2. Suporte para Firefox (barra fina, cor sutil) */
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #212529; /* Cor do "polegar" e do "trilho" */
+}
+
+/* 3. Suporte para Chrome, Edge, Safari (Webkit) */
+
+/* Define a largura da barra de scroll */
+.sidebar-links-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* Fundo (trilho) da barra de scroll */
+.sidebar-links-container::-webkit-scrollbar-track {
+    background: #212529; /* Cor de fundo exata da sidebar */
+    border-radius: 4px;
+}
+
+/* O "polegar" (a parte que você arrasta) */
+.sidebar-links-container::-webkit-scrollbar-thumb {
+    background-color: #6c757d; /* Um cinza sutil (cor do Bootstrap) */
+    border-radius: 4px;
+    /* Cria uma "borda" interna com a cor de fundo */
+    border: 2px solid #212529; 
+}
+
+/* O "polegar" ao passar o mouse */
+.sidebar-links-container::-webkit-scrollbar-thumb:hover {
+    background-color: #868e96; /* Um pouco mais claro no hover */
+}

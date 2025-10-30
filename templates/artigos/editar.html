@@ -4,51 +4,62 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h3>Editar Artigo</h3>
-        </div>
-        <div class="card-body">
-            <p>Atualize os campos abaixo.</p>
+     <div class="row">
+        <div class="col-lg-10 mx-auto"> {# Centraliza o card #}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                     <h3 class="mb-0 h5">Editar Artigo</h3> {# Ajustado tamanho do título #}
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Atualize os campos abaixo.</p> {# Texto descritivo #}
 
-            <form method="POST" action="{{ url_for('artigos.editar', artigo_id=artigo.id) }}" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="titulo" class="form-label">Título</label>
-                    <input type="text" class="form-control" id="titulo" name="titulo" value="{{ artigo.titulo | safe }}" required>
+                    <form method="POST" action="{{ url_for('artigos.editar', artigo_id=artigo.id) }}" enctype="multipart/form-data">
+                        {# Campos do formulário preenchidos com os dados existentes #}
+                         <div class="mb-3">
+                            <label for="titulo" class="form-label">Título</label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" value="{{ artigo.titulo | safe }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="resumo" class="form-label">Resumo (Opcional)</label>
+                            <textarea class="form-control" id="resumo" name="resumo" rows="3">{{ artigo.resumo | safe }}</textarea>
+                            <small class="form-text text-muted">Um parágrafo curto que aparecerá na lista de artigos.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="conteudo" class="form-label">Conteúdo Completo</label>
+                            <textarea class="form-control" id="conteudo" name="conteudo" rows="15" required>{{ artigo.conteudo | safe }}</textarea>
+                            <small class="form-text text-muted">Você pode usar tags HTML básicas para formatação.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="link_externo" class="form-label">Link Externo (Opcional)</label>
+                            <input type="url" class="form-control" id="link_externo" name="link_externo" value="{{ artigo.link_externo or '' }}" placeholder="https://...">
+                            <small class="form-text text-muted">Use se o artigo estiver publicado em outro site.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="anexo" class="form-label">Anexo (Opcional)</label>
+                            {% if artigo.path_anexo %}
+                                <p class="form-text text-muted small">
+                                    <i class="bi bi-paperclip"></i> Anexo atual: <a href="{{ url_for('artigos.download_anexo', filename=artigo.path_anexo) }}" target="_blank">{{ artigo.nome_anexo_original }}</a>
+                                    <br><i>Envie um novo arquivo abaixo para substituí-lo.</i>
+                                </p>
+                            {% else %}
+                                <small class="form-text text-muted">Nenhum anexo salvo.</small>
+                            {% endif %}
+                            <input type="file" class="form-control mt-1" id="anexo" name="anexo">
+                        </div>
+                        
+                        <hr> {# Separador antes dos botões #}
+                        
+                        <div class="d-flex justify-content-end"> {# Alinha botões à direita #}
+                            <a href="{{ url_for('artigos.gerenciar') }}" class="btn btn-secondary me-2"> {# Botão Cancelar #}
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-brand"> {# Botão Salvar #}
+                                <i class="bi bi-check-lg"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label for="resumo" class="form-label">Resumo (Opcional)</label>
-                    <textarea class="form-control" id="resumo" name="resumo" rows="3">{{ artigo.resumo | safe }}</textarea>
-                    <small class="form-text text-muted">Um parágrafo curto que aparecerá na lista de artigos.</small>
-                </div>
-                <div class="mb-3">
-                    <label for="conteudo" class="form-label">Conteúdo Completo</label>
-                    <textarea class="form-control" id="conteudo" name="conteudo" rows="15" required>{{ artigo.conteudo | safe }}</textarea>
-                    <small class="form-text text-muted">Você pode usar tags HTML básicas para formatação.</small>
-                </div>
-                <div class="mb-3">
-                    <label for="link_externo" class="form-label">Link Externo (Opcional)</label>
-                    <input type="url" class="form-control" id="link_externo" name="link_externo" value="{{ artigo.link_externo or '' }}" placeholder="https://...">
-                    <small class="form-text text-muted">Use se o artigo estiver publicado em outro site.</small>
-                </div>
-                <div class="mb-3">
-                    <label for="anexo" class="form-label">Anexo (Opcional)</label>
-                    {% if artigo.path_anexo %}
-                        <p class="form-text text-muted">
-                            <i class="bi bi-paperclip"></i> Anexo atual: <a href="{{ url_for('artigos.download_anexo', filename=artigo.path_anexo) }}" target="_blank">{{ artigo.nome_anexo_original }}</a>
-                        </p>
-                        <small>Envie um novo arquivo abaixo para substituí-lo.</small>
-                    {% endif %}
-                    <input type="file" class="form-control" id="anexo" name="anexo">
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg"></i> Salvar Alterações
-                </button>
-                <a href="{{ url_for('artigos.gerenciar') }}" class="btn btn-secondary">
-                    <i class="bi bi-x-lg"></i> Cancelar
-                </a>
-            </form>
+            </div>
         </div>
     </div>
 </div>

@@ -4,46 +4,55 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h3>Publicar Novo Artigo</h3>
-        </div>
-        <div class="card-body">
-            <p>Preencha os campos abaixo para compartilhar um novo artigo.</p>
+    <div class="row">
+        <div class="col-lg-10 mx-auto"> {# Centraliza o card #}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="mb-0 h5">Publicar Novo Artigo</h3> {# Ajustado tamanho do título #}
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted small">Preencha os campos abaixo para compartilhar um novo artigo.</p> {# Texto descritivo #}
 
-            <form method="POST" action="{{ url_for('artigos.criar') }}" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="titulo" class="form-label">Título</label>
-                    <input type="text" class="form-control" id="titulo" name="titulo" required>
+                    <form method="POST" action="{{ url_for('artigos.criar') }}" enctype="multipart/form-data">
+                        {# Campos do formulário permanecem os mesmos #}
+                        <div class="mb-3">
+                            <label for="titulo" class="form-label">Título</label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="resumo" class="form-label">Resumo (Opcional)</label>
+                            <textarea class="form-control" id="resumo" name="resumo" rows="3"></textarea>
+                            <small class="form-text text-muted">Um parágrafo curto que aparecerá na lista de artigos.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="conteudo" class="form-label">Conteúdo Completo</label>
+                            <textarea class="form-control" id="conteudo" name="conteudo" rows="15" required></textarea>
+                            <small class="form-text text-muted">Você pode usar tags HTML básicas para formatação.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="link_externo" class="form-label">Link Externo (Opcional)</label>
+                            <input type="url" class="form-control" id="link_externo" name="link_externo" placeholder="https://...">
+                            <small class="form-text text-muted">Use se o artigo estiver publicado em outro site.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="anexo" class="form-label">Anexo (Opcional)</label>
+                            <input type="file" class="form-control" id="anexo" name="anexo">
+                            <small class="form-text text-muted">Envie um PDF ou outro documento complementar.</small>
+                        </div>
+                        
+                        <hr> {# Separador antes dos botões #}
+                        
+                        <div class="d-flex justify-content-end"> {# Alinha botões à direita #}
+                            <a href="{{ url_for('artigos.gerenciar') }}" class="btn btn-secondary me-2"> {# Botão Cancelar #}
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-brand"> {# Botão Salvar/Publicar #}
+                                <i class="bi bi-check-lg"></i> Publicar Artigo
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label for="resumo" class="form-label">Resumo (Opcional)</label>
-                    <textarea class="form-control" id="resumo" name="resumo" rows="3"></textarea>
-                    <small class="form-text text-muted">Um parágrafo curto que aparecerá na lista de artigos.</small>
-                </div>
-                <div class="mb-3">
-                    <label for="conteudo" class="form-label">Conteúdo Completo</label>
-                    <textarea class="form-control" id="conteudo" name="conteudo" rows="15" required></textarea>
-                    <small class="form-text text-muted">Você pode usar tags HTML básicas para formatação (ex: &lt;b&gt;, &lt;p&gt;, &lt;br&gt;, &lt;ul&gt;, &lt;li&gt;).</small>
-                </div>
-                <div class="mb-3">
-                    <label for="link_externo" class="form-label">Link Externo (Opcional)</label>
-                    <input type="url" class="form-control" id="link_externo" name="link_externo" placeholder="https://...">
-                    <small class="form-text text-muted">Use se o artigo estiver publicado em outro site (ex: revista, portal).</small>
-                </div>
-                <div class="mb-3">
-                    <label for="anexo" class="form-label">Anexo (Opcional)</label>
-                    <input type="file" class="form-control" id="anexo" name="anexo">
-                    <small class="form-text text-muted">Envie um PDF ou outro documento complementar.</small>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg"></i> Publicar Artigo
-                </button>
-                <a href="{{ url_for('artigos.gerenciar') }}" class="btn btn-secondary">
-                    <i class="bi bi-x-lg"></i> Cancelar
-                </a>
-            </form>
+            </div>
         </div>
     </div>
 </div>

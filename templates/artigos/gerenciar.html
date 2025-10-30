@@ -3,52 +3,60 @@
 {% block title %}Gerenciar Artigos{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Gestão de Artigos</h1>
-        <a href="{{ url_for('artigos.criar') }}" class="btn btn-success">
-            <i class="fas fa-plus"></i> Publicar Novo Artigo
-        </a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Gerenciar Artigos</h1> {# Ajustado para h2 #}
+    <a href="{{ url_for('artigos.criar') }}" class="btn btn-brand"> {# Botão Novo no canto superior direito, usando btn-brand #}
+        <i class="bi bi-plus-circle"></i> Novo Artigo
+    </a>
+</div>
+
+<div class="card shadow-sm"> {# Tabela dentro de um card #}
+    <div class="card-body p-0"> {# Removido padding para a tabela ocupar todo o card #}
+        <div class="table-responsive"> {# Adicionado para responsividade em telas menores #}
+            <table class="table table-hover align-middle mb-0"> {# Classes da tabela replicadas #}
+                <thead class="table-light"> {# Cabeçalho claro como na imagem #}
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Data de Publicação</th>
+                        <th class="text-end" style="width: 150px;">Ações</th> {# Ações alinhadas à direita #}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for artigo in artigos %}
+                    <tr>
+                        <td>{{ artigo.titulo }}</td>
+                        <td>{{ artigo.autor.funcionario.nome }}</td>
+                        <td>{{ artigo.data_publicacao | localtime }}</td>
+                        <td class="text-end"> {# Botões de ação alinhados à direita #}
+                            
+                            {# Botão Visualizar - Mantido como info #}
+                            <a href="{{ url_for('artigos.visualizar', artigo_id=artigo.id) }}" class="btn btn-sm btn-outline-info" title="Visualizar">
+                                <i class="bi bi-eye"></i>
+                            </a>
+
+                            {# Botão Editar - Replicado de Gerenciar Cargos #}
+                            <a href="{{ url_for('artigos.editar', artigo_id=artigo.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="bi bi-pencil-square"></i> Editar
+                            </a>
+
+                            {# Botão Remover - Replicado de Gerenciar Cargos #}
+                            <form action="{{ url_for('artigos.remover', artigo_id=artigo.id) }}" method="POST" style="display: inline;" 
+                                  onsubmit="return confirm('Tem certeza que deseja remover o artigo \'{{ artigo.titulo | safe }}\'?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Deletar">
+                                    <i class="bi bi-trash"></i> Deletar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center p-4">Nenhum artigo publicado.</td> {# Mensagem de tabela vazia #}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>Título</th>
-                <th>Autor</th>
-                <th>Data de Publicação</th>
-                <th style="width: 150px;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for artigo in artigos %}
-            <tr>
-                <td>{{ artigo.titulo }}</td>
-                <td>{{ artigo.autor.funcionario.nome }}</td>
-                <td>{{ artigo.data_publicacao | format_datetime_local }}</td>
-                <td>
-                    <a href="{{ url_for('artigos.visualizar', artigo_id=artigo.id) }}" class="btn btn-info btn-sm" title="Visualizar">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    
-                    <a href="{{ url_for('artigos.editar', artigo_id=artigo.id) }}" class="btn btn-warning btn-sm" title="Editar">
-                        <i class="fas fa-pencil-alt"></i>
-                    </a>
-
-                    <form action="{{ url_for('artigos.remover', artigo_id=artigo.id) }}" method="POST" style="display: inline;" 
-                          onsubmit="return confirm('Tem certeza que deseja remover o artigo \'{{ artigo.titulo | safe }}\'? Esta ação não pode ser desfeita.');">
-                        <button type="submit" class="btn btn-danger btn-sm" title="Remover">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="text-center">Nenhum artigo publicado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </div>
 {% endblock %}
