@@ -45,9 +45,10 @@
                     </a>
                 </li>
                 
-                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal']) %}
+                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor']) %}
                 <hr class="text-secondary">
                 {% endif %}
+
                 {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal']) %}
                 <li class="nav-item">
                     <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if request.endpoint.startswith('main.') and 'funcionario' in request.endpoint %}active{% endif %}">
@@ -55,74 +56,130 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if current_user.tem_permissao(['admin_rh', 'depto_pessoal']) %}
-                <li>
-                    <a href="{{ url_for('documentos.gestao_documentos') }}" class="nav-link {% if 'documentos' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-file-earmark-zip-fill"></i> Gestão de Documentos
-                    </a>
-                </li>
+
+
+                {% set gestao_perms = ['admin_rh', 'depto_pessoal', 'admin_ti', 'supervisor'] %}
+                {% if current_user.tem_permissao(gestao_perms) %}
+                    
+                    {# Lógica para expandir "Gestão" se estiver ativo #}
+                    {% set gestao_prefixes = [
+                        'documentos.gestao_documentos', 
+                        'artigos.gerenciar', 'artigos.criar', 'artigos.editar', 
+                        'ponto.', 
+                        'denuncias.gestao_denuncias', 'denuncias.ver_denuncia'
+                    ] %}
+                    {% set is_gestao_active = false %}
+                    {% for prefix in gestao_prefixes %}
+                        {% if request.endpoint.startswith(prefix) %}
+                            {% set is_gestao_active = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if not is_gestao_active %}collapsed{% endif %}" href="#submenu-gestao" data-bs-toggle="collapse" role="button" aria-expanded="{{ 'true' if is_gestao_active else 'false' }}" aria-controls="submenu-gestao">
+                            <i class="bi bi-gear-fill"></i> Gestão
+                        </a>
+                        <div class="collapse {% if is_gestao_active %}show{% endif %}" id="submenu-gestao">
+                            <ul class="nav flex-column ms-3">
+                                
+                                {% if current_user.tem_permissao(['admin_rh', 'depto_pessoal']) %}
+                                <li>
+                                    <a href="{{ url_for('documentos.gestao_documentos') }}" class="nav-link {% if request.endpoint == 'documentos.gestao_documentos' %}active{% endif %}">
+                                        <i class="bi bi-file-earmark-zip-fill"></i> Gestão de Documentos
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'supervisor']) %}
+                                <li>
+                                    <a href="{{ url_for('artigos.gerenciar') }}" class="nav-link {% if 'artigos.gerenciar' in request.endpoint or 'artigos.criar' in request.endpoint or 'artigos.editar' in request.endpoint %}active{% endif %}">
+                                        <i class="bi bi-journals"></i> Gestão de Artigos
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if current_user.tem_permissao('depto_pessoal') %}
+                                <li>
+                                    <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">
+                                        <i class="bi bi-clock-history"></i> Gestão de Ponto
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if current_user.tem_permissao('admin_rh') %}
+                                <li>
+                                    <a href="{{ url_for('denuncias.gestao_denuncias') }}" class="nav-link {% if 'denuncias.gestao_denuncias' in request.endpoint or 'denuncias.ver_denuncia' in request.endpoint %}active{% endif %}">
+                                        <i class="bi bi-shield-lock-fill"></i> Gestão de Denúncias
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </li>
                 {% endif %}
+
 
                 {% if current_user.is_authenticated and current_user.tem_permissao(['admin_rh', 'depto_pessoal', 'admin_ti']) %}
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#submenu-cadastros" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenu-cadastros">
-                        <i class="bi bi-pencil-square"></i>
-                        Cadastros Gerais
-                    </a>
-                    <div class="collapse" id="submenu-cadastros">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('cadastros.gerenciar_cargos') }}">Cargos</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('cadastros.gerenciar_setores') }}">Setores</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('documentos.gerenciar_tipos_documento') }}">Tipos de Documento</a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                {% endif %}
-                
-                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'supervisor']) %}
-                <li>
-                    <a href="{{ url_for('artigos.gerenciar') }}" class="nav-link {% if 'artigos.gerenciar' in request.endpoint or 'artigos.criar' in request.endpoint or 'artigos.editar' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-journals"></i> Gestão de Artigos
-                    </a>
-                </li>
+                    
+                    {# Lógica para expandir "Cadastros Gerais" se estiver ativo #}
+                    {% set is_cadastros_active = request.endpoint.startswith('cadastros.') or request.endpoint == 'documentos.gerenciar_tipos_documento' %}
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if not is_cadastros_active %}collapsed{% endif %}" href="#submenu-cadastros" data-bs-toggle="collapse" role="button" aria-expanded="{{ 'true' if is_cadastros_active else 'false' }}" aria-controls="submenu-cadastros">
+                            <i class="bi bi-pencil-square"></i>
+                            Cadastros Gerais
+                        </a>
+                        <div class="collapse {% if is_cadastros_active %}show{% endif %}" id="submenu-cadastros">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint == 'cadastros.gerenciar_cargos' %}active{% endif %}" href="{{ url_for('cadastros.gerenciar_cargos') }}">Cargos</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint == 'cadastros.gerenciar_setores' %}active{% endif %}" href="{{ url_for('cadastros.gerenciar_setores') }}">Setores</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint == 'documentos.gerenciar_tipos_documento' %}active{% endif %}" href="{{ url_for('documentos.gerenciar_tipos_documento') }}">Tipos de Documento</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
                 {% endif %}
 
-                {% if current_user.tem_permissao('depto_pessoal') %}
-                <li>
-                    <a href="{{ url_for('ponto.gestao_ponto') }}" class="nav-link {% if 'ponto' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-clock-history"></i> Gestão de Ponto
-                    </a>
-                </li>
-                {% endif %}
-                {% if current_user.tem_permissao('admin_rh') %}
-                <li>
-                    <a href="{{ url_for('denuncias.gestao_denuncias') }}" class="nav-link {% if 'denuncias.gestao_denuncias' in request.endpoint or 'denuncias.ver_denuncia' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-shield-lock-fill"></i> Gestão de Denúncias
-                    </a>
-                </li>
-                {% endif %}
+
                 {% if current_user.tem_permissao('admin_ti') %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('vinculo_ad.revisao_vinculos') }}">
-                        <i class="bi bi-link-45deg"></i>
-                        Vínculo com AD
-                    </a>
-                </li>
+                    
+                    {# Lógica para expandir "Admin TI" se estiver ativo #}
+                    {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs'] %}
+                    {% set is_ti_active = false %}
+                    {% for prefix in ti_prefixes %}
+                        {% if request.endpoint.startswith(prefix) %}
+                            {% set is_ti_active = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if not is_ti_active %}collapsed{% endif %}" href="#submenu-ti" data-bs-toggle="collapse" role="button" aria-expanded="{{ 'true' if is_ti_active else 'false' }}" aria-controls="submenu-ti">
+                            <i class="bi bi-tools"></i> Admin TI
+                        </a>
+                        <div class="collapse {% if is_ti_active %}show{% endif %}" id="submenu-ti">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.endpoint.startswith('vinculo_ad.') %}active{% endif %}" href="{{ url_for('vinculo_ad.revisao_vinculos') }}">
+                                        <i class="bi bi-link-45deg"></i>
+                                        Vínculo com AD
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
+                                        <i class="bi bi-journal-text"></i> Logs do Sistema
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
                 {% endif %}
-                {% if current_user.tem_permissao('admin_ti') %}
-                <li>
-                    <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-journal-text"></i> Logs do Sistema
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
+
+                </ul>
             
         </div>
 
