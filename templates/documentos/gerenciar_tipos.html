@@ -6,20 +6,21 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Configurar Tipos de Documento</h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoTipo">
-            <i class="fas fa-plus"></i> Novo Tipo
+        
+        <button type="button" class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#modalNovoTipo">
+            <i class="bi bi-plus-circle"></i> Novo Tipo
         </button>
-    </div>
+        </div>
 
     <div class="card">
         <div class="card-body">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle"> 
                 <thead>
                     <tr>
                         <th>Nome</th>
                         <th>Descrição</th>
                         <th class="text-center">Obrigatório na Admissão?</th>
-                        <th class="text-center">Ações</th>
+                        <th class="text-end">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,14 +35,22 @@
                                 <span class="badge bg-secondary">Não</span>
                             {% endif %}
                         </td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEditar-{{ tipo.id }}">
-                                <i class="fas fa-edit"></i>
+                        
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                    title="Editar"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditar-{{ tipo.id }}">
+                                <i class="bi bi-pencil-square"></i> Editar
                             </button>
-                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeletar-{{ tipo.id }}">
-                                <i class="fas fa-trash"></i>
+                            
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    title="Excluir" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalDeletar-{{ tipo.id }}">
+                                <i class="bi bi-trash"></i> Excluir
                             </button>
                         </td>
+                        
                     </tr>
                     {% else %}
                     <tr>
@@ -78,7 +87,9 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        {{ form.submit(class="btn btn-primary") }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Salvar
+                        </button>
                     </div>
                 </form>
             </div>
@@ -96,7 +107,6 @@
                 </div>
                 <div class="modal-body">
                     <form action="{{ url_for('documentos.editar_tipo_documento', id=tipo.id) }}" method="POST">
-                        {# Usando o token do formulário principal #}
                         {{ form.csrf_token }}
                         <div class="mb-3">
                             <label for="nome-{{ tipo.id }}" class="form-label">Nome</label>
@@ -112,7 +122,9 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Salvar Alterações
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -134,9 +146,10 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <form action="{{ url_for('documentos.deletar_tipo_documento', id=tipo.id) }}" method="POST" style="display: inline;">
-                        {# Usando o token do formulário principal #}
                         {{ form.csrf_token }}
-                        <button type="submit" class="btn btn-danger">Excluir</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Excluir
+                        </button>
                     </form>
                 </div>
             </div>
