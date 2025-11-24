@@ -1,27 +1,38 @@
+from flask import current_app
 from flask_login import current_user
+from datetime import datetime
 from . import db
 from .models import LogAtividade
 from unidecode import unidecode
 import re
 
-def registrar_log(acao):
+def registrar_log(acao, usuario_id=None):
     """
-    Cria e salva uma nova entrada de log no banco de dados.
+    Registra uma ação na tabela de logs.
+    O usuario_id é opcional; se não for passado, tenta pegar do current_user (se possível) ou deixa nulo.
     """
     try:
-        # Garante que temos um usuário autenticado para associar ao log
-        if current_user and current_user.is_authenticated:
-            log = LogAtividade(
-                acao=acao,
-                usuario_id=current_user.id
-            )
-            db.session.add(log)
-            db.session.commit()
+        # Se não passou ID, tenta pegar do usuário logado (se estiver num contexto de request)
+        if usuario_id is None:
+            from flask_login import current_user
+            if current_user and current_user.is_authenticated:
+                usuario_id = current_user.id
+        
+        if not usuario_id:
+            # Se ainda assim não tiver ID (ex: log de sistema), não salva ou salva com ID de sistema se tiver
+            current_app.logger.warning(f"Tentativa de log sem usuário: {acao}")
+            return
+
+        novo_log = LogAtividade(
+            acao=acao,
+            usuario_id=usuario_id,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(novo_log)
+        db.session.commit()
     except Exception as e:
-        # Em caso de falha no log, não queremos que a aplicação quebre.
-        # Apenas registramos o erro no console do servidor.
-        print(f"ERRO AO REGISTRAR LOG: {e}")
-        db.session.rollback()
+        # Falha silenciosa no log para não parar a aplicação
+        current_app.logger.error(f"Erro ao salvar log de atividade: {e}")
 
 
 def normalizar_nome(nome):

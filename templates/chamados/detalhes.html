@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Chamado #{{ chamado.protocolo or chamado.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- CABEÇALHO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0">
+                <i class="bi bi-ticket-perforated-fill me-2"></i> 
+                Chamado #{{ chamado.protocolo or chamado.id }}
+            </h3>
+            <span class="text-muted small">Aberto em {{ chamado.data_abertura|format_datetime_local }}</span>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge fs-5 
+                {% if chamado.status == 'Fechado' %} bg-success
+                {% elif chamado.status == 'Aberto' %} bg-danger
+                {% elif chamado.status == 'Pendente' %} bg-warning text-dark
+                {% else %} bg-primary {% endif %}">
+                {{ chamado.status }}
+            </span>
+            
+            {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti']) and not chamado.arquivado %}
+            <form action="{{ url_for('chamados_web.arquivar_chamado', chamado_id=chamado.id) }}" method="POST" onsubmit="return confirm('Tem certeza?');">
+                <button type="submit" class="btn btn-outline-danger" title="Arquivar Chamado">
+                    <i class="bi bi-archive-fill"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- COLUNA ESQUERDA (Conteúdo) -->
+        <div class="col-lg-8">
+            
+            <!-- Descrição -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">{{ chamado.titulo }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text" style="white-space: pre-line;">{{ chamado.conteudo }}</p>
+                </div>
+            </div>
+
+            <!-- Anexos -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i> Anexos</h6>
+                </div>
+                <div class="card-body">
+                    {% if chamado.anexos.count() > 0 %}
+                        <ul class="list-group mb-3">
+                            {% for anexo in chamado.anexos %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ anexo.nome_arquivo_original }}</span>
+                                <a href="{{ url_for('chamados_web.baixar_anexo', anexo_id=anexo.id) }}" class="btn btn-sm btn-primary" target="_blank">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-3">Nenhum anexo.</p>
+                    {% endif %}
+
+                    {% if chamado.status != 'Fechado' %}
+                    <form action="{{ url_for('chamados_web.anexar_arquivo', chamado_id=chamado.id) }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                        <input type="file" class="form-control form-control-sm" name="arquivo" required>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Anexar</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Histórico -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><h6 class="mb-0 fw-bold">Histórico</h6></div>
+                <div class="card-body bg-light bg-opacity-10" style="max-height: 500px; overflow-y: auto;">
+                    {% for comentario in comentarios %}
+                    <div class="d-flex mb-3 {% if comentario.usuario_id == current_user.id %}flex-row-reverse{% endif %}">
+                        <div class="flex-grow-1 p-3 rounded-3 {% if comentario.usuario_id == current_user.id %}bg-white border ms-3 text-end{% else %}bg-white border me-3{% endif %} shadow-sm">
+                            <p class="fw-bold mb-1 small text-muted">{{ comentario.usuario.funcionario.nome }} • {{ comentario.data_comentario|format_datetime_local }}</p>
+                            <p class="mb-0">{{ comentario.comentario|nl2br }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-muted">Nenhum comentário.</p>
+                    {% endfor %}
+                </div>
+                {% if chamado.status != 'Fechado' %}
+                <div class="card-footer bg-white">
+                    <form method="POST">
+                        <div class="input-group">
+                            <textarea class="form-control" name="comentario" rows="2" placeholder="Escreva uma resposta..." required></textarea>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-send-fill"></i></button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- COLUNA DIREITA -->
+        <div class="col-lg-4">
+            
+            {% if current_user.tem_permissao(['tecnico_ti', 'supervisor_ti', 'admin_ti']) %}
+            
+            <!-- CARD GESTÃO TÉCNICA (Simplificado) -->
+            <div class="card shadow-sm mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-tools me-2"></i> Gestão do Técnico</h6>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Responsável -->
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold mb-1">Técnico Responsável</label>
+                        {% if chamado.tecnico_atribuido %}
+                            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light">
+                                <div>
+                                    <i class="bi bi-person-check-fill text-success me-2"></i>
+                                    <span class="fw-medium">{{ chamado.tecnico_atribuido.funcionario.nome }}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary w-100 mt-2" data-bs-toggle="modal" data-bs-target="#modalRepassar">
+                                <i class="bi bi-arrow-repeat me-1"></i> Repassar Chamado
+                            </button>
+                        {% else %}
+                            <div class="alert alert-warning small py-2 mb-2">
+                                <i class="bi bi-exclamation-triangle me-1"></i> Não atribuído
+                            </div>
+                            <form action="{{ url_for('chamados_web.assumir_chamado_web', chamado_id=chamado.id) }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-primary w-100">Assumir Chamado</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <!-- Status (Ações Rápidas) -->
+                    <label class="form-label small text-muted fw-bold mb-1">Ações de Status</label>
+                    <form action="{{ url_for('chamados_web.mudar_status_web', chamado_id=chamado.id) }}" method="POST" class="d-grid gap-2">
+                        {% if chamado.status == 'Aberto' %}
+                            <button name="novo_status" value="Em Andamento" class="btn btn-sm btn-primary text-start"><i class="bi bi-play-circle me-2"></i> Iniciar Atendimento</button>
+                        {% elif chamado.status == 'Em Andamento' %}
+                             <button name="novo_status" value="Pendente" class="btn btn-sm btn-warning text-start"><i class="bi bi-pause-circle me-2"></i> Marcar Pendência</button>
+                             <button name="novo_status" value="Fechado" class="btn btn-sm btn-success text-start" onclick="return confirm('Confirmar fechamento?');"><i class="bi bi-check-circle me-2"></i> Fechar Chamado</button>
+                        {% elif chamado.status == 'Pendente' %}
+                             <button name="novo_status" value="Em Andamento" class="btn btn-sm btn-primary text-start"><i class="bi bi-play-circle me-2"></i> Retomar Atendimento</button>
+                        {% elif chamado.status == 'Fechado' %}
+                             <button name="novo_status" value="Em Andamento" class="btn btn-sm btn-outline-secondary text-start"><i class="bi bi-arrow-counterclockwise me-2"></i> Reabrir Chamado</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- CARD INFORMAÇÕES (Com Edição) -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">Informações do Ticket</h6>
+                </div>
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item">
+                        <strong class="d-block text-muted">Solicitante</strong>
+                        {{ chamado.solicitante.funcionario.nome }}
+                        <br>
+                        <span class="text-muted" style="font-size: 0.85em;">{{ chamado.solicitante.funcionario.setor.nome or 'Setor N/A' }}</span>
+                    </li>
+                    
+                    <!-- CATEGORIA (Editável) -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="d-block text-muted">Categoria</strong>
+                            {{ chamado.categoria.nome }}
+                        </div>
+                        {% if current_user.tem_permissao(['tecnico_ti', 'supervisor_ti', 'admin_ti']) %}
+                        <button class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        {% endif %}
+                    </li>
+
+                    <li class="list-group-item">
+                        <strong class="d-block text-muted">Prioridade</strong>
+                        <span class="{% if chamado.prioridade == 'Alta' %}text-danger fw-bold{% endif %}">{{ chamado.prioridade }}</span>
+                    </li>
+
+                    <!-- ATIVO (Editável) -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="d-block text-muted">Ativo / Equipamento</strong>
+                            {% if chamado.ativo_associado %}
+                                {{ chamado.ativo_associado.nome }}
+                                <div class="text-muted" style="font-size: 0.85em;">{{ chamado.ativo_associado.tag_patrimonio or '' }}</div>
+                            {% else %}
+                                <span class="text-muted fst-italic">Nenhum vinculado</span>
+                            {% endif %}
+                        </div>
+                        {% if current_user.tem_permissao(['tecnico_ti', 'supervisor_ti', 'admin_ti']) %}
+                        <button class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalEditarAtivo">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REPASSAR (Técnico apenas) -->
+<div class="modal fade" id="modalRepassar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Repassar Chamado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('chamados_web.repassar_chamado', chamado_id=chamado.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Novo Técnico Responsável</label>
+                        <select class="form-select" name="novo_tecnico_id" required>
+                            <option value="" selected disabled>Selecione...</option>
+                            <option value="nenhum">-- Devolver para a Fila (Sem Técnico) --</option>
+                            {% for tec in tecnicos %}
+                                <option value="{{ tec.id }}" {% if chamado.tecnico_atribuido_id == tec.id %}selected{% endif %}>
+                                    {{ tec.funcionario.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo / Observação</label>
+                        <textarea class="form-control" name="motivo_repasse" rows="2" required placeholder="Ex: Escalação de nível, férias, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Repasse</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR CATEGORIA -->
+<div class="modal fade" id="modalEditarCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alterar Categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('chamados_web.atualizar_info_chamado', chamado_id=chamado.id) }}" method="POST">
+                <div class="modal-body">
+                    <label class="form-label">Nova Categoria</label>
+                    <select class="form-select" name="categoria_id" required>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if chamado.categoria_ti_id == cat.id %}selected{% endif %}>
+                                {{ cat.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR ATIVO (Com Busca/Criação) -->
+<div class="modal fade" id="modalEditarAtivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vincular Ativo/Equipamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('chamados_web.atualizar_info_chamado', chamado_id=chamado.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Buscar ou Criar Novo</label>
+                        <input type="text" class="form-control" list="lista-ativos" name="ativo_nome" 
+                               placeholder="Digite o nome ou patrimônio..." 
+                               value="{{ chamado.ativo_associado.nome if chamado.ativo_associado else '' }}" autocomplete="off">
+                        <datalist id="lista-ativos">
+                            {% for ativo in todos_ativos %}
+                                <option value="{{ ativo.nome }}">{{ ativo.tag_patrimonio or 'S/N' }}</option>
+                            {% endfor %}
+                        </datalist>
+                        <div class="form-text">
+                            Se o nome digitado não existir na lista, um novo ativo será <strong>criado automaticamente</strong> como "Manual".
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Vínculo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

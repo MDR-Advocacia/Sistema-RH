@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Abrir Novo Chamado{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h3><i class="bi bi-headset me-2"></i> Abrir Novo Chamado de TI</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('chamados_web.abrir_chamado') }}" enctype="multipart/form-data">
+                
+                <div class="row mb-3">
+                    <!-- Setor do Usuário (Informativo) -->
+                    <div class="col-md-4">
+                        <label class="form-label">Seu Setor</label>
+                        <input type="text" class="form-control bg-light" value="{{ current_user.funcionario.setor.nome if current_user.funcionario.setor else 'Não Definido' }}" readonly>
+                    </div>
+
+                    <!-- Seleção de Setor do Ativo -->
+                    <div class="col-md-4">
+                        <label for="setor_ativo_id" class="form-label">Setor do Equipamento</label>
+                        <select class="form-select" id="setor_ativo_id">
+                            <option value="" selected>-- Selecione o Setor --</option>
+                            {% for setor in setores %}
+                                <option value="{{ setor.id }}" {% if current_user.funcionario.setor_id == setor.id %}selected{% endif %}>
+                                    {{ setor.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Onde está o equipamento com problema?</div>
+                    </div>
+
+                    <!-- Lista de Ativos (Carregada via JS) -->
+                    <div class="col-md-4">
+                        <label for="ativo_id" class="form-label">Equipamento (Ativo)</label>
+                        
+                        {% if ativo_preenchido %}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-qr-code"></i></span>
+                                <input type="text" class="form-control" value="{{ ativo_preenchido.nome }}" disabled>
+                                <input type="hidden" name="ativo_id" value="{{ ativo_preenchido.id }}">
+                            </div>
+                        {% else %}
+                            <select class="form-select" name="ativo_id" id="ativo_id" disabled>
+                                <option value="">-- Selecione um setor primeiro --</option>
+                            </select>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label for="titulo" class="form-label">Título <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="titulo" name="titulo" required placeholder="Ex: Computador não liga">
+                </div>
+
+                <div class="mb-3">
+                    <label for="categoria_id" class="form-label">Categoria <span class="text-danger">*</span></label>
+                    <select class="form-select" id="categoria_id" name="categoria_id" required>
+                        <option value="" disabled selected>Selecione uma categoria...</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="conteudo" class="form-label">Descrição Detalhada <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="conteudo" name="conteudo" rows="5" required></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="arquivo" class="form-label">Anexo / Print (Opcional)</label>
+                    <input class="form-control" type="file" id="arquivo" name="arquivo">
+                </div>
+
+                <hr>
+                <button type="submit" class="btn btn-primary btn-lg">Enviar Chamado</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const setorSelect = document.getElementById('setor_ativo_id');
+    const ativoSelect = document.getElementById('ativo_id');
+
+    // Função para carregar ativos
+    function carregarAtivos(setorId) {
+        if (!setorId) {
+            ativoSelect.innerHTML = '<option value="">-- Selecione um setor primeiro --</option>';
+            ativoSelect.disabled = true;
+            return;
+        }
+
+        ativoSelect.innerHTML = '<option value="">Carregando...</option>';
+        ativoSelect.disabled = true;
+
+        fetch(`/chamados/api/ativos/setor/${setorId}`)
+            .then(response => response.json())
+            .then(data => {
+                ativoSelect.innerHTML = '<option value="">-- Selecione o Equipamento --</option>';
+                if (data.length === 0) {
+                    ativoSelect.innerHTML += '<option value="" disabled>Nenhum ativo encontrado neste setor</option>';
+                } else {
+                    data.forEach(ativo => {
+                        const patrimonio = ativo.patrimonio ? ` (${ativo.patrimonio})` : '';
+                        ativoSelect.innerHTML += `<option value="${ativo.id}">${ativo.nome}${patrimonio}</option>`;
+                    });
+                }
+                ativoSelect.disabled = false;
+            })
+            .catch(err => {
+                console.error('Erro ao buscar ativos:', err);
+                ativoSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+            });
+    }
+
+    // Evento de mudança
+    if (setorSelect) {
+        setorSelect.addEventListener('change', function() {
+            carregarAtivos(this.value);
+        });
+
+        // Carrega inicial se já tiver valor (ex: setor do usuario pre-selecionado)
+        if (setorSelect.value) {
+            carregarAtivos(setorSelect.value);
+        }
+    }
+});
+</script>
+{% endblock %}

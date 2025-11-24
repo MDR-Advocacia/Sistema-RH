@@ -23,6 +23,11 @@ from .utils import registrar_log
 
 main = Blueprint('main', __name__)
 
+# --- LISTA DE PERMISSÕES ADMINISTRATIVAS (CHAVE MESTRA) ---
+# Inclui RH, DP e os dois tipos de Admin de TI (Local e AD)
+PERMISSOES_GESTAO = ['admin_rh', 'depto_pessoal', 'admin_ti', 'supervisor_ti', 'tecnico_ti']
+# ----------------------------------------------------------
+
 # --- ROTAS PRINCIPAIS E DE DASHBOARD ---
 @main.route('/')
 @login_required
@@ -95,7 +100,7 @@ def index():
 # --- FUNÇÕES CORRIGIDAS ---
 @main.route('/cadastrar', methods=['GET'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def exibir_formulario_cadastro():
     """Apenas exibe o formulário de cadastro."""
     permissoes = Permissao.query.all()
@@ -106,7 +111,7 @@ def exibir_formulario_cadastro():
 # --- NOVA ROTA DE API PARA VERIFICAÇÃO ---
 @main.route('/api/ad/check-username')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def check_ad_username():
     username = request.args.get('username')
     if not username:
@@ -119,7 +124,7 @@ def check_ad_username():
 
 @main.route('/cadastrar', methods=['GET', 'POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def processar_cadastro():
     if request.method == 'POST':
         try:
@@ -223,7 +228,7 @@ def processar_cadastro():
 
 @main.route('/funcionarios')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def listar_funcionarios():
     termo_busca = request.args.get('q')
     sort_by = request.args.get('sort', 'nome_asc')
@@ -276,7 +281,7 @@ def listar_funcionarios():
 
 @main.route('/funcionario/<int:funcionario_id>/editar', methods=['GET', 'POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def editar_funcionario(funcionario_id):
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
@@ -334,7 +339,7 @@ def editar_funcionario(funcionario_id):
 
 @main.route('/funcionario/<int:funcionario_id>/perfil')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def perfil_funcionario(funcionario_id):
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     usuario = funcionario.usuario
@@ -371,7 +376,7 @@ def listar_avisos():
 
 @main.route('/avisos/novo', methods=['GET', 'POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def criar_aviso():
     if request.method == 'POST':
         titulo = request.form.get('titulo')
@@ -435,7 +440,7 @@ def download_anexo_aviso(filename):
 
 @main.route('/avisos/<int:aviso_id>/remover', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def remover_aviso(aviso_id):
     # (código existente)
     aviso = Aviso.query.get_or_404(aviso_id)
@@ -470,7 +475,7 @@ def dar_ciencia_aviso(aviso_id):
 
 @main.route('/aviso/<int:aviso_id>/logs')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def ver_logs_ciencia(aviso_id):
     # (código existente)
     aviso = Aviso.query.get_or_404(aviso_id)
@@ -484,7 +489,7 @@ def ver_logs_ciencia(aviso_id):
 # (código existente para arquivamento)
 @main.route('/aviso/<int:aviso_id>/arquivar', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def arquivar_aviso(aviso_id):
     aviso = Aviso.query.get_or_404(aviso_id)
     aviso.arquivado = True
@@ -495,7 +500,7 @@ def arquivar_aviso(aviso_id):
 
 @main.route('/aviso/<int:aviso_id>/desarquivar', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def desarquivar_aviso(aviso_id):
     aviso = Aviso.query.get_or_404(aviso_id)
     aviso.arquivado = False
@@ -506,7 +511,7 @@ def desarquivar_aviso(aviso_id):
 
 @main.route('/avisos/arquivados')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def avisos_arquivados():
     avisos_arquivados = Aviso.query.filter_by(arquivado=True).order_by(Aviso.data_publicacao.desc()).all()
     return render_template('avisos/avisos_arquivados.html', avisos=avisos_arquivados)
@@ -515,7 +520,7 @@ def avisos_arquivados():
 # --- ROTAS DE API ---
 @main.route('/api/buscar_funcionarios')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def buscar_funcionarios():
     termo = request.args.get('q', '').strip()
     if not termo:
@@ -552,7 +557,7 @@ def buscar_funcionarios():
 
 @main.route('/api/funcionario/<int:funcionario_id>')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def detalhes_funcionario(funcionario_id):
     # (código existente)
     funcionario = Funcionario.query.get_or_404(funcionario_id)
@@ -587,7 +592,7 @@ def detalhes_funcionario(funcionario_id):
 
 @main.route('/api/funcionario/<int:funcionario_id>/remover', methods=['DELETE'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def remover_funcionario_api(funcionario_id):
     funcionario = Funcionario.query.get_or_404(funcionario_id)
     email_para_remover = funcionario.email
@@ -608,7 +613,7 @@ def remover_funcionario_api(funcionario_id):
 
 @main.route('/api/funcionarios/remover-em-lote', methods=['DELETE'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def remover_funcionarios_lote():
     # (código existente)
     ids_para_remover = request.get_json().get('ids')
@@ -627,7 +632,7 @@ def remover_funcionarios_lote():
 
 @main.route('/api/funcionarios/editar-em-lote', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def editar_funcionarios_lote():
     dados = request.get_json()
     ids_funcionarios = dados.get('ids')
@@ -665,7 +670,7 @@ def editar_funcionarios_lote():
 # (código existente para importação/exportação)
 @main.route('/importar_csv', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def importar_csv():
     # (código existente)
     if 'arquivo' not in request.files:
@@ -712,7 +717,7 @@ def importar_csv():
 
 @main.route('/exportar_csv')
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def exportar_csv():
     # (código existente)
     termo_busca = request.args.get('q', '').strip()
@@ -758,7 +763,7 @@ def reset_password(funcionario_id):
 ## ALTERAR STATUS DO FUNCIONARIO (ATIVO/SUSPENSO)
 @main.route('/funcionario/<int:funcionario_id>/toggle-status', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def toggle_status(funcionario_id):
     """Alterna o status do funcionário entre Ativo e Suspenso."""
     funcionario = Funcionario.query.get_or_404(funcionario_id)
@@ -831,7 +836,7 @@ def anonimizar_dados_funcionario(funcionario):
 
 @main.route('/funcionario/<int:funcionario_id>/desligar', methods=['POST'])
 @login_required
-@permission_required(['admin_rh', 'admin_ti', 'depto_pessoal'])
+@permission_required(PERMISSOES_GESTAO)
 def desligar_funcionario(funcionario_id):
     """
     Processa o desligamento de um funcionário, o que inclui:
@@ -886,9 +891,8 @@ def desligar_funcionario(funcionario_id):
 
 @main.route('/logs')
 @login_required
-@permission_required('admin_ti')
+@permission_required(['admin_ti', 'supervisor_ti']) # <-- CORREÇÃO APLICADA AQUI
 def ver_logs():
-    """Exibe a página de logs de atividade do sistema."""
     page = request.args.get('page', 1, type=int)
     logs = LogAtividade.query.order_by(LogAtividade.timestamp.desc()).paginate(
         page=page, per_page=30

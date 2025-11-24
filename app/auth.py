@@ -4,22 +4,22 @@ from datetime import datetime, timezone
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app # type: ignore
 from flask_login import login_user, logout_user, login_required, current_user # type: ignore
 from flask_mail import Message
-from sqlalchemy import func # <-- ADICIONADO: Import necessário para a correção
+from sqlalchemy import func
 from . import mail
-from app.models import TipoDocumento, RequisicaoDocumento, Funcionario, Usuario 
+# IMPORTAÇÕES ATUALIZADAS (Permissao e Setor)
+from app.models import TipoDocumento, RequisicaoDocumento, Funcionario, Usuario, Permissao, Setor
 from . import db
 
 
-from ldap3.core.exceptions import LDAPBindError, LDAPException # LDAPException adicionado aqui
+from ldap3.core.exceptions import LDAPBindError, LDAPException
 from flask import current_app
 from ldap3 import Server, Connection, ALL
 import uuid
 
-
+# --- O MAPA DE GRUPOS FOI REMOVIDO POIS A LÓGICA AGORA É COMPOSTA ---
 
 auth = Blueprint('auth', __name__)
 
-# --- CORREÇÃO 1: Renomeando a função para evitar conflitos ---
 @auth.route('/login', methods=['GET'])
 def login_get():
     return render_template('login.html')
@@ -45,7 +45,7 @@ def login_post():
         conn.search(
             search_base=current_app.config['LDAP_BASE_DN'],
             search_filter=f'(&(objectClass=person)(sAMAccountName={username}))',
-            attributes=['cn', 'mail', 'sAMAccountName']
+            attributes=['cn', 'mail', 'sAMAccountName', 'memberOf', 'department']
         )
 
         if not conn.entries:
@@ -56,7 +56,16 @@ def login_post():
         ad_full_name = ad_user.cn.value
         ad_email = ad_user.mail.value if ad_user.mail else f"{username}@{domain}"
         ad_username = ad_user.sAMAccountName.value
+        ad_grupos_dns = ad_user.memberOf.values if ad_user.memberOf else []
+        ad_departamento_str = ad_user.department.value if ad_user.department else None
+        
         conn.unbind()
+
+        # --- LÓGICA DE GRUPOS (AÇÃO 0.1 ATUALIZADA) ---
+        # Extrai apenas o NOME do grupo do "Distinguished Name" (DN)
+        # Ex: "CN=TI,CN=Users,DC=mdr,DC=local" -> "TI"
+        ad_group_names = {dn.split(',')[0].split('=')[1] for dn in ad_grupos_dns}
+        # -----------------------------------------------
 
         user = Usuario.query.filter(func.lower(Usuario.username) == func.lower(ad_username)).first()
 
@@ -64,14 +73,58 @@ def login_post():
             # Usuário encontrado! Sincroniza e corrige os dados.
             current_app.logger.info(f"Usuário '{ad_username}' encontrado no DB local (ID: {user.id}).")
             
-            # --- ALTERAÇÃO 1: CORREÇÃO AUTOMÁTICA DE E-MAIL ---
-            # Garante que o email do usuário seja sempre igual ao do funcionário (que é a fonte da verdade).
             if user.funcionario and user.email != user.funcionario.email:
                 user.email = user.funcionario.email
 
-            if user.funcionario and user.funcionario.nome.lower() != ad_full_name.lower():
-                # user.funcionario.nome = ad_full_name # Mantido como no seu original
-                pass
+            # --- INÍCIO DA NOVA LÓGICA DE PERMISSÃO COMPOSTA ---
+            
+            # 1. Busca todas as permissões do banco UMA SÓ VEZ.
+            permissoes_db = {p.nome: p for p in Permissao.query.all()}
+            
+            # 2. Lista onde vamos adicionar as permissões que o usuário DEVE TER.
+            permissoes_para_adicionar = []
+
+            # 3. Lógica de Mapeamento Base
+            if 'TI' in ad_group_names and 'tecnico_ti' in permissoes_db:
+                permissoes_para_adicionar.append(permissoes_db['tecnico_ti'])
+            
+            if 'Supervisores' in ad_group_names and 'supervisor' in permissoes_db:
+                permissoes_para_adicionar.append(permissoes_db['supervisor'])
+            
+            # 4. Lógica "RH engloba DP" (Sua regra)
+            # Se for do RH OU do DP, ganha a permissão de DP.
+            if ('Recursos Humanos' in ad_group_names or 'Departamento Pessoal' in ad_group_names) and 'dp_pessoal' in permissoes_db:
+                permissoes_para_adicionar.append(permissoes_db['dp_pessoal'])
+
+            # 5. Lógica Composta "Admin RH" (Sua regra)
+            # admin_rh = Recursos Humanos E Supervisores
+            if 'Recursos Humanos' in ad_group_names and 'Supervisores' in ad_group_names and 'admin_rh' in permissoes_db:
+                permissoes_para_adicionar.append(permissoes_db['admin_rh'])
+
+            # 6. Lógica Composta "Admin TI" (Sua regra)
+            # supervisor_ti = TI E Supervisores
+            if 'TI' in ad_group_names and 'Supervisores' in ad_group_names and 'supervisor_ti' in permissoes_db:
+                permissoes_para_adicionar.append(permissoes_db['supervisor_ti'])
+
+            # 7. Limpa permissões antigas e aplica as novas (sem duplicatas)
+            user.permissoes.clear()
+            user.permissoes.extend(list(set(permissoes_para_adicionar)))
+            
+            # --- FIM DA NOVA LÓGICA DE PERMISSÃO ---
+
+            # --- INÍCIO DA SINCRONIZAÇÃO DE SETOR (AÇÃO 0.2 - Mantida) ---
+            if user.funcionario and ad_departamento_str:
+                setor_db = Setor.query.filter(func.lower(Setor.nome) == func.lower(ad_departamento_str)).first()
+                if setor_db:
+                    user.funcionario.setor_id = setor_db.id
+                else:
+                    current_app.logger.warning(f"Sincronização AD: Setor '{ad_departamento_str}' não encontrado. Criando novo setor no banco...")
+                    novo_setor = Setor(nome=ad_departamento_str)
+                    db.session.add(novo_setor)
+                    db.session.flush()
+                    user.funcionario.setor_id = novo_setor.id
+            # --- FIM DA SINCRONIZAÇÃO DE SETOR ---
+            
         else:
             # Usuário não encontrado, tenta vincular ou criar.
             current_app.logger.info(f"Usuário '{ad_username}' não encontrado. Tentando vincular ou provisionar.")
@@ -82,10 +135,7 @@ def login_post():
             ).first()
 
             if funcionario_sem_usuario:
-                # Encontrou funcionário, vamos criar e vincular o usuário.
                 current_app.logger.info(f"Vinculando usuário AD '{ad_username}' ao funcionário existente '{ad_full_name}' (ID: {funcionario_sem_usuario.id})")
-                
-                # --- ALTERAÇÃO 2: USA O E-MAIL DO FUNCIONÁRIO SE ELE EXISTIR ---
                 email_para_usuario = funcionario_sem_usuario.email if funcionario_sem_usuario.email else ad_email
                 
                 user = Usuario(
@@ -96,7 +146,6 @@ def login_post():
                 user.set_password(uuid.uuid4().hex)
                 db.session.add(user)
             else:
-                # Não encontrou funcionário, cria um novo.
                 current_app.logger.info(f"Provisionando novo funcionário e usuário para '{ad_username}' a partir do AD.")
                 
                 cpf_ficticio = f"AD_{ad_username}"
@@ -160,7 +209,7 @@ def login_post():
 
 
 @auth.route('/logout')
-@login_required # Garante que apenas usuários logados podem deslogar
+@login_required 
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
@@ -171,18 +220,16 @@ def logout():
 def change_password_post():
     nova_senha = request.form.get('nova_senha')
     confirmacao = request.form.get('confirmacao_senha')
-    consentimento = request.form.get('consentimento') # Pega o valor do checkbox
+    consentimento = request.form.get('consentimento') 
 
     if not nova_senha or nova_senha != confirmacao:
         flash('As senhas não conferem ou estão em branco.', 'danger')
         return redirect(url_for('auth.change_password'))
 
-    # Validação do consentimento
     if not consentimento:
         flash('Você precisa concordar com os termos de uso para continuar.', 'danger')
         return redirect(url_for('auth.change_password'))
 
-    # Salva a nova senha e a data do consentimento
     current_user.set_password(nova_senha)
     current_user.senha_provisoria = False
     current_user.data_consentimento = datetime.utcnow()

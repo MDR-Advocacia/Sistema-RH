@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Categorias de Chamado{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3><i class="bi bi-tags-fill me-2"></i> Categorias de Chamado</h3>
+                <a href="{{ url_for('chamados_web.gestao_chamados_react') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar para Gestão
+                </a>
+            </div>
+
+            <!-- Card de Cadastro -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Nova Categoria</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="d-flex gap-2">
+                        <input type="text" class="form-control" name="nome" placeholder="Ex: Instalação de Software" required>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-lg"></i> Adicionar
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lista de Categorias -->
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Nome da Categoria</th>
+                                <th class="text-end pe-4" style="width: 100px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in categorias %}
+                            <tr>
+                                <td class="ps-4 align-middle">{{ cat.nome }}</td>
+                                <td class="text-end pe-4">
+                                    <form action="{{ url_for('chamados_web.excluir_categoria', id=cat.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir esta categoria?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center py-4 text-muted">
+                                    Nenhuma categoria cadastrada.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

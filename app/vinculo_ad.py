@@ -12,7 +12,7 @@ vinculo_bp = Blueprint('vinculo_ad', __name__)
 
 @vinculo_bp.route('/revisao', methods=['GET'])
 @login_required
-@permission_required(['admin_ti'])
+@permission_required(['admin_ti', 'supervisor_ti']) # <-- CORREÇÃO APLICADA AQUI
 def revisao_vinculos():
     sugestoes = VinculoADSugestao.query.order_by(VinculoADSugestao.pontuacao.desc()).all()
     

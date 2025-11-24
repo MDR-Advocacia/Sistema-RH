@@ -1,4 +1,4 @@
-# app/mos.py
+# app/models.py
 import jwt
 
 from flask import current_app
@@ -36,7 +36,7 @@ class Usuario(db.Model, UserMixin):
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True)
     senha_provisoria = db.Column(db.Boolean, default=True, nullable=False)
     data_consentimento = db.Column(db.DateTime, nullable=True)
-    theme = db.Column(db.String(50), default='light', nullable=False) # <-- NOVA LINHA
+    theme = db.Column(db.String(50), default='light', nullable=False)
 
     # --- CAMPOS ADICIONADOS PARA O PIPELINE DE DOCUMENTOS ---
     ultimo_login_em = db.Column(db.DateTime, nullable=True)
@@ -49,7 +49,8 @@ class Usuario(db.Model, UserMixin):
                                  backref=db.backref('usuarios', lazy=True))
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        # CORREÇÃO DE COMPATIBILIDADE (Erro do 'scrypt' no macOS)
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -162,32 +163,18 @@ class RequisicaoDocumento(db.Model):
     __tablename__ = 'requisicao_documento'
     id = db.Column(db.Integer, primary_key=True)
     
-    # --- AJUSTE 1: REMOVIDA A COLUNA REDUNDANTE ---
-    # Removi a coluna 'tipo_documento = db.Column(db.String(100))'.
-    # O nome do documento virá diretamente do relacionamento com TipoDocumento.
-    # Ex: minha_requisicao.tipo.nome
-    # Isso evita duplicidade e garante que, se o nome do tipo de documento for alterado,
-    # todas as requisições relacionadas refletirão a mudança automaticamente.
-    
     status = db.Column(db.String(50), default='Pendente', nullable=False, index=True)
     data_requisicao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     data_conclusao = db.Column(db.DateTime, nullable=True)
     data_ultima_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     observacoes_rh = db.Column(db.Text, nullable=True) 
 
-    # Chaves estrangeiras (Sua definição aqui está perfeita)
     tipo_documento_id = db.Column(db.Integer, db.ForeignKey('tipo_documento.id'), nullable=False)
     destinatario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False, index=True)
     documento_enviado_id = db.Column(db.Integer, db.ForeignKey('documento.id'), nullable=True)
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
 
-    # Relacionamentos
-    # --- AJUSTE 2: SIMPLIFICADO O BACKREF ---
-    # O 'backref' no relacionamento 'tipo' já cria o atributo 'requisicoes' na classe TipoDocumento.
-    # Definir o relationship em ambos os models pode causar conflitos.
-    # Mantemos a definição principal aqui e deixamos o backref fazer a mágica.
     tipo = db.relationship('TipoDocumento', backref='requisicoes')
-    
     destinatario = db.relationship('Funcionario', backref=db.backref('requisicoes_documentos', lazy='dynamic'))
     documento = db.relationship('Documento', backref='requisicao', uselist=False, foreign_keys=[documento_enviado_id])
     solicitante = db.relationship('Usuario')
@@ -200,10 +187,6 @@ class TipoDocumento(db.Model):
     descricao = db.Column(db.String(255), nullable=True)
     obrigatorio_na_admissao = db.Column(db.Boolean, default=False, nullable=False)
     
-    # --- AJUSTE 2 (Continuação) ---
-    # A linha abaixo foi removida porque o 'backref' em RequisicaoDocumento.tipo já a cria para nós.
-    # requisicoes = db.relationship('RequisicaoDocumento', backref='tipo_documento', lazy=True)
-
     def __repr__(self):
         return f'<TipoDocumento {self.nome}>'
 
@@ -232,7 +215,6 @@ class Ponto(db.Model):
 
 
 ## Modelo de Denuncias
-
 class Denuncia(db.Model):
     __tablename__ = 'denuncia'
     id = db.Column(db.Integer, primary_key=True)
@@ -241,21 +223,14 @@ class Denuncia(db.Model):
     data_envio = db.Column(db.DateTime, default=datetime.utcnow)
     categoria = db.Column(db.String(100), nullable=False, default='Outros')
     status = db.Column(db.String(50), default='Nova', nullable=False)
-
-    # Adicionamos um campo único e indexado para o protocolo.
-    # nullable=True para não quebrar denúncias antigas que não terão protocolo.
     protocolo = db.Column(db.String(32), unique=True, nullable=True, index=True)
-
-    # Feedback dado pelo RH a denuncia
     feedback_rh = db.Column(db.Text, nullable=True) 
 
-    # Adicione este relacionamento para conectar a denúncia aos seus anexos
     anexos = db.relationship('DenunciaAnexo', backref='denuncia', lazy='dynamic', cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<Denuncia "{self.titulo}">'
 
-# Crie esta nova classe para os anexos
 class DenunciaAnexo(db.Model):
     __tablename__ = 'denuncia_anexo'
     id = db.Column(db.Integer, primary_key=True)
@@ -270,7 +245,6 @@ class LogAtividade(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     acao = db.Column(db.String(512), nullable=False)
     
-    # Relacionamento para saber quem executou a ação
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     usuario = db.relationship('Usuario', backref='logs_atividade')
 
@@ -318,11 +292,7 @@ class Artigo(db.Model):
     conteudo = db.Column(db.Text, nullable=False)
     data_publicacao = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     
-    # --- CORREÇÃO APLICADA AQUI ---
-    # Apontando para 'usuario.id' (singular), conforme definido no seu modelo Usuario.
     autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
-    # --- FIM DA CORREÇÃO ---
-
     autor = db.relationship('Usuario', backref='artigos_publicados')
     
     link_externo = db.Column(db.String(500), nullable=True)
@@ -331,3 +301,131 @@ class Artigo(db.Model):
 
     def __repr__(self):
         return f'<Artigo {self.titulo}>'
+
+# --- FASE 1: MÓDULO HELPDESK E ATIVOS ---
+
+class Localizacao(db.Model):
+    """ Modelo para Localizações Físicas (Salas, Mesas) """
+    __tablename__ = 'localizacao'
+    id = db.Column(db.Integer, primary_key=True)
+    nome_sala = db.Column(db.String(100), nullable=False, unique=True)
+    andar = db.Column(db.String(50), nullable=True)
+    planta_path = db.Column(db.String(255), nullable=True) # Caminho para imagem da planta/mapa
+
+    def __repr__(self):
+        return f'<Localizacao {self.nome_sala}>'
+
+class Ativo(db.Model):
+    """ Modelo para o Inventário Central (CMDB) """
+    __tablename__ = 'ativo'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    hostname = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    tag_patrimonio = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    numero_serie = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    
+    tipo = db.Column(db.String(50), default='Desktop', nullable=False)
+    status = db.Column(db.String(50), default='Em Uso', nullable=False)
+    
+    localizacao_id = db.Column(db.Integer, db.ForeignKey('localizacao.id'), nullable=True)
+    
+    # --- NOVO CAMPO: SETOR DO ATIVO ---
+    setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'), nullable=True)
+    # ----------------------------------
+
+    localizacao = db.relationship('Localizacao', backref='ativos')
+    setor = db.relationship('Setor', backref='ativos') # Relacionamento
+    
+    descricao_ad = db.Column(db.String(255), nullable=True)
+    sistema_operacional = db.Column(db.String(100), nullable=True)
+    ultimo_logon_ad = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f'<Ativo {self.nome} ({self.hostname})>'
+
+class Emprestimo(db.Model):
+    """ Modelo para Cautela (Check-out/Check-in de Notebooks) """
+    __tablename__ = 'emprestimo'
+    id = db.Column(db.Integer, primary_key=True)
+    
+    ativo_id = db.Column(db.Integer, db.ForeignKey('ativo.id'), nullable=False)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
+    tecnico_responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False) # Quem entregou
+    
+    data_emprestimo = db.Column(db.DateTime, default=datetime.utcnow)
+    data_prevista_devolucao = db.Column(db.Date, nullable=True)
+    data_devolucao_real = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(50), default='Ativo', nullable=False) # "Ativo", "Devolvido"
+
+    ativo = db.relationship('Ativo', backref='emprestimos')
+    funcionario = db.relationship('Funcionario', backref='emprestimos')
+    tecnico_responsavel = db.relationship('Usuario')
+
+    def __repr__(self):
+        return f'<Emprestimo Ativo {self.ativo_id} para Func {self.funcionario_id}>'
+
+class CategoriaTI(db.Model):
+    """ Categorias para os chamados de Helpdesk (Ex: Hardware, Rede, Sistema) """
+    __tablename__ = 'categoria_ti'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), unique=True, nullable=False)
+    
+    def __repr__(self):
+        return f'<CategoriaTI {self.nome}>'
+
+class ChamadoTI(db.Model):
+    """ Modelo para os Chamados de Helpdesk (Baseado em Denuncia) """
+    __tablename__ = 'chamado_ti'
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # --- NOVO CAMPO: PROTOCOLO ---
+    protocolo = db.Column(db.String(20), unique=True, nullable=True, index=True)
+    
+    # --- NOVO CAMPO: ARQUIVADO (Fase 1.6) ---
+    arquivado = db.Column(db.Boolean, default=False, nullable=False)
+    # ----------------------------------------
+
+    titulo = db.Column(db.String(200), nullable=False)
+    conteudo = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), default='Aberto', nullable=False) # Aberto, Em Andamento, Pendente, Fechado
+    prioridade = db.Column(db.String(50), default='Media', nullable=False) # Baixa, Media, Alta, Urgente
+    data_abertura = db.Column(db.DateTime, default=datetime.utcnow)
+    data_fechamento = db.Column(db.DateTime, nullable=True)
+    data_limite_sla = db.Column(db.DateTime, nullable=True)
+    
+    # Relacionamentos
+    categoria_ti_id = db.Column(db.Integer, db.ForeignKey('categoria_ti.id'), nullable=False)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    tecnico_atribuido_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    ativo_associado_id = db.Column(db.Integer, db.ForeignKey('ativo.id'), nullable=True) # Link com QR Code
+
+    categoria = db.relationship('CategoriaTI', backref='chamados')
+    solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id], backref='chamados_abertos')
+    tecnico_atribuido = db.relationship('Usuario', foreign_keys=[tecnico_atribuido_id], backref='chamados_atribuidos')
+    ativo_associado = db.relationship('Ativo', backref='chamados')
+    
+    anexos = db.relationship('ChamadoAnexo', backref='chamado', lazy='dynamic', cascade="all, delete-orphan")
+    comentarios = db.relationship('ChamadoComentario', backref='chamado', lazy='dynamic', cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<ChamadoTI {self.id}: {self.titulo}>'
+
+class ChamadoAnexo(db.Model):
+    """ Anexos para os Chamados (Baseado em DenunciaAnexo) """
+    __tablename__ = 'chamado_anexo'
+    id = db.Column(db.Integer, primary_key=True)
+    nome_arquivo_original = db.Column(db.String(255), nullable=False)
+    path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
+    chamado_id = db.Column(db.Integer, db.ForeignKey('chamado_ti.id'), nullable=False)
+
+class ChamadoComentario(db.Model):
+    """ Histórico de comentários (idas e vindas) dos chamados """
+    __tablename__ = 'chamado_comentario'
+    id = db.Column(db.Integer, primary_key=True)
+    comentario = db.Column(db.Text, nullable=False)
+    data_comentario = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    chamado_id = db.Column(db.Integer, db.ForeignKey('chamado_ti.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False) # Quem comentou (solicitante ou técnico)
+
+    usuario = db.relationship('Usuario')

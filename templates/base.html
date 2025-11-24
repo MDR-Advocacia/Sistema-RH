@@ -45,12 +45,20 @@
                         <i class="bi bi-shield-exclamation"></i> Canal de Denúncias
                     </a>
                 </li>
+
+                <!-- Link Helpdesk (Todos) -->
+                <li>
+                    <a href="{{ url_for('chamados_web.meus_chamados') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.') and 'gestao' not in request.endpoint and 'categorias' not in request.endpoint and 'relatorios' not in request.endpoint %}active{% endif %}">
+                        <i class="bi bi-headset"></i> Meus Chamados
+                    </a>
+                </li>
                 
-                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor']) %}
+                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor', 'supervisor_ti', 'tecnico_ti']) %}
                 <hr class="text-secondary">
                 {% endif %}
 
-                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal']) %}
+                <!-- Link Funcionários (Permissões Atualizadas) -->
+                {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor_ti', 'tecnico_ti']) %}
                 <li class="nav-item">
                     <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if request.endpoint.startswith('main.') and 'funcionario' in request.endpoint %}active{% endif %}">
                         <i class="bi bi-people-fill"></i> Funcionários
@@ -147,10 +155,11 @@
                 {% endif %}
 
 
-                {% if current_user.tem_permissao('admin_ti') %}
+                
+                {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti']) %}
                     
-                    {# Lógica para expandir "Admin TI" se estiver ativo #}
-                    {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs'] %}
+                    <!-- Lógica Admin TI Atualizada (Sem link solto de Categorias) -->
+                    {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs', 'chamados_web.gestao_chamados_react', 'chamados_web.gerenciar_categorias', 'chamados_web.relatorios'] %}
                     {% set is_ti_active = false %}
                     {% for prefix in ti_prefixes %}
                         {% if request.endpoint.startswith(prefix) %}
@@ -173,6 +182,13 @@
                                 <li>
                                     <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
                                         <i class="bi bi-journal-text"></i> Logs do Sistema
+                                    </a>
+                                </li>
+                                
+                                <!-- Link Gestão de Chamados (Hub Central) -->
+                                <li>
+                                    <a href="{{ url_for('chamados_web.gestao_chamados_react') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.gestao') or request.endpoint.startswith('chamados_web.gerenciar_cat') or request.endpoint.startswith('chamados_web.relat') %}active{% endif %}">
+                                        <i class="bi bi-kanban-fill"></i> Gestão de Chamados
                                     </a>
                                 </li>
                             </ul>

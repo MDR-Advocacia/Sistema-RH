@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Meus Chamados{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3><i class="bi bi-ticket-detailed-fill me-2"></i> Meus Chamados</h3>
+        <a href="{{ url_for('chamados_web.abrir_chamado') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle-fill me-2"></i> Abrir Novo Chamado
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <ul class="nav nav-tabs" id="chamadosTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="abertos-tab" data-bs-toggle="tab" data-bs-target="#abertos-pane" type="button" role="tab" aria-controls="abertos-pane" aria-selected="true">Em Aberto</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="fechados-tab" data-bs-toggle="tab" data-bs-target="#fechados-pane" type="button" role="tab" aria-controls="fechados-pane" aria-selected="false">Fechados</button>
+                </li>
+            </ul>
+            <div class="tab-content" id="chamadosTabContent">
+                
+                <!-- Painel de Chamados Abertos -->
+                <div class="tab-pane fade show active" id="abertos-pane" role="tabpanel" aria-labelledby="abertos-tab" tabindex="0">
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th> <!-- Mudado de ID para Protocolo -->
+                                    <th>Título</th>
+                                    <th>Status</th>
+                                    <th>Prioridade</th>
+                                    <th>Data Abertura</th>
+                                    <th>Técnico</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set abertos = chamados|selectattr("status", "ne", "Fechado")|list %}
+                                {% for chamado in abertos %}
+                                <tr>
+                                    <!-- EXIBE O PROTOCOLO (Ou ID se protocolo for nulo por ser antigo) -->
+                                    <td><strong>#{{ chamado.protocolo or chamado.id }}</strong></td>
+                                    <td>{{ chamado.titulo }}</td>
+                                    <td><span class="badge bg-warning text-dark">{{ chamado.status }}</span></td>
+                                    <td>{{ chamado.prioridade }}</td>
+                                    <td>{{ chamado.data_abertura|format_datetime_local }}</td>
+                                    <td>{{ chamado.tecnico_atribuido.funcionario.nome if chamado.tecnico_atribuido else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('chamados_web.detalhes_chamado', chamado_id=chamado.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-chat-dots-fill"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Você não possui chamados em aberto.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Painel de Chamados Fechados -->
+                <div class="tab-pane fade" id="fechados-pane" role="tabpanel" aria-labelledby="fechados-tab" tabindex="0">
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th>
+                                    <th>Título</th>
+                                    <th>Status</th>
+                                    <th>Data Abertura</th>
+                                    <th>Data Fechamento</th>
+                                    <th>Técnico</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set fechados = chamados|selectattr("status", "eq", "Fechado")|list %}
+                                {% for chamado in fechados %}
+                                <tr>
+                                    <td><strong>#{{ chamado.protocolo or chamado.id }}</strong></td>
+                                    <td>{{ chamado.titulo }}</td>
+                                    <td><span class="badge bg-success">{{ chamado.status }}</span></td>
+                                    <td>{{ chamado.data_abertura|format_datetime_local }}</td>
+                                    <td>{{ chamado.data_fechamento|format_datetime_local if chamado.data_fechamento else 'N/A' }}</td>
+                                    <td>{{ chamado.tecnico_atribuido.funcionario.nome if chamado.tecnico_atribuido else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('chamados_web.detalhes_chamado', chamado_id=chamado.id) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye-fill"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Você não possui chamados fechados.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
