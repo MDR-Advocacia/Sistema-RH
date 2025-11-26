@@ -1,8 +1,8 @@
-"""Fase 1 - Modulo Helpdesk e Ativos
+"""Merge Final
 
-Revision ID: 66ec6e4c0733
-Revises: fe638cd9c42a
-Create Date: 2025-11-17 16:53:33.045842
+Revision ID: 884b0099ac0f
+Revises: 
+Create Date: 2025-11-25 18:30:35.144526
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '66ec6e4c0733'
-down_revision = 'fe638cd9c42a'
+revision = '884b0099ac0f'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -41,10 +41,12 @@ def upgrade():
     sa.Column('tipo', sa.String(length=50), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('localizacao_id', sa.Integer(), nullable=True),
+    sa.Column('setor_id', sa.Integer(), nullable=True),
     sa.Column('descricao_ad', sa.String(length=255), nullable=True),
     sa.Column('sistema_operacional', sa.String(length=100), nullable=True),
     sa.Column('ultimo_logon_ad', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['localizacao_id'], ['localizacao.id'], ),
+    sa.ForeignKeyConstraint(['setor_id'], ['setor.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('ativo', schema=None) as batch_op:
@@ -54,6 +56,8 @@ def upgrade():
 
     op.create_table('chamado_ti',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('protocolo', sa.String(length=20), nullable=True),
+    sa.Column('arquivado', sa.Boolean(), nullable=False),
     sa.Column('titulo', sa.String(length=200), nullable=False),
     sa.Column('conteudo', sa.Text(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
@@ -71,6 +75,9 @@ def upgrade():
     sa.ForeignKeyConstraint(['tecnico_atribuido_id'], ['usuario.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    with op.batch_alter_table('chamado_ti', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_chamado_ti_protocolo'), ['protocolo'], unique=True)
+
     op.create_table('emprestimo',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('ativo_id', sa.Integer(), nullable=False),
@@ -112,6 +119,9 @@ def downgrade():
     op.drop_table('chamado_comentario')
     op.drop_table('chamado_anexo')
     op.drop_table('emprestimo')
+    with op.batch_alter_table('chamado_ti', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_chamado_ti_protocolo'))
+
     op.drop_table('chamado_ti')
     with op.batch_alter_table('ativo', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_ativo_tag_patrimonio'))

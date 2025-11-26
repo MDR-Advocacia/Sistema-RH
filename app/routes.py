@@ -95,6 +95,88 @@ def index():
     return render_template('index.html', dados=dados_dashboard)
 
 
+@main.route('/aniversariantes/painel')
+@login_required
+@permission_required(PERMISSOES_GESTAO)
+def painel_aniversariantes():
+    mes_filtro = request.args.get('mes', type=int)
+    
+    query = Funcionario.query.filter_by(status='Ativo')
+    
+    if mes_filtro:
+        query = query.filter(extract('month', Funcionario.data_nascimento) == mes_filtro)
+    
+    # Ordena cronologicamente: Primeiro pelo Mês, depois pelo Dia
+    funcionarios = query.order_by(
+        extract('month', Funcionario.data_nascimento),
+        extract('day', Funcionario.data_nascimento)
+    ).all()
+    
+    # Dicionário para preencher o Select no HTML (1: Janeiro, etc.)
+    # Se quiser em PT-BR manual, pode usar um dict simples, senão o locale resolve.
+    # Vou usar um dict simples para garantir PT-BR sem depender de locale do servidor.
+    meses = {
+        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
+        7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+    }
+    
+    return render_template(
+        'aniversariantes_lista.html', 
+        funcionarios=funcionarios, 
+        meses=meses,
+        mes_selecionado=mes_filtro
+    )
+
+@main.route('/aniversariantes/exportar')
+@login_required
+@permission_required(PERMISSOES_GESTAO)
+def exportar_aniversariantes():
+    mes_filtro = request.args.get('mes', type=int)
+    
+    query = Funcionario.query.filter_by(status='Ativo')
+    
+    if mes_filtro:
+        query = query.filter(extract('month', Funcionario.data_nascimento) == mes_filtro)
+        nome_arquivo = f"Aniversariantes_Mes_{mes_filtro}.csv"
+    else:
+        nome_arquivo = "Aniversariantes_Geral_Ano.csv"
+
+    # Mesma ordenação da tela
+    funcionarios = query.order_by(
+        extract('month', Funcionario.data_nascimento),
+        extract('day', Funcionario.data_nascimento)
+    ).all()
+
+    output = StringIO()
+    writer = csv.writer(output, delimiter=';')
+    
+    writer.writerow(['Data Aniversário', 'Nome Completo', 'Setor', 'Cargo', 'E-mail'])
+
+    for f in funcionarios:
+        # CORREÇÃO: Verifica se a data existe antes de formatar
+        if f.data_nascimento:
+            dia = f.data_nascimento.day
+            mes = f.data_nascimento.month
+            data_formatada = f"{dia:02d}/{mes:02d}"
+        else:
+            data_formatada = "Data não informada"
+
+        writer.writerow([
+            data_formatada,
+            f.nome,
+            f.setor.nome if f.setor else 'N/A',
+            f.cargo.nome if f.cargo else 'N/A',
+            f.email
+        ])
+
+    output.seek(0)
+    response = make_response(output.getvalue().encode('utf-8-sig'))
+    response.headers["Content-Disposition"] = f"attachment; filename={nome_arquivo}"
+    response.headers["Content-type"] = "text/csv"
+    
+    registrar_log(f"Exportou relatório de aniversariantes. Filtro Mês: {mes_filtro if mes_filtro else 'Todos'}.")
+    
+    return response
 # --- ROTAS DE GESTÃO DE FUNCIONÁRIOS ---
 
 # --- FUNÇÕES CORRIGIDAS ---
