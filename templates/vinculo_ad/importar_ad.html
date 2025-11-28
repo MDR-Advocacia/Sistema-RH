@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-upload text-success"></i> Alimentar AD via CSV</h2>
+        <a href="{{ url_for('vinculo_ad.revisao') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Upload de Arquivo</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Use esta ferramenta para atualizar dados faltantes (Cargo, Telefone, Setor, CPF) no AD usando uma planilha.
+                    </p>
+                    <div class="alert alert-info">
+                        <strong>Campos Esperados no CSV:</strong><br>
+                        Nome Completo, E-mail, Telefone, Cargo, Setor, CPF
+                    </div>
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Selecione o arquivo (.csv)</label>
+                            <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sync"></i> Processar e Atualizar AD
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-terminal"></i> Logs de Execução</h5>
+                </div>
+                <div class="card-body bg-light" style="max-height: 400px; overflow-y: auto;">
+                    {% if logs %}
+                        <ul class="list-unstyled font-monospace small">
+                            {% for log in logs %}
+                                <li class="mb-1 border-bottom pb-1">
+                                    {% if 'SUCESSO' in log %}
+                                        <span class="text-success fw-bold">{{ log }}</span>
+                                    {% elif 'ERRO' in log %}
+                                        <span class="text-danger fw-bold">{{ log }}</span>
+                                    {% elif 'ALERTA' in log %}
+                                        <span class="text-warning fw-bold text-dark">{{ log }}</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ log }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted text-center mt-5">Nenhum log disponível. Faça o upload para começar.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

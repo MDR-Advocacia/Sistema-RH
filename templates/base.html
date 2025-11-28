@@ -174,7 +174,7 @@
                         <div class="collapse {% if is_ti_active %}show{% endif %}" id="submenu-ti">
                             <ul class="nav flex-column ms-3">
                                 <li class="nav-item">
-                                    <a class="nav-link {% if request.endpoint.startswith('vinculo_ad.') %}active{% endif %}" href="{{ url_for('vinculo_ad.revisao_vinculos') }}">
+                                    <a class="nav-link {% if request.endpoint.startswith('vinculo_ad.') %}active{% endif %}" href="{{ url_for('vinculo_ad.revisao') }}">
                                         <i class="bi bi-link-45deg"></i>
                                         Vínculo com AD
                                     </a>

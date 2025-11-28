@@ -38,8 +38,9 @@ class Usuario(db.Model, UserMixin):
     data_consentimento = db.Column(db.DateTime, nullable=True)
     theme = db.Column(db.String(50), default='light', nullable=False)
 
-    # --- CAMPOS ADICIONADOS PARA O PIPELINE DE DOCUMENTOS ---
+    # --- CAMPOS ADICIONADOS PARA O PIPELINE DE DOCUMENTOS E SYNC AD ---
     ultimo_login_em = db.Column(db.DateTime, nullable=True)
+    ultimo_logon_ad = db.Column(db.DateTime, nullable=True) # NOVO CAMPO PARA LAST LOGON
     primeiro_login_completo = db.Column(db.Boolean, default=False, nullable=False)
     # --- FIM DOS CAMPOS ADICIONADOS ---
 

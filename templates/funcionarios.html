@@ -61,6 +61,7 @@
                                 <th>Setor</th>
                                 <th>Email</th>
                                 <th>Telefone</th>
+                                <th class="text-end">Último Login</th> <!-- TÍTULO ALTERADO -->
                             </tr>
                         </thead>
                         <tbody>
@@ -72,10 +73,38 @@
                                 <td>{{ f.setor.nome or 'N/A' }}</td>
                                 <td>{{ f.email }}</td>
                                 <td>{{ f.telefone or 'N/A' }}</td>
+                                <!-- DADOS DE ACESSO REFINADOS -->
+                                <td class="text-end text-dark" style="font-size: 0.85rem;">
+                                    {% if f.usuario %}
+                                        <div title="Último acesso à Intranet">
+                                            <small class="text-muted me-1">Intranet:</small>
+                                            {% if f.usuario.ultimo_login_em %}
+                                                <!-- Fonte preta, menor, sem negrito -->
+                                                <span>{{ f.usuario.ultimo_login_em.strftime('%d/%m %H:%M') }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </div>
+                                        <div title="Último logon no Computador/Rede (AD)">
+                                            <small class="text-muted me-1">Rede (AD):</small>
+                                            {% if f.usuario.ultimo_logon_ad %}
+                                                <!-- Lógica para destacar contas inativas (+30 dias) -->
+                                                {% set dias_atras = (datetime.now() - f.usuario.ultimo_logon_ad).days %}
+                                                <span class="{{ 'text-danger' if dias_atras > 30 else '' }}">
+                                                    {{ f.usuario.ultimo_logon_ad.strftime('%d/%m %H:%M') }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <small class="text-muted">Sem usuário</small>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center p-4">Nenhum funcionário encontrado.</td>
+                                <td colspan="7" class="text-center p-4">Nenhum funcionário encontrado.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

@@ -10,13 +10,15 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
 from .config import config
-
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 # Inicialização das extensões
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 mail = Mail()
+scheduler = BackgroundScheduler()
 login_manager.login_view = 'auth.login_get'
 CORS_INSTANCE = CORS()
 
@@ -65,6 +67,12 @@ def create_app(config_name='default'):
     def load_user(user_id):
         return db.session.get(Usuario, int(user_id))
 
+    # --- Context Processor para injetar datetime e helpers ---
+    @app.context_processor
+    def inject_helpers():
+        from datetime import datetime
+        return dict(datetime=datetime)
+
     # --- Registro dos Blueprints ---
     from .routes import main as main_blueprint
     app.register_blueprint(main_blueprint)
@@ -98,8 +106,44 @@ def create_app(config_name='default'):
     app.register_blueprint(chamados_web_bp)
     from .chamados_api import chamados_api_bp
     app.register_blueprint(chamados_api_bp)
+    
+    # Tente importar o blueprint de ativos se ele existir, senão ignore
+    try:
+        from .ativos import ativos_bp
+        app.register_blueprint(ativos_bp)
+    except ImportError:
+        pass
     # --- FIM DAS ADIÇÕES ---
     
+    # --- SCHEDULER AUTOMÁTICO PARA O AD ---
+    # Inicia o agendador apenas se não estiver em modo de debug/reloader
+    # para evitar que o job rode duplicado.
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        try:
+            from .ad_mirror import sync_ad_to_db_logic
+            
+            def job_sync_ad():
+                with app.app_context():
+                    print(">>> [AutoSync] Iniciando Sincronização Agendada do AD...")
+                    try:
+                        sync_ad_to_db_logic()
+                        print(">>> [AutoSync] Sincronização Finalizada com Sucesso.")
+                    except Exception as e:
+                        print(f"!!! [AutoSync] Erro Crítico: {e}")
+
+            # Agenda para rodar a cada 4 horas
+            scheduler.add_job(func=job_sync_ad, trigger="interval", hours=4, id="sync_ad_job", replace_existing=True)
+            
+            if not scheduler.running:
+                scheduler.start()
+                print(">>> APScheduler Iniciado: Sync AD agendado a cada 4h.")
+                
+            atexit.register(lambda: scheduler.shutdown())
+            
+        except ImportError:
+            print("Aviso: Não foi possível carregar o módulo de sincronização do AD.")
+        except Exception as e:
+            print(f"Erro ao configurar o scheduler: {e}")
 
     # --- Verificações Globais ---
     @app.before_request
@@ -107,9 +151,27 @@ def create_app(config_name='default'):
         if not current_user.is_authenticated or not request.endpoint or 'static' in request.endpoint or 'auth.' in request.endpoint:
             return
 
-        if not current_user.data_consentimento:
-            if request.endpoint not in ['main.consentimento', 'main.politica_privacidade']:
-                return redirect(url_for('main.consentimento'))
+        if not current_user.funcionario:
+            return
+
+        if current_user.funcionario.status == 'Suspenso':
+            from flask_login import logout_user
+            logout_user()
+            return redirect(url_for('auth.login_get'))
+            
+        # Verifica consentimento (se a lógica de consentimento estiver ativa no seu app)
+        if hasattr(current_user, 'data_consentimento') and not current_user.data_consentimento:
+             if request.endpoint not in ['main.consentimento', 'main.politica_privacidade', 'auth.logout']:
+                 return redirect(url_for('main.consentimento'))
+
+    @app.context_processor
+    def inject_user_permissions():
+        if current_user.is_authenticated:
+            return dict(
+                tem_permissao=current_user.tem_permissao,
+                is_admin_ti=current_user.tem_permissao('admin_ti')
+            )
+        return dict(tem_permissao=lambda x: False, is_admin_ti=False)
 
     from manage import register_commands
     register_commands(app)

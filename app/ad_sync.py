@@ -1,12 +1,15 @@
 import os
 import uuid
 from flask import current_app
-from ldap3 import Server, Connection, ALL, Tls, MODIFY_REPLACE
+from ldap3 import Server, Connection, ALL, Tls, MODIFY_REPLACE, NTLM
 from ldap3.core.exceptions import LDAPException
 import ssl
 from unidecode import unidecode
+from datetime import datetime
+# Adicione dateutil para facilitar o parsing de strings ISO
+from dateutil import parser 
 
-def get_ad_connection():
+def get_ad_connection(user=None, password=None):
     """Cria e retorna uma conexão autenticada com o AD usando a conta de serviço."""
     try:
         tls_config = Tls(validate=ssl.CERT_NONE)
@@ -27,6 +30,81 @@ def get_ad_connection():
     except LDAPException as e:
         current_app.logger.error(f"Falha ao conectar ao AD com a conta de serviço: {e}")
         return None
+
+def ad_timestamp_to_datetime(ad_timestamp):
+    """
+    Converte timestamp do AD para datetime de forma robusta.
+    Aceita: Inteiro (Windows FileTime), String ISO, ou datetime já pronto.
+    """
+    if not ad_timestamp or ad_timestamp == 0:
+        return None
+    
+    try:
+        # Caso 1: Já é um objeto datetime (o ldap3 converteu)
+        if isinstance(ad_timestamp, datetime):
+            return ad_timestamp
+
+        # Caso 2: É uma string (ISO format, como no seu log)
+        if isinstance(ad_timestamp, str):
+            # Tenta converter string ISO
+            try:
+                return parser.parse(ad_timestamp)
+            except:
+                return None # Falhou no parse da string
+
+        # Caso 3: É um inteiro (Windows FileTime - 100ns desde 1601)
+        # 116444736000000000 é a diferença entre 1601 e 1970 em 100ns
+        timestamp_seconds = (int(ad_timestamp) - 116444736000000000) / 10000000
+        return datetime.fromtimestamp(timestamp_seconds)
+        
+    except Exception as e:
+        # print(f"Erro convertendo data: {e}") # Debug opcional
+        return None
+
+def get_user_ad_info(username):
+    """
+    Busca informações detalhadas de um usuário no AD, INCLUINDO LAST LOGON.
+    """
+    conn = get_ad_connection()
+    if not conn:
+        return None
+
+    try:
+        search_filter = f'(&(objectClass=user)(sAMAccountName={username}))'
+        attributes = ['displayName', 'mail', 'title', 'department', 'memberOf', 'lastLogonTimestamp', 'userAccountControl']
+        
+        conn.search(
+            search_base=current_app.config['LDAP_BASE_DN'],
+            search_filter=search_filter,
+            attributes=attributes
+        )
+
+        if not conn.entries:
+            return None
+
+        entry = conn.entries[0]
+        
+        # Converte lastLogonTimestamp
+        last_logon_ad = None
+        if 'lastLogonTimestamp' in entry:
+            # Passa o valor bruto para nossa função robusta
+            last_logon_ad = ad_timestamp_to_datetime(entry.lastLogonTimestamp.value)
+
+        return {
+            'nome': str(entry.displayName.value) if 'displayName' in entry else username,
+            'email': str(entry.mail.value) if 'mail' in entry else None,
+            'cargo': str(entry.title.value) if 'title' in entry else None,
+            'setor': str(entry.department.value) if 'department' in entry else None,
+            'grupos': entry.memberOf.value if 'memberOf' in entry else [],
+            'ativo_ad': not ((entry.userAccountControl.value & 2) == 2) if 'userAccountControl' in entry else True,
+            'last_logon': last_logon_ad
+        }
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar info extendida do usuário {username}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.unbind()
 
 def verificar_usuario_ad(username):
     """Verifica se um sAMAccountName já existe no AD."""
@@ -88,7 +166,6 @@ def provisionar_usuario_ad(funcionario, username_manual=None, vincular=False):
 
         conn.search(search_base=current_app.config['LDAP_BASE_DN'], search_filter=f'(sAMAccountName={username})', attributes=['cn'])
 
-        # --- CORREÇÃO APLICADA EM AMBOS OS BLOCOS (ATUALIZAÇÃO E CRIAÇÃO) ---
         cargo_nome = funcionario.cargo.nome if funcionario.cargo else ''
         setor_nome = funcionario.setor.nome if funcionario.setor else ''
 
@@ -100,13 +177,11 @@ def provisionar_usuario_ad(funcionario, username_manual=None, vincular=False):
                 'title': [(MODIFY_REPLACE, [cargo_nome])],
                 'department': [(MODIFY_REPLACE, [setor_nome])],
             }
-            # Filtra chaves com valor None para não enviar ao AD
             modificacoes_finais = {k: v for k, v in modificacoes.items() if v[0][1][0] is not None}
 
             if modificacoes_finais:
                 conn.modify(user_dn_existente, modificacoes_finais)
         else:
-            # Fluxo de criação de novo usuário
             conn.add(
                 user_dn,
                 attributes={
@@ -118,7 +193,6 @@ def provisionar_usuario_ad(funcionario, username_manual=None, vincular=False):
                     'userPrincipalName': user_principal_name,
                     'sAMAccountName': username,
                     'mail': funcionario.email,
-                    # --- CORREÇÃO APLICADA AQUI TAMBÉM ---
                     'title': cargo_nome,
                     'department': setor_nome
                 }
@@ -157,7 +231,6 @@ def provisionar_usuario_ad(funcionario, username_manual=None, vincular=False):
 def _alterar_status_usuario_ad(username, habilitar=True):
     """
     Função interna para habilitar ou desabilitar uma conta de usuário no AD.
-    AGORA BUSCA PELO sAMAccountName (username).
     """
     conn = get_ad_connection()
     if not conn:
@@ -218,4 +291,3 @@ def remover_usuario_ad(email):
     finally:
         if conn:
             conn.unbind()
-

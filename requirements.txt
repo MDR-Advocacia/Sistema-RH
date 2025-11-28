@@ -20,4 +20,6 @@ Flask-WTF
 gunicorn
 gevent
 thefuzz
+apscheduler
+python-dateutil
 #pip install -r requirements.txt
