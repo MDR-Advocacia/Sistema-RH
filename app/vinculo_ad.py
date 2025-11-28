@@ -1,25 +1,40 @@
 from flask import Blueprint, render_template, flash, redirect, request, url_for, current_app
 from flask_login import login_required, current_user
-from .models import db, Funcionario, Usuario, VinculoADSugestao, Ponto, Documento, LogAtividade, Ativo
+from unidecode import unidecode
+from thefuzz import fuzz
+# Importa o gerador de token manualmente para injetar no template caso necessário
+from flask_wtf.csrf import generate_csrf
+
+# Importações do App
+from . import db
+# REMOVIDO 'csrf' daqui para evitar o Erro de Importação Circular
+from .models import Funcionario, Usuario, VinculoADSugestao, Ponto, Documento, LogAtividade, Ativo
+from .decorators import permission_required
+from .utils import registrar_log
+
+# Importações das lógicas de Negócio (AD e CSV)
 from .ad_mirror import sync_ad_to_db_logic, sync_ad_computers_logic
 from .ad_sync import get_ad_connection
-from .utils import registrar_log
-from thefuzz import fuzz
-from .decorators import permission_required
-from unidecode import unidecode
-# Importação da lógica de CSV (Se der erro aqui, verifique se criou o arquivo app/ad_import.py)
 from .ad_import import processar_upload_csv_ad
 
-vinculo_bp = Blueprint('vinculo_ad', __name__, url_prefix='/vinculo_ad')
+# Define o Blueprint
+vinculo_bp = Blueprint('vinculo_ad', __name__, url_prefix='/vinculo-ad')
+
+# --- CORREÇÃO: INJETOR DE TOKEN CSRF ---
+@vinculo_bp.context_processor
+def inject_csrf():
+    """Garante que a função csrf_token() esteja disponível em todos os templates deste blueprint"""
+    return {'csrf_token': generate_csrf}
 
 # --- FUNÇÕES AUXILIARES ---
+
 def normalizar_nome(nome):
     """Remove acentos e coloca em minúsculas para comparação."""
     if not nome: return ""
     return unidecode(nome).lower().strip()
 
 def encontrar_melhor_correspondencia(nome_funcionario, lista_usuarios_ad):
-    """Encontra a melhor correspondência no AD baseada no nome."""
+    """Encontra a melhor correspondência no AD baseada no nome (Fuzzy Logic)."""
     nome_norm_func = normalizar_nome(nome_funcionario)
     melhor_pontuacao = 0
     melhor_match = None
@@ -29,23 +44,30 @@ def encontrar_melhor_correspondencia(nome_funcionario, lista_usuarios_ad):
         if not display_name_val:
             continue
         nome_norm_ad = normalizar_nome(display_name_val)
+        
+        # Compara similaridade
         pontuacao = fuzz.token_sort_ratio(nome_norm_func, nome_norm_ad)
+        
         if pontuacao > melhor_pontuacao:
             melhor_pontuacao = pontuacao
             melhor_match = usuario_ad
+            
     return melhor_match, melhor_pontuacao
 
-# --- ROTAS ---
+# --- ROTAS DE PAINEL E GESTÃO ---
 
 @vinculo_bp.route('/revisao', methods=['GET'])
 @login_required
-@permission_required(['admin_ti', 'supervisor_ti', 'admin_rh'])
+# AJUSTE: Incluído 'admin' e 'supervisor_ti' para garantir acesso ao dashboard
+@permission_required(['admin', 'admin_ti', 'supervisor_ti', 'admin_rh'])
 def revisao():
-    """Dashboard principal de Vínculos."""
+    """Dashboard principal de Vínculos e Sugestões."""
     sugestoes = VinculoADSugestao.query.order_by(VinculoADSugestao.pontuacao.desc()).all()
     funcionarios_com_usuario = Funcionario.query.join(Usuario).order_by(Funcionario.nome).all()
+    
+    # Busca funcionários suspensos ou desligados no sistema
     desligados = Funcionario.query.filter(
-        Funcionario.status.in_(['Suspenso', 'Desligado (AD)'])
+        Funcionario.status.in_(['Suspenso', 'Desligado (AD)', 'Inativo'])
     ).order_by(Funcionario.nome).all()
     
     return render_template(
@@ -57,10 +79,11 @@ def revisao():
 
 @vinculo_bp.route('/importar_ad', methods=['GET', 'POST'])
 @login_required
-@permission_required(['admin_ti'])
+# AJUSTE: Incluído 'admin' para permitir manutenção de emergência
+@permission_required(['admin', 'admin_ti'])
 def importar_dados_ad():
     """
-    Rota para Upload de CSV que alimenta o AD.
+    Rota para Upload Manual de CSV (Caso não queira usar o Sync automático).
     """
     logs = []
     if request.method == 'POST':
@@ -84,27 +107,48 @@ def importar_dados_ad():
 
     return render_template('vinculo_ad/importar_ad.html', logs=logs)
 
-@vinculo_bp.route('/sincronizar_agora', methods=['POST'])
+# --- ROTAS DE SINCRONIZAÇÃO (AD MIRROR) ---
+
+@vinculo_bp.route('/sincronizar_agora', methods=['GET', 'POST']) # Aceita GET para facilitar (evita CSRF em link)
 @login_required
-@permission_required(['admin_ti'])
+# AJUSTE CRÍTICO: Permitido 'admin', 'supervisor_ti' e 'admin_rh'.
+# Isso permite que usuários que ainda não viraram 'admin_ti' (ovo/galinha) consigam rodar o sync.
+@permission_required(['admin', 'admin_ti', 'supervisor_ti', 'admin_rh'])
 def sincronizar_agora():
-    """Força a execução do script de espelhamento do AD."""
+    """Força a execução do script de espelhamento COMPLETO (Users + PCs)."""
     try:
-        sync_ad_to_db_logic() # Sync Usuários
-        sync_ad_computers_logic() # Sync Computadores
-        flash('Sincronização com AD realizada com sucesso!', 'success')
+        sync_ad_to_db_logic()
+        flash('Sincronização com AD realizada com sucesso! Setores e Usuários atualizados.', 'success')
     except Exception as e:
-        flash(f'Erro ao sincronizar: {str(e)}', 'danger')
+        flash(f'Erro crítico ao sincronizar: {str(e)}', 'danger')
         print(f"Erro Sync Manual: {e}")
 
-    return redirect(url_for('vinculo_ad.revisao'))
+    # Retorna para quem chamou ou para a revisão
+    return redirect(request.referrer or url_for('vinculo_ad.revisao'))
+
+@vinculo_bp.route('/sincronizar_computadores', methods=['GET', 'POST']) # Aceita GET para facilitar
+@login_required
+# AJUSTE CRÍTICO: Mesma lógica acima.
+@permission_required(['admin', 'admin_ti', 'supervisor_ti', 'admin_rh'])
+def sincronizar_computadores():
+    """Força apenas a sincronização de computadores/ativos."""
+    try:
+        sync_ad_computers_logic()
+        flash('Sincronização de Computadores/Ativos realizada com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro ao sincronizar computadores: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('ativos.listar_ativos'))
+
+# --- ROTAS DE ANÁLISE E VÍNCULO (FUZZY) ---
 
 @vinculo_bp.route('/executar-analise', methods=['POST'])
 @login_required
-@permission_required(['admin_ti'])
+@permission_required(['admin', 'admin_ti'])
 def executar_analise():
     """Gera sugestões de vínculo baseadas em similaridade de nome."""
     try:
+        # Limpa sugestões antigas
         VinculoADSugestao.query.delete()
         funcionarios_alvo = Funcionario.query.all()
         
@@ -113,6 +157,7 @@ def executar_analise():
             flash("Não foi possível conectar ao Active Directory.", "danger")
             return redirect(url_for('vinculo_ad.revisao'))
         
+        # Busca usuários do AD
         conn.search(
             search_base=current_app.config['LDAP_BASE_DN'],
             search_filter='(&(objectClass=user)(sAMAccountName=*))',
@@ -151,9 +196,10 @@ def executar_analise():
 
 @vinculo_bp.route('/confirmar/<int:sugestao_id>', methods=['POST'])
 @login_required
-@permission_required(['admin_ti'])
+# AJUSTE: RH pode confirmar vínculos pois conhece as pessoas
+@permission_required(['admin', 'admin_ti', 'admin_rh'])
 def confirmar_vinculo(sugestao_id):
-    """Aplica o vínculo sugerido."""
+    """Aplica o vínculo sugerido pela IA/Fuzzy."""
     sugestao = VinculoADSugestao.query.get_or_404(sugestao_id)
     funcionario = Funcionario.query.get(sugestao.funcionario_id)
 
@@ -180,7 +226,7 @@ def confirmar_vinculo(sugestao_id):
 
 @vinculo_bp.route('/rejeitar/<int:sugestao_id>', methods=['POST'])
 @login_required
-@permission_required(['admin_ti'])
+@permission_required(['admin', 'admin_ti', 'admin_rh'])
 def rejeitar_vinculo(sugestao_id):
     sugestao = VinculoADSugestao.query.get_or_404(sugestao_id)
     db.session.delete(sugestao)
@@ -190,11 +236,9 @@ def rejeitar_vinculo(sugestao_id):
 
 @vinculo_bp.route('/unificar-contas', methods=['POST'])
 @login_required
-@permission_required(['admin_ti'])
+# AJUSTE: RH pode unificar contas duplicadas (comum no cadastro)
+@permission_required(['admin', 'admin_ti', 'admin_rh'])
 def unificar_contas():
-    """
-    Unifica duas contas: Apaga a 'Duplicada' e move tudo para a 'Correta'.
-    """
     id_duplicado = request.form.get('id_duplicado')
     id_correto = request.form.get('id_correto')
 
@@ -210,6 +254,7 @@ def unificar_contas():
             flash('Funcionários não encontrados.', 'danger')
             return redirect(url_for('vinculo_ad.revisao'))
 
+        # Renomeia CPF temporariamente para evitar colisão Unique Constraint
         cpf_temp = f"temp_{func_old.id}_{func_old.cpf[:3]}" if func_old.cpf else f"temp_{func_old.id}"
         func_old.cpf = cpf_temp
         db.session.flush()

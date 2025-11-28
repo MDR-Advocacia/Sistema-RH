@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Cautela de Equipamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="bi bi-laptop me-2"></i> Controle de Cautela (Check-in/Check-out)</h3>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNovoEmprestimo">
+            <i class="bi bi-plus-circle me-2"></i> Novo Empréstimo
+        </button>
+    </div>
+
+    <div class="row">
+        <!-- COLUNA ESQUERDA: Empréstimos Ativos -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning-subtle text-warning-emphasis border-warning">
+                    <h5 class="mb-0"><i class="bi bi-hourglass-split me-2"></i> Empréstimos em Aberto</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ativo / Patrimônio</th>
+                                    <th>Responsável Atual</th>
+                                    <th>Data Saída</th>
+                                    <th>Previsão Retorno</th>
+                                    <th class="text-end">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emp in emprestimos_ativos %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ emp.ativo.nome }}</div>
+                                        <small class="text-muted">{{ emp.ativo.tag_patrimonio or 'S/N' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if emp.funcionario.foto_perfil %}
+                                                <img src="{{ url_for('perfil.uploaded_file', filename=emp.funcionario.foto_perfil) }}" class="rounded-circle me-2" width="24" height="24" style="object-fit: cover;">
+                                            {% else %}
+                                                <i class="bi bi-person-circle me-2 text-secondary"></i>
+                                            {% endif %}
+                                            {{ emp.funcionario.nome.split()[0] }} {{ emp.funcionario.nome.split()[-1] }}
+                                        </div>
+                                    </td>
+                                    <td>{{ emp.data_emprestimo }}</td>
+                                    <td>
+                                        {% if emp.data_prevista_devolucao %}
+                                            {% set dias_restantes = (emp.data_prevista_devolucao - emp.data_emprestimo.date()).days %}
+                                            <span class="badge {{ 'bg-danger' if dias_restantes < 0 else 'bg-info' }}">
+                                                {{ emp.data_prevista_devolucao.strftime('%d/%m') }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form action="{{ url_for('ativos.devolver_emprestimo', emprestimo_id=emp.id) }}" method="POST" onsubmit="return confirm('Confirmar devolução e conferência do equipamento?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Registrar Devolução (Check-in)">
+                                                <i class="bi bi-box-arrow-in-down-left me-1"></i> Devolver
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">Nenhum equipamento emprestado no momento.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUNA DIREITA: Histórico Recente -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold text-muted"><i class="bi bi-clock-history me-2"></i> Histórico de Devoluções</h6>
+                </div>
+                <ul class="list-group list-group-flush small">
+                    {% for hist in historico %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">{{ hist.ativo.nome }}</span>
+                            <span class="text-muted" style="font-size: 0.8em;">{{ hist.data_devolucao_real }}</span>
+                        </div>
+                        <div class="text-muted">
+                            <i class="bi bi-arrow-return-left me-1"></i> Devolvido por: {{ hist.funcionario.nome.split()[0] }}
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted">Sem histórico recente.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NOVO EMPRÉSTIMO -->
+<div class="modal fade" id="modalNovoEmprestimo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Registrar Saída (Check-out)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('ativos.novo_emprestimo') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Equipamento / Ativo</label>
+                        <!-- CORREÇÃO APLICADA AQUI: ativos_disponiveis -->
+                        <select name="ativo_id" class="form-select" required>
+                            <option value="" selected disabled>Selecione o equipamento...</option>
+                            {% for ativo in ativos_disponiveis %}
+                                <option value="{{ ativo.id }}">{{ ativo.nome }} ({{ ativo.tag_patrimonio or 'S/N' }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Apenas ativos com status 'Disponível' aparecem aqui.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Funcionário Responsável</label>
+                        <input type="text" class="form-control mb-2" id="busca-func" placeholder="Filtrar nome..." autocomplete="off">
+                        <select name="funcionario_id" id="select-func" class="form-select" required size="5">
+                            {% for f in funcionarios %}
+                                <option value="{{ f.id }}">{{ f.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Previsão de Devolução (Opcional)</label>
+                        <input type="date" name="data_prevista_devolucao" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar Saída</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Script simples para filtrar o select de funcionários
+    document.getElementById('busca-func').addEventListener('keyup', function() {
+        let termo = this.value.toLowerCase();
+        let options = document.getElementById('select-func').options;
+        for (let i = 0; i < options.length; i++) {
+            let texto = options[i].text.toLowerCase();
+            options[i].style.display = texto.includes(termo) ? '' : 'none';
+        }
+    });
+</script>
+{% endblock %}

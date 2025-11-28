@@ -6,24 +6,28 @@
         <h2><i class="fas fa-network-wired text-primary"></i> Revisão de Vínculos AD</h2>
         
         <div class="d-flex gap-2">
-            <!-- O BOTÃO TEM QUE ESTAR AQUI -->
+            <!-- Botão de Upload CSV -->
             <a href="{{ url_for('vinculo_ad.importar_dados_ad') }}" class="btn btn-success text-white shadow-sm">
                 <i class="fas fa-file-csv"></i> Alimentar AD (CSV)
             </a>
             
-            <!-- Botão de Análise -->
+            <!-- Botão de Análise (POST com CSRF) -->
             <form action="{{ url_for('vinculo_ad.executar_analise') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-info text-white shadow-sm" onclick="return confirm('Isso vai reanalisar todos os nomes. Pode demorar. Continuar?')">
                     <i class="fas fa-magic"></i> Analisar
                 </button>
             </form>
 
-            <!-- Botão de Sync Manual -->
-            <form action="{{ url_for('vinculo_ad.sincronizar_agora') }}" method="POST">
-                <button type="submit" class="btn btn-warning shadow-sm" onclick="return confirm('Deseja forçar a sincronização com o AD agora?')">
-                    <i class="fas fa-sync"></i> Sync
-                </button>
-            </form>
+            <!-- Botão de Sync Manual (AGORA É UM LINK GET - SEM ERRO 403) -->
+            <a href="{{ url_for('vinculo_ad.sincronizar_agora') }}" class="btn btn-warning shadow-sm" onclick="return confirm('Deseja forçar a sincronização com o AD agora?')">
+                <i class="fas fa-sync"></i> Sync Usuários
+            </a>
+
+            <!-- Botão de Sync Computadores (AGORA É UM LINK GET - SEM ERRO 403) -->
+            <a href="{{ url_for('vinculo_ad.sincronizar_computadores') }}" class="btn btn-secondary shadow-sm" onclick="return confirm('Deseja sincronizar apenas os computadores?')">
+                <i class="fas fa-laptop"></i> Sync PCs
+            </a>
             
             <!-- Botão Modal Unificação -->
             <button class="btn btn-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalUnificar">
@@ -32,33 +36,35 @@
         </div>
     </div>
 
-    <!-- MANTENHA O RESTO DO CONTEÚDO IGUAL (ALERTAS, TABELA, MODAL)... -->
+    <!-- CARD 1: USUÁRIOS DESATIVADOS NO AD -->
     {% if desligados %}
     <div class="card mb-4 border-danger shadow-sm">
         <div class="card-header bg-danger text-white">
             <h5 class="mb-0"><i class="fas fa-user-slash"></i> Atenção: Usuários Desativados no AD</h5>
         </div>
         <div class="card-body p-0">
-            <table class="table table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Status</th>
-                        <th>Setor</th>
-                        <th>Ação Recomendada</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for func in desligados %}
-                    <tr>
-                        <td>{{ func.nome }}</td>
-                        <td><span class="badge bg-dark">{{ func.status }}</span></td>
-                        <td>{{ func.setor.nome if func.setor else '-' }}</td>
-                        <td><small class="text-muted">Verificar rescisão no DP</small></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Status</th>
+                            <th>Setor</th>
+                            <th>Ação Recomendada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for func in desligados %}
+                        <tr>
+                            <td>{{ func.nome }}</td>
+                            <td><span class="badge bg-dark">{{ func.status }}</span></td>
+                            <td>{{ func.setor.nome if func.setor else '-' }}</td>
+                            <td><small class="text-muted">Verificar rescisão no DP</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -101,11 +107,13 @@
                                 <td>
                                     <div class="btn-group">
                                         <form action="{{ url_for('vinculo_ad.confirmar_vinculo', sugestao_id=sugestao.id) }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                             <button class="btn btn-sm btn-success" title="Confirmar Vínculo">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         </form>
                                         <form action="{{ url_for('vinculo_ad.rejeitar_vinculo', sugestao_id=sugestao.id) }}" method="POST" class="ms-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                             <button class="btn btn-sm btn-outline-danger" title="Rejeitar">
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -136,6 +144,9 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('vinculo_ad.unificar_contas') }}" method="POST">
+                <!-- IMPORTANTÍSSIMO: TOKEN CSRF PARA MODAL -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
                 <div class="modal-body">
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i> <strong>Cuidado:</strong> Esta ação é irreversível. A "Conta Duplicada" será apagada e todos os seus dados (pontos, documentos) serão movidos para a "Conta Correta".
