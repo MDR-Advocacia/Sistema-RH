@@ -1,4 +1,3 @@
-
 import csv
 import os
 import uuid
@@ -16,9 +15,10 @@ from .email import send_email
 
 from . import db, format_datetime_local
 from .decorators import permission_required
-# Adicione LogAtividade e registrar_log às importações
+# --- CORREÇÃO AQUI: Adicionado DocumentoAprovacao e Solicitacao aos imports ---
 from .models import (Funcionario, Permissao, Usuario, Aviso,
-                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto, LogAtividade, Cargo, Setor)
+                     LogCienciaAviso, RequisicaoDocumento, AvisoAnexo, Ponto, 
+                     LogAtividade, Cargo, Setor, DocumentoAprovacao, Solicitacao)
 from .utils import registrar_log
 
 main = Blueprint('main', __name__)
@@ -35,65 +35,65 @@ def index():
     dados_dashboard = {}
     usuario = current_user
     
+    # 1. Avisos Pendentes
     avisos_lidos_ids = {log.aviso_id for log in usuario.logs_ciencia}
+    # Filtra avisos não lidos, não arquivados e que o usuário tem permissão de ver (lógica simplificada aqui)
+    # Idealmente usar a mesma query do avisos.py
     dados_dashboard['avisos_pendentes'] = Aviso.query.filter(
         Aviso.id.notin_(avisos_lidos_ids),
         Aviso.arquivado == False
-    ).all()
+    ).limit(5).all()
     
+    # 2. Minhas Pendências de Envio (Eu tenho que mandar documento)
     dados_dashboard['requisicoes_pendentes'] = RequisicaoDocumento.query.filter_by(
         destinatario_id=usuario.funcionario.id, status='Pendente'
     ).all()
 
+    # 3. Meus Ajustes de Ponto (Se houver retorno)
     dados_dashboard['pontos_pendentes'] = Ponto.query.filter_by(
-        funcionario_id=usuario.funcionario.id, status='Pendente'
-    ).all()
+        funcionario_id=usuario.funcionario.id
+    ).filter(Ponto.status.in_(['Pendente', 'Em Revisão'])).all()
 
-# --- LÓGICA DE ANIVERSARIANTES (CORRIGIDA) ---
+    # 4. NOVO: Meus Documentos para Aprovar (Sou chefe e tenho que dar ok)
+    # Agora vai funcionar porque importamos DocumentoAprovacao lá em cima
+    aprovacoes_pendentes = DocumentoAprovacao.query.filter_by(
+        aprovador_id=usuario.id,
+        status='Pendente'
+    ).all()
+    dados_dashboard['aprovacoes_pendentes'] = aprovacoes_pendentes
+
+    # 5. Aniversariantes
     hoje = datetime.utcnow().date()
     inicio_semana = hoje - timedelta(days=hoje.weekday())
     fim_semana = inicio_semana + timedelta(days=6)
     
     dados_dashboard['periodo_semana'] = f"{inicio_semana.strftime('%d/%m')} - {fim_semana.strftime('%d/%m')}"
     
-    aniversariantes = []
-
-    # Se a semana inteira estiver dentro do MESMO MÊS (Caso simples)
     if inicio_semana.month == fim_semana.month:
         aniversariantes = Funcionario.query.filter(
             db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
             db.func.extract('day', Funcionario.data_nascimento).between(inicio_semana.day, fim_semana.day)
         ).all()
-    
-    # Se a semana atravessar DOIS MESES (Seja Out/Nov ou Dez/Jan)
     else:
-        # Busca aniversariantes no primeiro mês (ex: Outubro, a partir do dia de início)
         primeiro_mes = Funcionario.query.filter(
             db.func.extract('month', Funcionario.data_nascimento) == inicio_semana.month,
             db.func.extract('day', Funcionario.data_nascimento) >= inicio_semana.day
         ).all()
-        
-        # Busca aniversariantes no segundo mês (ex: Novembro, até o dia final)
         segundo_mes = Funcionario.query.filter(
             db.func.extract('month', Funcionario.data_nascimento) == fim_semana.month,
             db.func.extract('day', Funcionario.data_nascimento) <= fim_semana.day
         ).all()
-        
         aniversariantes = primeiro_mes + segundo_mes
     
-    # --- FIM DA CORREÇÃO ---
-
     aniversariantes.sort(key=lambda f: (f.data_nascimento.month, f.data_nascimento.day))
     dados_dashboard['aniversariantes'] = aniversariantes
 
-    # Bloco if agora cuida apenas dos dados específicos de admin
-    if usuario.tem_permissao('admin_rh') or usuario.tem_permissao('admin_ti'):
-        # --- LINHA CORRIGIDA ---
+    # Stats para Admin
+    if usuario.tem_permissao(['admin_rh', 'admin_ti']):
         dados_dashboard['total_funcionarios'] = Funcionario.query.filter_by(status='Ativo').count()
         dados_dashboard['total_avisos'] = Aviso.query.filter_by(arquivado=False).count()
 
     return render_template('index.html', dados=dados_dashboard)
-
 
 # --- ROTAS DE GESTÃO DE FUNCIONÁRIOS ---
 
@@ -102,7 +102,6 @@ def index():
 @login_required
 @permission_required(PERMISSOES_GESTAO)
 def exibir_formulario_cadastro():
-    """Apenas exibe o formulário de cadastro."""
     permissoes = Permissao.query.all()
     cargos = Cargo.query.order_by(Cargo.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
@@ -151,7 +150,6 @@ def processar_cadastro():
             cargo_id = request.form.get('cargo_id') or None
             setor_id = request.form.get('setor_id') or None
 
-            # Cria o objeto funcionário (ainda não salvo no banco)
             # Cria o objeto funcionário (ainda não salvo no banco)
             novo_funcionario = Funcionario(
                 nome=nome, cpf=cpf, email=email_contato,
@@ -207,7 +205,6 @@ def processar_cadastro():
 
         except Exception as e:
             db.session.rollback()
-            # A linha de log que você já tem é excelente para depuração
             current_app.logger.error(f"Erro ao cadastrar funcionário: {e}") 
             flash(f"Ocorreu um erro inesperado durante o cadastro: {e}", "danger")
             return redirect(url_for('main.exibir_formulario_cadastro'))
@@ -215,12 +212,11 @@ def processar_cadastro():
         return redirect(url_for('main.listar_funcionarios'))    
 
     # --- LÓGICA DE PERMISSÕES ADICIONADA AQUI (GET) ---
-    # Busca todas as permissões para exibir no formulário
     permissoes_disponiveis = Permissao.query.order_by(Permissao.nome).all()
     cargos = Cargo.query.order_by(Cargo.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
 
-    return render_template('cadastrar.html', permissoes=permissoes_disponiveis)
+    return render_template('cadastrar.html', permissoes=permissoes_disponiveis, cargos=cargos, setores=setores)
 
     
 # --- FIM DA CORREÇÃO ---

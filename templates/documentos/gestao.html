@@ -3,435 +3,429 @@
 {% block title %}Gestão de Documentos{% endblock %}
 
 {% block content %}
-<h1 class="h2 mb-4">Gestão de Documentos</h1>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div id="react-root"></div>
+
+<!-- Bibliotecas React e Babel -->
+<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+    /* Tema */
+    .btn-brand-custom {
+        background-color: var(--cor-primaria, #0a2240); 
+        color: white;
+        border: none;
+        transition: 0.3s;
+    }
+    .btn-brand-custom:hover {
+        background-color: var(--cor-primaria-hover, #153358);
+        color: white;
+        transform: translateY(-1px);
+    }
     
-    <a href="{{ url_for('documentos.gerenciar_tipos_documento') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-cog"></i> Configurar Tipos de Documento
-    </a>
-</div>
-<ul class="nav nav-tabs" id="gestaoTab" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="revisao-tab" data-bs-toggle="tab" data-bs-target="#revisao" type="button" role="tab" aria-controls="revisao" aria-selected="true">
-            Revisão de Documentos
-            {% if documentos_para_revisar %}
-                <span class="badge rounded-pill bg-danger">{{ documentos_para_revisar|length }}</span>
-            {% endif %}
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="solicitar-tab" data-bs-toggle="tab" data-bs-target="#solicitar" type="button" role="tab" aria-controls="solicitar" aria-selected="false">
-            Solicitar Documento
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="enviar-tab" data-bs-toggle="tab" data-bs-target="#enviar" type="button" role="tab" aria-controls="enviar" aria-selected="false">
-            Enviar Manualmente
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="consulta-tab" data-bs-toggle="tab" data-bs-target="#consulta" type="button" role="tab" aria-controls="consulta" aria-selected="false">
-            Consultar Documentos
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content" id="gestaoTabContent">
+    /* Autocomplete Styling */
+    .ac-wrapper { position: relative; width: 100%; }
+    .ac-list {
+        position: absolute;
+        top: 100%; left: 0; right: 0;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 0 0 4px 4px;
+    }
+    .ac-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+        font-size: 0.95rem;
+    }
+    .ac-item:hover { background-color: #f1f3f5; color: var(--cor-primaria, #0a2240); }
     
-    <div class="tab-pane fade show active" id="revisao" role="tabpanel" aria-labelledby="revisao-tab">
-        <div class="card shadow-sm card-tab">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Documentos Pendentes de Revisão</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Funcionário</th>
-                                <th>Tipo do Documento</th>
-                                <th>Data de Envio</th>
-                                <th class="text-end">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for doc in documentos_para_revisar %}
-                            <tr>
-                                <td>{{ doc.funcionario.nome }}</td>
-                                <td>
-                                    <a href="{{ url_for('documentos.download_documento', filename=doc.path_armazenamento) }}" target="_blank" title="Baixar para visualizar">
-                                        <i class="bi bi-file-earmark-text me-2"></i>{{ doc.tipo_documento }}
-                                    </a>
-                                </td>
-                                <td>{{ doc.data_upload | localtime }}</td>
-                                <td class="text-end">
-                                    <form action="{{ url_for('documentos.aprovar_documento', documento_id=doc.id) }}" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Aprovar">
-                                            <i class="bi bi-check-lg"></i> Aprovar
-                                        </button>
-                                    </form>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modal-reprovar-{{ doc.id }}" title="Reprovar">
-                                        <i class="bi bi-x-lg"></i> Reprovar
-                                    </button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center p-4">Nenhum documento pendente de revisão.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-pane fade" id="solicitar" role="tabpanel" aria-labelledby="solicitar-tab">
-        <div class="card shadow-sm card-tab">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-send-plus-fill"></i> Solicitar Documento em Lote</h5>
-            </div>
-            <div class="card-body">
-                <p class="card-text">Selecione os funcionários e o documento que deseja solicitar.</p>
-                
-                <form action="{{ url_for('documentos.solicitar_em_lote') }}" method="POST">
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h6>1. Selecione o Documento</h6>
-                            <div class="mb-3">
-                                <select name="tipo_documento_id" class="form-select" required>
-                                    <option value="" selected disabled>-- Tipo de Documento --</option>
-                                    {% for tipo in tipos_documento %}
-                                        <option value="{{ tipo.id }}">{{ tipo.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-brand w-100">
-                                <i class="fas fa-paper-plane"></i> Enviar Solicitação
-                            </button>
-                        </div>
-
-                        <div class="col-md-8">
-                            <h6>2. Selecione os Funcionários</h6>
-                            <input type="text" id="search-funcionarios-doc" class="form-control mb-2" placeholder="Pesquisar funcionário...">
-                            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
-                                <table class="table table-sm table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 10%;"><input type="checkbox" class="form-check-input" id="selecionar-todos"></th>
-                                            <th>Nome</th>
-                                            <th>Setor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for func in funcionarios %}
-                                        <tr>
-                                            <td><input type="checkbox" class="form-check-input" name="funcionarios_selecionados" value="{{ func.id }}"></td>
-                                            <td>{{ func.nome }}</td>
-                                            <td>{{ func.setor }}</td>
-                                        </tr>
-                                        {% else %}
-                                        <tr>
-                                            <td colspan="3" class="text-center">Nenhum funcionário ativo encontrado.</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>       
-
-    <div class="tab-pane fade" id="enviar" role="tabpanel" aria-labelledby="enviar-tab">
-        <div class="card shadow-sm card-tab">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-upload"></i> Enviar Documento Manualmente</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('documentos.upload_manual_documento') }}" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="busca-enviar" class="form-label">Funcionário</label>
-                        <input type="text" class="form-control" id="busca-enviar" placeholder="Comece a digitar o nome..." autocomplete="off">
-                        <div id="resultados-enviar" class="list-group mt-1"></div>
-                        <input type="hidden" name="funcionario_id" id="funcionario_id_enviar">
-                    </div>
-                    <div class="mb-3">
-                        <label for="tipo_documento_id" class="form-label">Tipo de Documento</label>
-                        <select class="form-select" name="tipo_documento_id" id="tipo_documento_id" required>
-                            <option value="" selected disabled>Selecione um tipo...</option>
-                            {% for tipo in tipos_documento %}
-                                <option value="{{ tipo.id }}">{{ tipo.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="arquivo" class="form-label">Selecione o arquivo</label>
-                        <input class="form-control" type="file" id="arquivo" name="arquivo" required>
-                    </div>
-                    <button type="submit" class="btn btn-brand w-100">Enviar Documento</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-pane fade" id="consulta" role="tabpanel" aria-labelledby="consulta-tab">
-        <div class="card shadow-sm card-tab">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-search"></i> Consultar Documentos do Colaborador</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="busca-consulta" class="form-label">Funcionário</label>
-                    <input type="text" class="form-control" id="busca-consulta" placeholder="Comece a digitar o nome..." autocomplete="off">
-                    <div id="resultados-consulta" class="list-group mt-1"></div>
-                </div>
-                <hr>
-                <div id="historico-container" class="mt-3">
-                    <p class="text-muted text-center">Selecione um funcionário para ver seus documentos.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% for doc in documentos_para_revisar %}
-<div class="modal fade" id="modal-reprovar-{{ doc.id }}" tabindex="-1" aria-labelledby="reprovarLabel-{{ doc.id }}" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="reprovarLabel-{{ doc.id }}">Reprovar Documento</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form action="{{ url_for('documentos.reprovar_documento', documento_id=doc.id) }}" method="POST">
-          <div class="modal-body">
-            <p>Você está reprovando o documento <strong>{{ doc.tipo_documento }}</strong> de <strong>{{ doc.funcionario.nome }}</strong>. Por favor, informe o motivo abaixo para que o colaborador possa corrigir.</p>
-            <div class="mb-3">
-                <label for="motivo-{{ doc.id }}" class="form-label">Motivo da Reprovação</label>
-                <textarea class="form-control" id="motivo-{{ doc.id }}" name="motivo_reprovacao" rows="3" required></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Confirmar Reprovação</button>
-          </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endfor %}
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-
-    // --- Lógica do "Selecionar Todos" movida para fora da função reutilizável ---
-    const selecionarTodos = document.getElementById('selecionar-todos');
-    if (selecionarTodos) {
-        selecionarTodos.addEventListener('change', function(e) {
-            const isChecked = e.target.checked;
-            // Usamos um seletor mais específico para garantir que só pegamos os checkboxes corretos
-            const checkboxes = document.querySelectorAll('input[name="funcionarios_selecionados"]');
-            checkboxes.forEach(checkbox => checkbox.checked = isChecked);
-        });
+    /* Tags Selecionadas */
+    .tag-item {
+        background-color: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #ced4da;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        animation: fadeIn 0.2s;
     }
+    .tag-remove { cursor: pointer; color: #dc3545; font-weight: bold; }
+    .tag-remove:hover { color: #a71d2a; }
 
-    /**
-     * Configura a funcionalidade de busca para um campo de input.
-     * @param {string} inputId O ID do campo de busca.
-     * @param {string} resultadosId O ID do elemento que exibirá os resultados.
-     * @param {string|null} hiddenInputId O ID do campo hidden para armazenar o ID do item selecionado (ou null).
-     */
-    function setupBusca(inputId, resultadosId, hiddenInputId) {
-        const buscaInput = document.getElementById(inputId);
-        const resultadosDiv = document.getElementById(resultadosId);
-        const hiddenInput = hiddenInputId ? document.getElementById(hiddenInputId) : null;
-        let searchTimeout;
-
-        // Se algum dos elementos essenciais não for encontrado, interrompe a função para evitar erros.
-        if (!buscaInput || !resultadosDiv) {
-            console.error(`Elementos não encontrados para a busca: ${inputId}, ${resultadosId}`);
-            return;
-        }
-
-        buscaInput.addEventListener('keyup', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(async () => {
-                const termo = buscaInput.value.trim();
-                resultadosDiv.innerHTML = '';
-                if (hiddenInput) hiddenInput.value = '';
-
-                if (termo.length < 2) return;
-
-                // --- Adicionado TRY...CATCH para a busca de funcionários ---
-                try {
-                    const res = await fetch(`/api/buscar_funcionarios?q=${encodeURIComponent(termo)}`);
-                    if (!res.ok) { // Verifica se a resposta da API foi bem-sucedida (status 2xx)
-                        throw new Error(`Erro na busca: ${res.statusText}`);
-                    }
-                    const colaboradores = await res.json();
-
-                    if (colaboradores.length > 0) {
-                        colaboradores.forEach(colab => {
-                            const item = document.createElement('a');
-                            item.href = '#';
-                            item.className = 'list-group-item list-group-item-action';
-                            item.innerHTML = `<strong>${colab.nome}</strong><br><small class="text-muted">CPF: ${colab.cpf}</small>`;
-                            item.addEventListener('click', (e) => {
-                                e.preventDefault();
-                                buscaInput.value = colab.nome;
-                                if (hiddenInput) {
-                                    hiddenInput.value = colab.id;
-                                } else {
-                                    // Esta chamada é para a aba de consulta
-                                    carregarHistorico(colab.id);
-                                }
-                                resultadosDiv.innerHTML = ''; // Limpa os resultados após a seleção
-                            });
-                            resultadosDiv.appendChild(item);
-                        });
-                    } else {
-                        resultadosDiv.innerHTML = '<p class="list-group-item text-muted">Nenhum colaborador encontrado.</p>';
-                    }
-                } catch (error) {
-                    console.error('Falha ao buscar colaboradores:', error);
-                    resultadosDiv.innerHTML = '<p class="list-group-item text-danger">Erro ao carregar os dados. Tente novamente.</p>';
-                }
-            }, 300);
-        });
+    /* Nav Tabs Custom */
+    .nav-pills .nav-link.active {
+        background-color: var(--cor-primaria, #0a2240) !important;
+        color: white !important;
     }
-
-    /**
-     * Carrega e exibe o histórico de documentos de um funcionário.
-     * @param {number} funcionarioId O ID do funcionário.
-     */
-    async function carregarHistorico(funcionarioId) {
-        const historicoContainer = document.getElementById('historico-container');
-        if (!historicoContainer) return; // Segurança
-
-        historicoContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-
-        // --- Adicionado TRY...CATCH para carregar o histórico ---
-        try {
-            const res = await fetch(`/documentos/api/funcionario/${funcionarioId}/documentos`);
-            if (!res.ok) {
-                throw new Error(`Erro na API: ${res.statusText}`);
-            }
-            const documentos = await res.json();
-
-            if (documentos.length === 0) {
-                historicoContainer.innerHTML = '<p class="text-muted text-center">Nenhum documento encontrado para este funcionário.</p>';
-                return;
-            }
-
-            let tableHtml = `
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>Tipo</th>
-                                <th>Arquivo</th>
-                                <th>Data Envio</th>
-                                <th>Status</th>
-                                <th class="text-end">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            documentos.forEach(doc => {
-                let statusBadge = '';
-                // --- Lógica de status melhorada para incluir um caso padrão ---
-                if (doc.status === 'Pendente de Revisão') {
-                    statusBadge = '<span class="badge bg-warning text-dark">Pendente</span>';
-                } else if (doc.status === 'Aprovado') {
-                    statusBadge = '<span class="badge bg-success">Aprovado</span>';
-                } else {
-                    // Caso para outros status como 'Rejeitado' ou qualquer outro
-                    statusBadge = `<span class="badge bg-secondary">${doc.status}</span>`;
-                }
-
-                const btnDownload = `<a href="${doc.url_download}" class="btn btn-sm btn-outline-secondary" title="Baixar" download><i class="bi bi-download"></i></a>`;
-                const btnRemover = `<button class="btn btn-sm btn-outline-danger btn-remover-doc" data-doc-id="${doc.id}" title="Remover"><i class="bi bi-trash"></i></button>`;
-
-                tableHtml += `
-                    <tr id="doc-row-${doc.id}">
-                        <td>${doc.tipo_documento || 'N/A'}</td>
-                        <td>${doc.nome_arquivo || 'N/A'}</td>
-                        <td>${doc.data_upload || 'N/A'}</td>
-                        <td>${statusBadge}</td>
-                        <td class="text-end">${btnDownload} ${btnRemover}</td>
-                    </tr>
-                `;
-            });
-
-            tableHtml += '</tbody></table></div>';
-            historicoContainer.innerHTML = tableHtml;
-
-        } catch (error) {
-            console.error('Falha ao carregar histórico de documentos:', error);
-            historicoContainer.innerHTML = '<p class="text-danger text-center"><strong>Erro!</strong> Não foi possível carregar os documentos. Verifique o console para mais detalhes.</p>';
-        }
-    }
-
-    // --- Delegação de evento para remoção de documento ---
-    const historicoContainer = document.getElementById('historico-container');
-    if (historicoContainer) {
-        historicoContainer.addEventListener('click', function(event) {
-            const target = event.target.closest('.btn-remover-doc');
-            if (!target) return;
-
-            const docId = target.dataset.docId;
-            if (confirm('Tem certeza que deseja remover este documento permanentemente? Esta ação é irreversível.')) {
-                // Tratamento de erro também é bom aqui, embora menos crítico que no GET
-                fetch(`/documentos/api/documento/${docId}/remover`, {
-                    method: 'DELETE'
-                })
-                .then(res => {
-                    if (!res.ok) { // Lança um erro se a resposta não for OK
-                        return res.json().then(err => { throw new Error(err.message || 'Erro no servidor') });
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById(`doc-row-${docId}`).remove();
-                    } else {
-                        alert(data.message || 'Ocorreu um erro ao remover o documento.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao remover documento:', error);
-                    alert(`Não foi possível remover o documento: ${error.message}`);
-                });
-            }
-        });
-    }
-
-    // --- Inicialização das buscas ---
-    setupBusca('busca-solicitar', 'resultados-solicitar', 'funcionario_id_solicitar');
-    setupBusca('busca-enviar', 'resultados-enviar', 'funcionario_id_enviar');
-    setupBusca('busca-consulta', 'resultados-consulta', null);
+    .nav-pills .nav-link { color: var(--cor-primaria, #0a2240); font-weight: 500; }
     
-    // --- Lógica para a busca na aba de solicitar documentos ---
-    document.getElementById('search-funcionarios-doc').addEventListener('keyup', function() {
-        let searchTerm = this.value.toLowerCase();
-        let tableRows = document.querySelectorAll('#solicitar tbody tr');
-        tableRows.forEach(function(row) {
-            let employeeName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-            if (employeeName.includes(searchTerm)) {
-                row.style.display = '';
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+{% raw %}
+<script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- COMPONENTE: AUTOCOMPLETE MULTI-SELECT ---
+    const MultiSelectInput = ({ items, selectedIds, onAdd, onRemove, placeholder, labelKey = 'nome', subLabelKey = null }) => {
+        const [query, setQuery] = useState("");
+        const [suggestions, setSuggestions] = useState([]);
+        const [showList, setShowList] = useState(false);
+        const wrapperRef = useRef(null);
+
+        useEffect(() => {
+            if (query.length > 0) {
+                const lowerQ = query.toLowerCase();
+                const filtered = items.filter(item => 
+                    !selectedIds.includes(item.id) && 
+                    item[labelKey].toLowerCase().includes(lowerQ)
+                );
+                setSuggestions(filtered);
+                setShowList(true);
             } else {
-                row.style.display = 'none';
+                setShowList(false);
             }
-        });
-    });
-});
+        }, [query, items, selectedIds]);
+
+        // Click Outside Handler
+        useEffect(() => {
+            const handleClickOutside = (event) => {
+                if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                    setShowList(false);
+                }
+            };
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }, []);
+
+        const handleSelect = (item) => {
+            onAdd(item.id);
+            setQuery("");
+            setShowList(false);
+        };
+
+        const selectedItems = items.filter(i => selectedIds.includes(i.id));
+
+        return (
+            <div>
+                <div className="ac-wrapper" ref={wrapperRef}>
+                    <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder={placeholder}
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onFocus={() => query.length > 0 && setShowList(true)}
+                    />
+                    {showList && (
+                        <div className="ac-list">
+                            {suggestions.length > 0 ? (
+                                suggestions.map(item => (
+                                    <div key={item.id} className="ac-item" onClick={() => handleSelect(item)}>
+                                        <strong>{item[labelKey]}</strong>
+                                        {subLabelKey && item[subLabelKey] && <small className="text-muted ms-2">({item[subLabelKey]})</small>}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-3 text-muted small">Sem resultados.</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div className="mt-2">
+                    {selectedItems.map(item => (
+                        <span key={item.id} className="tag-item">
+                            {item[labelKey]}
+                            <span className="tag-remove" onClick={() => onRemove(item.id)}>&times;</span>
+                        </span>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // --- COMPONENTE: NOVA SOLICITAÇÃO ---
+    const NovaSolicitacao = ({ initialData }) => {
+        const [form, setForm] = useState({ titulo: '', descricao: '' });
+        
+        // Modos: 'individual' (Lista de pessoas) ou 'lote' (Setores/Cargos)
+        const [mode, setMode] = useState('individual'); 
+        
+        const [selFuncs, setSelFuncs] = useState([]);   // IDs Pessoas
+        const [selSetores, setSelSetores] = useState([]); // IDs Setores
+        const [selCargos, setSelCargos] = useState([]);   // IDs Cargos
+        const [selDocs, setSelDocs] = useState([]);       // IDs Docs
+        const [selAprovs, setSelAprovs] = useState([]);   // IDs Aprovadores
+
+        // Helpers genéricos de Estado
+        const addId = (list, setList, id) => setList([...list, id]);
+        const removeId = (list, setList, id) => setList(list.filter(x => x !== id));
+
+        const handleSubmit = async () => {
+            // Validações
+            if (!form.titulo) return alert("Por favor, preencha o Título.");
+            if (selDocs.length === 0) return alert("Selecione pelo menos um documento.");
+            
+            if (mode === 'individual' && selFuncs.length === 0) return alert("Selecione ao menos um funcionário.");
+            if (mode === 'lote' && selSetores.length === 0 && selCargos.length === 0) return alert("No modo Lote, selecione Setores ou Cargos.");
+
+            const payload = {
+                titulo: form.titulo, descricao: form.descricao, mode: mode,
+                documentos: selDocs, aprovadores: selAprovs,
+                funcionarios: selFuncs, setores: selSetores, cargos: selCargos
+            };
+
+            const btn = document.getElementById('btn-submit');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Enviando...`;
+
+            try {
+                const res = await fetch('/documentos/criar-solicitacao', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert("Erro: " + data.message);
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erro de conexão.");
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        };
+
+        return (
+            <div className="card shadow-sm border-0">
+                <div className="card-body p-4">
+                    <h5 className="mb-4 text-secondary border-bottom pb-2">Detalhes da Solicitação</h5>
+                    
+                    <div className="row g-3 mb-4">
+                        <div className="col-md-8">
+                            <label className="form-label fw-bold">Título</label>
+                            <input type="text" className="form-control" placeholder="Ex: Atualização Cadastral - 2025" 
+                                value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} />
+                        </div>
+                        <div className="col-md-4">
+                            <label className="form-label fw-bold">Solicitante</label>
+                            <input type="text" className="form-control bg-light" value={initialData.usuario_atual.nome} disabled />
+                        </div>
+                        <div className="col-12">
+                            <label className="form-label">Descrição / Instruções (Opcional)</label>
+                            <textarea className="form-control" rows="2" placeholder="Instruções para os colaboradores..."
+                                value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})}></textarea>
+                        </div>
+                    </div>
+
+                    <h5 className="mb-3 text-secondary border-bottom pb-2">Destinatários</h5>
+                    
+                    <div className="bg-light p-3 rounded border mb-4">
+                        <div className="d-flex gap-4 mb-3">
+                            <div className="form-check">
+                                <input className="form-check-input" type="radio" name="mode" id="modeInd" 
+                                    checked={mode === 'individual'} onChange={() => setMode('individual')} />
+                                <label className="form-check-label fw-bold" htmlFor="modeInd">Individual (Múltiplos)</label>
+                            </div>
+                            <div className="form-check">
+                                <input className="form-check-input" type="radio" name="mode" id="modeLot" 
+                                    checked={mode === 'lote'} onChange={() => setMode('lote')} />
+                                <label className="form-check-label fw-bold" htmlFor="modeLot">Em Lote (Setor / Cargo)</label>
+                            </div>
+                        </div>
+
+                        {mode === 'individual' ? (
+                            <MultiSelectInput 
+                                items={initialData.funcionarios} selectedIds={selFuncs}
+                                onAdd={id => addId(selFuncs, setSelFuncs, id)} onRemove={id => removeId(selFuncs, setSelFuncs, id)}
+                                placeholder="Digite o nome do colaborador..." subLabelKey="setor"
+                            />
+                        ) : (
+                            <div className="row g-3">
+                                <div className="col-md-6 border-end">
+                                    <label className="form-label fw-bold text-success small">SETORES</label>
+                                    <MultiSelectInput 
+                                        items={initialData.setores} selectedIds={selSetores}
+                                        onAdd={id => addId(selSetores, setSelSetores, id)} onRemove={id => removeId(selSetores, setSelSetores, id)}
+                                        placeholder="Adicionar Setor..."
+                                    />
+                                </div>
+                                <div className="col-md-6">
+                                    <label className="form-label fw-bold text-info small">CARGOS</label>
+                                    <MultiSelectInput 
+                                        items={initialData.cargos} selectedIds={selCargos}
+                                        onAdd={id => addId(selCargos, setSelCargos, id)} onRemove={id => removeId(selCargos, setSelCargos, id)}
+                                        placeholder="Adicionar Cargo..."
+                                    />
+                                </div>
+                                <div className="col-12 text-muted small fst-italic">
+                                    <i className="bi bi-info-circle me-1"></i>
+                                    Se selecionar Setor E Cargo, enviará apenas para quem tem aquele cargo naquele setor (Interseção).
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="row g-4">
+                        <div className="col-md-6">
+                            <h5 className="mb-3 text-secondary border-bottom pb-2">Documentos</h5>
+                            <MultiSelectInput 
+                                items={initialData.tipos_documento} selectedIds={selDocs}
+                                onAdd={id => addId(selDocs, setSelDocs, id)} onRemove={id => removeId(selDocs, setSelDocs, id)}
+                                placeholder="Selecione os tipos..."
+                            />
+                        </div>
+                        <div className="col-md-6 border-start">
+                            <h5 className="mb-3 text-secondary border-bottom pb-2">Workflow de Aprovação</h5>
+                            <MultiSelectInput 
+                                items={initialData.aprovadores} selectedIds={selAprovs}
+                                onAdd={id => addId(selAprovs, setSelAprovs, id)} onRemove={id => removeId(selAprovs, setSelAprovs, id)}
+                                placeholder="Adicionar Aprovador..."
+                            />
+                            <div className="form-text mt-1">
+                                Se vazio, a aprovação será feita pelo fluxo padrão (Solicitante/RH).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="d-flex justify-content-end mt-5 pt-3 border-top">
+                        <button id="btn-submit" className="btn btn-brand-custom px-5 py-2 shadow-sm" onClick={handleSubmit}>
+                            Enviar Solicitação <i className="bi bi-send-fill ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- COMPONENTE: REVISÃO UNIFICADA ---
+    const RevisaoTab = ({ docs }) => {
+        const handleAction = async (id, action) => {
+            const motivo = action === 'rejeitar' ? prompt("Motivo da rejeição:") : null;
+            if (action === 'rejeitar' && !motivo) return;
+
+            try {
+                const url = action === 'aprovar' ? `/api/aprovar-documento/${id}` : `/api/rejeitar-documento/${id}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ motivo })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if(data.success) window.location.reload();
+            } catch(e) { console.error(e); alert("Erro ao processar."); }
+        };
+
+        return (
+            <div className="card shadow-sm border-0">
+                <div className="card-body p-0">
+                    <div className="table-responsive">
+                        <table className="table table-hover align-middle mb-0">
+                            <thead className="bg-light">
+                                <tr>
+                                    <th className="ps-4">Funcionário</th>
+                                    <th>Documento</th>
+                                    <th>Data Envio</th>
+                                    <th className="text-end pe-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {docs.length === 0 ? (
+                                    <tr><td colSpan="4" className="text-center p-5 text-muted">Nenhum documento pendente para sua revisão.</td></tr>
+                                ) : (
+                                    docs.map(doc => (
+                                        <tr key={doc.id}>
+                                            <td className="ps-4">
+                                                <div className="fw-bold">{doc.funcionario_nome}</div>
+                                                <small className="text-muted">{doc.setor_nome}</small>
+                                            </td>
+                                            <td>
+                                                <a href={doc.url_download} target="_blank" className="text-decoration-none">
+                                                    <i className="bi bi-file-earmark-text me-1"></i> {doc.tipo}
+                                                </a>
+                                            </td>
+                                            <td>{doc.data_envio}</td>
+                                            <td className="text-end pe-4">
+                                                <button className="btn btn-sm btn-outline-success me-2" title="Aprovar" onClick={() => handleAction(doc.id, 'aprovar')}>
+                                                    <i className="bi bi-check-lg"></i>
+                                                </button>
+                                                <button className="btn btn-sm btn-outline-danger" title="Rejeitar" onClick={() => handleAction(doc.id, 'rejeitar')}>
+                                                    <i className="bi bi-x-lg"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- APP PRINCIPAL ---
+    const App = () => {
+        const [tab, setTab] = useState('solicitar');
+        const data = window.INITIAL_DATA || { funcionarios: [], setores: [], cargos: [], documentos_revisao: [], tipos_documento: [], aprovadores: [] };
+
+        return (
+            <div>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h2 className="h4 text-dark mb-0 border-start border-4 border-primary ps-3">Gestão de Documentos</h2>
+                    
+                    <ul className="nav nav-pills bg-white p-1 rounded shadow-sm">
+                        <li className="nav-item">
+                            <button className={`nav-link px-4 ${tab === 'solicitar' ? 'active' : ''}`} onClick={() => setTab('solicitar')}>
+                                <i className="bi bi-plus-circle me-2"></i> Solicitar
+                            </button>
+                        </li>
+                        <li className="nav-item">
+                            <button className={`nav-link px-4 ${tab === 'revisao' ? 'active' : ''}`} onClick={() => setTab('revisao')}>
+                                <i className="bi bi-list-check me-2"></i> Revisão
+                                {data.documentos_revisao.length > 0 && <span className="badge bg-danger ms-2">{data.documentos_revisao.length}</span>}
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                {tab === 'solicitar' && <NovaSolicitacao initialData={data} />}
+                {tab === 'revisao' && <RevisaoTab docs={data.documentos_revisao} />}
+            </div>
+        );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('react-root'));
 </script>
+{% endraw %}
+
+<!-- INJEÇÃO DE DADOS (Fora do raw para o Jinja funcionar) -->
+<script>
+    window.INITIAL_DATA = {{ initial_data | tojson }};
+</script>
+
 {% endblock %}

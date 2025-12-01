@@ -1,6 +1,5 @@
 # app/models.py
 import jwt
-
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from . import db
@@ -22,7 +21,7 @@ funcionario_sistemas = db.Table('funcionario_sistemas',
     db.Column('observacao', db.String(255))
 )
 
-# NOVO: Tabela para vincular avisos a múltiplos setores
+# Tabela para vincular avisos a múltiplos setores
 aviso_setores = db.Table('aviso_setores',
     db.Column('aviso_id', db.Integer, db.ForeignKey('aviso.id'), primary_key=True),
     db.Column('setor_id', db.Integer, db.ForeignKey('setor.id'), primary_key=True)
@@ -34,9 +33,7 @@ class Usuario(db.Model, UserMixin):
     __tablename__ = 'usuario'
     id = db.Column(db.Integer, primary_key=True)
 
-    # CAMPO ADICIONADO: Essencial para o login e vínculo com o AD
     username = db.Column(db.String(120), unique=True, nullable=True, index=True)
-
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), unique=True)
@@ -44,19 +41,15 @@ class Usuario(db.Model, UserMixin):
     data_consentimento = db.Column(db.DateTime, nullable=True)
     theme = db.Column(db.String(50), default='light', nullable=False)
 
-    # --- CAMPOS ADICIONADOS PARA O PIPELINE DE DOCUMENTOS E SYNC AD ---
     ultimo_login_em = db.Column(db.DateTime, nullable=True)
-    ultimo_logon_ad = db.Column(db.DateTime, nullable=True) # NOVO CAMPO PARA LAST LOGON
+    ultimo_logon_ad = db.Column(db.DateTime, nullable=True)
     primeiro_login_completo = db.Column(db.Boolean, default=False, nullable=False)
-    # --- FIM DOS CAMPOS ADICIONADOS ---
-
 
     funcionario = db.relationship('Funcionario', backref=db.backref('usuario', uselist=False))
     permissoes = db.relationship('Permissao', secondary=permissoes_usuarios, lazy='subquery',
                                  backref=db.backref('usuarios', lazy=True))
 
     def set_password(self, password):
-        # CORREÇÃO DE COMPATIBILIDADE (Erro do 'scrypt' no macOS)
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
@@ -67,7 +60,6 @@ class Usuario(db.Model, UserMixin):
         if isinstance(nome_permissao, list):
             return any(p.nome in nome_permissao for p in self.permissoes)
         return any(p.nome == nome_permissao for p in self.permissoes)
-    
     
 class Permissao(db.Model):
     __tablename__ = 'permissao'
@@ -113,20 +105,14 @@ class Aviso(db.Model):
     data_publicacao = db.Column(db.DateTime, default=datetime.utcnow)
     autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     
-    # --- NOVOS CAMPOS HIERARQUIA ---
     publico_geral = db.Column(db.Boolean, default=True, nullable=False) 
-    
-    # Separação Supervisor vs Diretoria
-    target_supervisores = db.Column(db.Boolean, default=False, nullable=False) # Mural de Supervisores
-    target_diretoria = db.Column(db.Boolean, default=False, nullable=False)    # Mural de Diretoria
-    
+    target_supervisores = db.Column(db.Boolean, default=False, nullable=False)
+    target_diretoria = db.Column(db.Boolean, default=False, nullable=False)
     arquivado = db.Column(db.Boolean, default=False, nullable=False)
 
     autor = db.relationship('Usuario')
     logs_ciencia = db.relationship('LogCienciaAviso', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
     anexos = db.relationship('AvisoAnexo', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
-    
-    # Relacionamento M2M com Setores
     setores_alvo = db.relationship('Setor', secondary=aviso_setores, backref=db.backref('avisos_exclusivos', lazy='dynamic'))
 
 class LogCienciaAviso(db.Model):
@@ -145,6 +131,56 @@ class AvisoAnexo(db.Model):
     path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
     aviso_id = db.Column(db.Integer, db.ForeignKey('aviso.id'), nullable=False)    
 
+# --- NOVO: MODELOS DE SOLICITAÇÃO COMPLEXA DE DOCUMENTOS ---
+
+class Solicitacao(db.Model):
+    """
+    O 'Pai' do pedido. Agrupa várias requisições individuais.
+    Ex: 'Relatório Mensal de Bônus' criado pelo Financeiro.
+    """
+    __tablename__ = 'solicitacao'
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False)
+    descricao = db.Column(db.Text, nullable=True)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    status_geral = db.Column(db.String(50), default='Aberta') # Aberta, Concluída, Cancelada
+
+    solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
+    # Relacionamento com as requisições filhas
+    requisicoes = db.relationship('RequisicaoDocumento', backref='solicitacao_pai', lazy='dynamic')
+    # Lista de quem deve aprovar (workflow definido na criação)
+    aprovadores_previstos = db.relationship('SolicitacaoAprovador', backref='solicitacao', lazy='dynamic', cascade="all, delete-orphan")
+
+class SolicitacaoAprovador(db.Model):
+    """
+    Define QUEM deve aprovar os documentos dessa solicitação.
+    """
+    __tablename__ = 'solicitacao_aprovador'
+    id = db.Column(db.Integer, primary_key=True)
+    solicitacao_id = db.Column(db.Integer, db.ForeignKey('solicitacao.id'), nullable=False)
+    aprovador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    
+    aprovador = db.relationship('Usuario')
+
+class DocumentoAprovacao(db.Model):
+    """
+    Rastreia o 'OK' individual de cada aprovador para um documento específico.
+    """
+    __tablename__ = 'documento_aprovacao'
+    id = db.Column(db.Integer, primary_key=True)
+    documento_id = db.Column(db.Integer, db.ForeignKey('documento.id'), nullable=False)
+    aprovador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    
+    status = db.Column(db.String(50), default='Pendente') # Pendente, Aprovado, Rejeitado
+    data_acao = db.Column(db.DateTime, nullable=True)
+    observacao = db.Column(db.Text, nullable=True)
+
+    documento = db.relationship('Documento', back_populates='aprovacoes')
+    aprovador = db.relationship('Usuario')
+
+# -----------------------------------------------------------
+
 class Documento(db.Model):
     __tablename__ = 'documento'
     id = db.Column(db.Integer, primary_key=True)
@@ -154,18 +190,54 @@ class Documento(db.Model):
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
     data_upload = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # CORREÇÃO: Adicionado use_alter=True para evitar Ciclo de Dependência
     requisicao_id = db.Column(db.Integer, db.ForeignKey('requisicao_documento.id', use_alter=True), nullable=True)
 
-    # --- CAMPOS ADICIONADOS PARA O FLUXO DE REVISÃO ---
+    # Status geral do documento (só vira 'Aprovado' se todos os DocumentoAprovacao derem OK)
     status = db.Column(db.String(50), default='Pendente de Revisão', nullable=False)
+    
+    # Campos Legado (Mantidos para compatibilidade, mas preferir usar a tabela DocumentoAprovacao)
     revisor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     data_revisao = db.Column(db.DateTime, nullable=True)
     observacao_revisao = db.Column(db.Text, nullable=True)
 
     funcionario = db.relationship('Funcionario', backref='documentos')
-    revisor = db.relationship('Usuario', foreign_keys=[revisor_id])
-    # ----------------------------------------------------
+    # Relacionamento para as aprovações detalhadas
+    aprovacoes = db.relationship('DocumentoAprovacao', back_populates='documento', cascade="all, delete-orphan")
+
+
+class RequisicaoDocumento(db.Model):
+    __tablename__ = 'requisicao_documento'
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # FK Nova para a Solicitacao Pai (opcional para manter compatibilidade com o antigo)
+    solicitacao_id = db.Column(db.Integer, db.ForeignKey('solicitacao.id'), nullable=True)
+
+    status = db.Column(db.String(50), default='Pendente', nullable=False, index=True)
+    data_requisicao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    data_conclusao = db.Column(db.DateTime, nullable=True)
+    data_ultima_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    observacoes_rh = db.Column(db.Text, nullable=True) 
+
+    tipo_documento_id = db.Column(db.Integer, db.ForeignKey('tipo_documento.id'), nullable=False)
+    destinatario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False, index=True)
+    
+    documento_enviado_id = db.Column(db.Integer, db.ForeignKey('documento.id', use_alter=True), nullable=True)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+
+    tipo = db.relationship('TipoDocumento', backref='requisicoes')
+    destinatario = db.relationship('Funcionario', backref=db.backref('requisicoes_documentos', lazy='dynamic'))
+    documento = db.relationship('Documento', backref='requisicao', uselist=False, foreign_keys=[documento_enviado_id])
+    solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
+
+class TipoDocumento(db.Model):
+    __tablename__ = 'tipo_documento'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False, unique=True)
+    descricao = db.Column(db.String(255), nullable=True)
+    obrigatorio_na_admissao = db.Column(db.Boolean, default=False, nullable=False)
+    
+    def __repr__(self):
+        return f'<TipoDocumento {self.nome}>'
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
@@ -179,55 +251,19 @@ class Feedback(db.Model):
     avaliador = db.relationship('Usuario', foreign_keys=[avaliador_id])
     avaliado = db.relationship('Funcionario', foreign_keys=[avaliado_id])
 
-class RequisicaoDocumento(db.Model):
-    __tablename__ = 'requisicao_documento'
-    id = db.Column(db.Integer, primary_key=True)
-    
-    status = db.Column(db.String(50), default='Pendente', nullable=False, index=True)
-    data_requisicao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    data_conclusao = db.Column(db.DateTime, nullable=True)
-    data_ultima_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    observacoes_rh = db.Column(db.Text, nullable=True) 
-
-    tipo_documento_id = db.Column(db.Integer, db.ForeignKey('tipo_documento.id'), nullable=False)
-    destinatario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False, index=True)
-    
-    # CORREÇÃO: Adicionado use_alter=True para evitar Ciclo de Dependência
-    documento_enviado_id = db.Column(db.Integer, db.ForeignKey('documento.id', use_alter=True), nullable=True)
-    
-    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-
-    tipo = db.relationship('TipoDocumento', backref='requisicoes')
-    destinatario = db.relationship('Funcionario', backref=db.backref('requisicoes_documentos', lazy='dynamic'))
-    documento = db.relationship('Documento', backref='requisicao', uselist=False, foreign_keys=[documento_enviado_id])
-    solicitante = db.relationship('Usuario')
-
-
-class TipoDocumento(db.Model):
-    __tablename__ = 'tipo_documento'
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False, unique=True)
-    descricao = db.Column(db.String(255), nullable=True)
-    obrigatorio_na_admissao = db.Column(db.Boolean, default=False, nullable=False)
-    
-    def __repr__(self):
-        return f'<TipoDocumento {self.nome}>'
-
-
 ## Modelo de pontos
 class Ponto(db.Model):
     __tablename__ = 'ponto'
     id = db.Column(db.Integer, primary_key=True)
     data_ajuste = db.Column(db.Date, nullable=False)
-    tipo_ajuste = db.Column(db.String(50), nullable=False) # Ex: 'Entrada', 'Saída Almoço', etc.
-    justificativa = db.Column(db.Text, nullable=True) # Justificativa do colaborador
+    tipo_ajuste = db.Column(db.String(50), nullable=False)
+    justificativa = db.Column(db.Text, nullable=True)
     path_assinado = db.Column(db.String(512), nullable=True)
     status = db.Column(db.String(50), default='Pendente', nullable=False)
     data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
     data_upload = db.Column(db.DateTime, nullable=True)
-    observacao_rh = db.Column(db.Text, nullable=True) # Motivo da reprovação pelo RH
+    observacao_rh = db.Column(db.Text, nullable=True)
 
-    # Relacionamentos
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     revisor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
@@ -251,9 +287,6 @@ class Denuncia(db.Model):
 
     anexos = db.relationship('DenunciaAnexo', backref='denuncia', lazy='dynamic', cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f'<Denuncia "{self.titulo}">'
-
 class DenunciaAnexo(db.Model):
     __tablename__ = 'denuncia_anexo'
     id = db.Column(db.Integer, primary_key=True)
@@ -271,10 +304,6 @@ class LogAtividade(db.Model):
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     usuario = db.relationship('Usuario', backref='logs_atividade')
 
-    def __repr__(self):
-        return f'<Log {self.timestamp}: {self.acao}>'
-
-# --- NOVOS MODELOS ADICIONADOS ---
 class Cargo(db.Model):
     __tablename__ = 'cargo'
     id = db.Column(db.Integer, primary_key=True)
@@ -303,9 +332,6 @@ class VinculoADSugestao(db.Model):
     pontuacao = db.Column(db.Integer, nullable=False)
     
     funcionario = db.relationship('Funcionario')
-
-    def __repr__(self):
-        return f'<VinculoADSugestao {self.funcionario_nome} -> {self.ad_display_name}>'
     
 class Artigo(db.Model):
     __tablename__ = 'artigos'
@@ -322,24 +348,14 @@ class Artigo(db.Model):
     path_anexo = db.Column(db.String(500), nullable=True)
     nome_anexo_original = db.Column(db.String(255), nullable=True)
 
-    def __repr__(self):
-        return f'<Artigo {self.titulo}>'
-
-# --- FASE 1: MÓDULO HELPDESK E ATIVOS ---
-
 class Localizacao(db.Model):
-    """ Modelo para Localizações Físicas (Salas, Mesas) """
     __tablename__ = 'localizacao'
     id = db.Column(db.Integer, primary_key=True)
     nome_sala = db.Column(db.String(100), nullable=False, unique=True)
     andar = db.Column(db.String(50), nullable=True)
-    planta_path = db.Column(db.String(255), nullable=True) # Caminho para imagem da planta/mapa
-
-    def __repr__(self):
-        return f'<Localizacao {self.nome_sala}>'
+    planta_path = db.Column(db.String(255), nullable=True)
 
 class Ativo(db.Model):
-    """ Modelo para o Inventário Central (CMDB) """
     __tablename__ = 'ativo'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(150), nullable=False)
@@ -351,76 +367,55 @@ class Ativo(db.Model):
     status = db.Column(db.String(50), default='Em Uso', nullable=False)
     
     localizacao_id = db.Column(db.Integer, db.ForeignKey('localizacao.id'), nullable=True)
-    
-    # --- NOVO CAMPO: SETOR DO ATIVO ---
     setor_id = db.Column(db.Integer, db.ForeignKey('setor.id'), nullable=True)
-    # ----------------------------------
 
     localizacao = db.relationship('Localizacao', backref='ativos')
-    setor = db.relationship('Setor', backref='ativos') # Relacionamento
+    setor = db.relationship('Setor', backref='ativos')
     
     descricao_ad = db.Column(db.String(255), nullable=True)
     sistema_operacional = db.Column(db.String(100), nullable=True)
     ultimo_logon_ad = db.Column(db.DateTime, nullable=True)
 
-    def __repr__(self):
-        return f'<Ativo {self.nome} ({self.hostname})>'
-
 class Emprestimo(db.Model):
-    """ Modelo para Cautela (Check-out/Check-in de Notebooks) """
     __tablename__ = 'emprestimo'
     id = db.Column(db.Integer, primary_key=True)
     
     ativo_id = db.Column(db.Integer, db.ForeignKey('ativo.id'), nullable=False)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
-    tecnico_responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False) # Quem entregou
+    tecnico_responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     
     data_emprestimo = db.Column(db.DateTime, default=datetime.utcnow)
     data_prevista_devolucao = db.Column(db.Date, nullable=True)
     data_devolucao_real = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(50), default='Ativo', nullable=False) # "Ativo", "Devolvido"
+    status = db.Column(db.String(50), default='Ativo', nullable=False)
 
     ativo = db.relationship('Ativo', backref='emprestimos')
     funcionario = db.relationship('Funcionario', backref='emprestimos')
     tecnico_responsavel = db.relationship('Usuario')
 
-    def __repr__(self):
-        return f'<Emprestimo Ativo {self.ativo_id} para Func {self.funcionario_id}>'
-
 class CategoriaTI(db.Model):
-    """ Categorias para os chamados de Helpdesk (Ex: Hardware, Rede, Sistema) """
     __tablename__ = 'categoria_ti'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), unique=True, nullable=False)
-    
-    def __repr__(self):
-        return f'<CategoriaTI {self.nome}>'
 
 class ChamadoTI(db.Model):
-    """ Modelo para os Chamados de Helpdesk (Baseado em Denuncia) """
     __tablename__ = 'chamado_ti'
     id = db.Column(db.Integer, primary_key=True)
-    
-    # --- NOVO CAMPO: PROTOCOLO ---
     protocolo = db.Column(db.String(20), unique=True, nullable=True, index=True)
-    
-    # --- NOVO CAMPO: ARQUIVADO (Fase 1.6) ---
     arquivado = db.Column(db.Boolean, default=False, nullable=False)
-    # ----------------------------------------
 
     titulo = db.Column(db.String(200), nullable=False)
     conteudo = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(50), default='Aberto', nullable=False) # Aberto, Em Andamento, Pendente, Fechado
-    prioridade = db.Column(db.String(50), default='Media', nullable=False) # Baixa, Media, Alta, Urgente
+    status = db.Column(db.String(50), default='Aberto', nullable=False)
+    prioridade = db.Column(db.String(50), default='Media', nullable=False)
     data_abertura = db.Column(db.DateTime, default=datetime.utcnow)
     data_fechamento = db.Column(db.DateTime, nullable=True)
     data_limite_sla = db.Column(db.DateTime, nullable=True)
     
-    # Relacionamentos
     categoria_ti_id = db.Column(db.Integer, db.ForeignKey('categoria_ti.id'), nullable=False)
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tecnico_atribuido_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    ativo_associado_id = db.Column(db.Integer, db.ForeignKey('ativo.id'), nullable=True) # Link com QR Code
+    ativo_associado_id = db.Column(db.Integer, db.ForeignKey('ativo.id'), nullable=True)
 
     categoria = db.relationship('CategoriaTI', backref='chamados')
     solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id], backref='chamados_abertos')
@@ -430,11 +425,7 @@ class ChamadoTI(db.Model):
     anexos = db.relationship('ChamadoAnexo', backref='chamado', lazy='dynamic', cascade="all, delete-orphan")
     comentarios = db.relationship('ChamadoComentario', backref='chamado', lazy='dynamic', cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f'<ChamadoTI {self.id}: {self.titulo}>'
-
 class ChamadoAnexo(db.Model):
-    """ Anexos para os Chamados (Baseado em DenunciaAnexo) """
     __tablename__ = 'chamado_anexo'
     id = db.Column(db.Integer, primary_key=True)
     nome_arquivo_original = db.Column(db.String(255), nullable=False)
@@ -442,13 +433,12 @@ class ChamadoAnexo(db.Model):
     chamado_id = db.Column(db.Integer, db.ForeignKey('chamado_ti.id'), nullable=False)
 
 class ChamadoComentario(db.Model):
-    """ Histórico de comentários (idas e vindas) dos chamados """
     __tablename__ = 'chamado_comentario'
     id = db.Column(db.Integer, primary_key=True)
     comentario = db.Column(db.Text, nullable=False)
     data_comentario = db.Column(db.DateTime, default=datetime.utcnow)
     
     chamado_id = db.Column(db.Integer, db.ForeignKey('chamado_ti.id'), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False) # Quem comentou (solicitante ou técnico)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
     usuario = db.relationship('Usuario')
