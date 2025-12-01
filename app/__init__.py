@@ -1,5 +1,3 @@
-# app/__init__.py
-
 import os
 from datetime import datetime
 import pytz
@@ -113,6 +111,13 @@ def create_app(config_name='default'):
         app.register_blueprint(ativos_bp)
     except ImportError:
         pass
+        
+    # --- ADIÇÕES DA FASE 2 (Mural de Avisos) ---
+    try:
+        from .avisos import avisos_bp
+        app.register_blueprint(avisos_bp)
+    except ImportError:
+        pass # Evita erro se o arquivo ainda não existir, mas ele deve existir agora
     # --- FIM DAS ADIÇÕES ---
     
     # --- SCHEDULER AUTOMÁTICO PARA O AD ---

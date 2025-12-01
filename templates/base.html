@@ -156,9 +156,18 @@
 
 
                 
-                {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti']) %}
+                {# --- NOVA LÓGICA DE PERMISSÃO PARA O MENU ADMIN TI --- #}
+                {% set is_ti_member = false %}
+                {% if current_user.funcionario and current_user.funcionario.setor %}
+                    {% set setor_nome = current_user.funcionario.setor.nome|upper %}
+                    {% if 'TI' in setor_nome or 'TECNOLOGIA' in setor_nome or 'SUPORTE' in setor_nome or 'INFRA' in setor_nome %}
+                        {% set is_ti_member = true %}
+                    {% endif %}
+                {% endif %}
+
+                {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti', 'tecnico_ti']) or is_ti_member %}
                     
-                    <!-- Lógica Admin TI Atualizada (Sem link solto de Categorias) -->
+                    <!-- Lógica Admin TI Atualizada -->
                     {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs', 'chamados_web.gestao_chamados_react', 'chamados_web.gerenciar_categorias', 'chamados_web.relatorios'] %}
                     {% set is_ti_active = false %}
                     {% for prefix in ti_prefixes %}
@@ -180,7 +189,7 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}">
+                                    <a href="{{ url_for('main.ver_logs') }}" class="nav-link {% if 'ver_logs' in request.endpoint %}active{% endif %}" href="{{ url_for('main.ver_logs') }}">
                                         <i class="bi bi-journal-text"></i> Logs do Sistema
                                     </a>
                                 </li>

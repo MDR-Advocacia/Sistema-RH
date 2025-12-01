@@ -3,89 +3,76 @@
 {% block title %}Mural de Avisos{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">Mural de Avisos</h1>
-    {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('main.avisos_arquivados') }}" class="btn btn-sm btn-outline-secondary me-2">
-            <i class="bi bi-archive"></i> Ver Arquivados
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-newspaper me-2"></i> Mural Digital</h2>
+        {% if nivel_acesso != 'COLABORADOR' %}
+        <a href="{{ url_for('avisos.criar_aviso') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i> Novo Aviso
         </a>
-        <a href="{{ url_for('main.criar_aviso') }}" class="btn btn-sm btn-brand">
-            <i class="bi bi-plus-circle"></i> Novo Aviso
-        </a>
+        {% endif %}
     </div>
+
+    {% if avisos %}
+        <div class="row">
+            {% for aviso in avisos %}
+            <div class="col-md-12 mb-3">
+                <!-- Borda Colorida baseada no Tipo -->
+                <div class="card h-100 border-start border-4 shadow-sm
+                    {% if aviso.target_diretoria %}border-danger
+                    {% elif aviso.target_supervisores %}border-warning
+                    {% elif aviso.publico_geral %}border-primary
+                    {% else %}border-success{% endif %}">
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title fw-bold mb-1">{{ aviso.titulo }}</h5>
+                            
+                            <!-- Badges -->
+                            <div>
+                                {% if aviso.target_diretoria %}
+                                    <span class="badge bg-danger"><i class="bi bi-shield-lock"></i> Diretoria</span>
+                                {% endif %}
+                                
+                                {% if aviso.target_supervisores %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-briefcase"></i> Supervisores</span>
+                                {% endif %}
+                                
+                                {% if aviso.publico_geral %}
+                                    <span class="badge bg-primary">Geral</span>
+                                {% endif %}
+
+                                {% for setor in aviso.setores_alvo %}
+                                    <span class="badge bg-success">{{ setor.nome }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <h6 class="card-subtitle mb-3 text-muted small">
+                            {{ aviso.data_publicacao.strftime('%d/%m/%Y às %H:%M') }} por {{ aviso.autor.funcionario.nome }}
+                        </h6>
+
+                        <p class="card-text" style="white-space: pre-line;">{{ aviso.conteudo }}</p>
+                    </div>
+
+                    {% if current_user.id == aviso.autor_id or nivel_acesso == 'DIRETOR' %}
+                    <div class="card-footer bg-transparent border-top-0 text-end">
+                        <form action="{{ url_for('avisos.arquivar_aviso', aviso_id=aviso.id) }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-link text-muted text-decoration-none">
+                                <i class="bi bi-archive"></i> Arquivar
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-2">Nenhum aviso no momento.</p>
+        </div>
     {% endif %}
 </div>
-
-
-
-{% for aviso in avisos %}
-<div class="card shadow-sm mb-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <h5 class="card-title mb-1">{{ aviso.titulo }}</h5>
-                <small class="text-muted">
-                    Publicado por: {{ aviso.autor.funcionario.nome }} em {{ aviso.data_publicacao | localtime }}
-                </small>
-            </div>
-            <div>
-                {% if aviso.id in avisos_lidos_ids %}
-                    <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill"><i class="bi bi-check-circle-fill"></i> Lido</span>
-                {% else %}
-                    <span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill"><i class="bi bi-exclamation-triangle-fill"></i> Pendente</span>
-                {% endif %}
-            </div>
-        </div>
-        <hr>
-        <p class="card-text" style="white-space: pre-wrap;">{{ aviso.conteudo }}</p>
-        
-        {% if aviso.anexos.all() %}
-        <hr>
-        <h6 class="card-subtitle mb-2 text-muted">Anexos:</h6>
-        <ul class="list-unstyled">
-            {% for anexo in aviso.anexos %}
-            <li>
-                <a href="{{ url_for('main.download_anexo_aviso', filename=anexo.path_armazenamento) }}">
-                    <i class="bi bi-paperclip"></i> {{ anexo.nome_arquivo_original }}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        <div class="text-end">
-            {% if current_user.tem_permissao('admin_rh') or current_user.tem_permissao('admin_ti') %}
-                <form method="POST" action="{{ url_for('main.remover_aviso', aviso_id=aviso.id) }}" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover este aviso? Esta ação não pode ser desfeita.');">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash"></i> Remover
-                    </button>
-                </form>
-                <a href="{{ url_for('main.ver_logs_ciencia', aviso_id=aviso.id) }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-card-checklist"></i> Ver Logs
-                </a>
-                <!-- BOTÃO DE ARQUIVAR ADICIONADO AQUI -->
-                <form method="POST" action="{{ url_for('main.arquivar_aviso', aviso_id=aviso.id) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-info">
-                        <i class="bi bi-archive"></i> Arquivar
-                    </button>
-                </form>
-            {% endif %}
-
-            {% if aviso.id not in avisos_lidos_ids %}
-                <form method="POST" action="{{ url_for('main.dar_ciencia_aviso', aviso_id=aviso.id) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-accent">Estou Ciente</button>
-                </form>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% else %}
-<div class="card shadow-sm">
-    <div class="card-body text-center">
-        <p class="mb-0">Nenhum aviso publicado no momento.</p>
-    </div>
-</div>
-{% endfor %}
-
 {% endblock %}

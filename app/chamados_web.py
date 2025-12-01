@@ -1,12 +1,11 @@
-# app/chamados_web.py
 import os
 from flask import (
-    Blueprint, render_template, request, flash, redirect, url_for, current_app, send_file, jsonify
+    Blueprint, render_template, request, flash, redirect, url_for, current_app, send_file, jsonify, abort
 )
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.utils import secure_filename
-from sqlalchemy import or_ # Necessário para busca
+from sqlalchemy import or_
 
 from . import db
 from .models import ChamadoTI, CategoriaTI, Ativo, ChamadoComentario, Usuario, ChamadoAnexo, Setor
@@ -15,7 +14,31 @@ from .utils import registrar_log
 
 chamados_web_bp = Blueprint('chamados_web', __name__, url_prefix='/chamados')
 
-PERMISSOES_TECNICAS = ['tecnico_ti', 'supervisor_ti', 'admin_ti']
+# --- LOGICA DE ACESSO (PERMISSÃO + SETOR) ---
+def is_equipe_ti():
+    """
+    Verifica se o usuário tem acesso técnico aos chamados.
+    Critério: Ter permissão explícita OU estar lotado no setor de TI.
+    """
+    # 1. Verifica Permissões de Sistema (Admins/Supervisores)
+    if current_user.tem_permissao(['admin_ti', 'supervisor_ti', 'tecnico_ti']):
+        return True
+    
+    # 2. Verifica Setor (Membros da OU TI)
+    if current_user.funcionario and current_user.funcionario.setor:
+        nome_setor = current_user.funcionario.setor.nome.upper()
+        # Palavras-chave que identificam o setor de TI no seu AD
+        termos_ti = ['TI', 'TECNOLOGIA', 'SUPORTE', 'INFRAESTRUTURA', 'SISTEMAS']
+        if any(termo in nome_setor for termo in termos_ti):
+            return True
+            
+    return False
+
+def verificar_acesso_ti():
+    """Atalha o request se não for TI"""
+    if not is_equipe_ti():
+        flash('Acesso restrito à equipe técnica.', 'danger')
+        abort(403)
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -31,7 +54,6 @@ def get_upload_path_chamado(chamado_id):
 @chamados_web_bp.route('/abrir', methods=['GET', 'POST'])
 @login_required
 def abrir_chamado():
-    # (MANTIDO IGUAL AO ANTERIOR - SEM ALTERAÇÕES)
     ativo_id = request.args.get('ativo_id', type=int)
     ativo_preenchido = None
     if ativo_id:
@@ -106,7 +128,9 @@ def meus_chamados():
 @login_required
 def detalhes_chamado(chamado_id):
     chamado = ChamadoTI.query.get_or_404(chamado_id)
-    is_tecnico = current_user.tem_permissao(PERMISSOES_TECNICAS)
+    
+    # Verifica se é TI usando a nova lógica
+    is_tecnico = is_equipe_ti()
 
     if chamado.solicitante_id != current_user.id and not is_tecnico:
         flash('Você não tem permissão para ver este chamado.', 'danger')
@@ -128,17 +152,21 @@ def detalhes_chamado(chamado_id):
 
     comentarios = ChamadoComentario.query.filter_by(chamado_id=chamado_id).order_by(ChamadoComentario.data_comentario.asc()).all()
     
-    # Dados para os modais de edição
+    # Dados para os modais
     categorias = []
     tecnicos = []
-    todos_ativos = [] # Para o datalist de busca rápida
+    todos_ativos = []
     
     if is_tecnico:
         categorias = CategoriaTI.query.order_by(CategoriaTI.nome).all()
-        # Busca técnicos (quem tem permissão)
+        # Busca técnicos: Agora listamos todos do setor TI + Admins
+        # Simplificação: Lista todos os usuários, ou filtra melhor se tiver muitos
+        # Idealmente: Filtrar usuários onde is_equipe_ti(u) é True, mas isso é pesado no banco.
+        # Mantendo filtro por permissão por enquanto para popular o select:
         from .models import Permissao
-        tecnicos = Usuario.query.join(Usuario.permissoes).filter(Permissao.nome.in_(PERMISSOES_TECNICAS)).distinct().all()
-        # Busca ativos para sugestão (limite de 500 para não pesar)
+        permissoes_ti = ['tecnico_ti', 'supervisor_ti', 'admin_ti']
+        tecnicos = Usuario.query.join(Usuario.permissoes).filter(Permissao.nome.in_(permissoes_ti)).distinct().all()
+        
         todos_ativos = Ativo.query.order_by(Ativo.nome).limit(500).all()
 
     return render_template(
@@ -147,16 +175,23 @@ def detalhes_chamado(chamado_id):
         comentarios=comentarios,
         categorias=categorias,
         tecnicos=tecnicos,
-        todos_ativos=todos_ativos
+        todos_ativos=todos_ativos,
+        is_tecnico=is_tecnico # Passa para o template
     )
 
-# --- AÇÕES DO CHAMADO ---
+# --- ROTAS DE GESTÃO (AGORA ABERTAS PARA A OU TI) ---
+
+@chamados_web_bp.route('/gestao')
+@login_required
+def gestao_chamados_react():
+    # Substitui o decorator @permission_required pela verificação de setor
+    verificar_acesso_ti()
+    return render_template('chamados/gestao_react.html')
 
 @chamados_web_bp.route('/<int:chamado_id>/repassar', methods=['POST'])
 @login_required
-@permission_required(PERMISSOES_TECNICAS)
 def repassar_chamado(chamado_id):
-    """ Apenas troca o técnico responsável (e adiciona motivo). """
+    verificar_acesso_ti()
     chamado = ChamadoTI.query.get_or_404(chamado_id)
     
     novo_tecnico_id = request.form.get('novo_tecnico_id')
@@ -189,29 +224,24 @@ def repassar_chamado(chamado_id):
 
     return redirect(url_for('.detalhes_chamado', chamado_id=chamado_id))
 
-
 @chamados_web_bp.route('/<int:chamado_id>/atualizar_info', methods=['POST'])
 @login_required
-@permission_required(PERMISSOES_TECNICAS)
 def atualizar_info_chamado(chamado_id):
-    """ Atualiza Categoria ou Ativo (com criação automática) """
+    verificar_acesso_ti()
     chamado = ChamadoTI.query.get_or_404(chamado_id)
     
     nova_categoria_id = request.form.get('categoria_id')
-    novo_ativo_nome = request.form.get('ativo_nome') # Texto digitado/selecionado
+    novo_ativo_nome = request.form.get('ativo_nome') 
     
     alteracoes = []
 
-    # 1. Atualiza Categoria
     if nova_categoria_id and int(nova_categoria_id) != chamado.categoria_ti_id:
         cat_nova = CategoriaTI.query.get(int(nova_categoria_id))
         if cat_nova:
             chamado.categoria_ti_id = cat_nova.id
             alteracoes.append(f"Categoria alterada para: {cat_nova.nome}")
 
-    # 2. Atualiza Ativo (Busca ou Cria)
     if novo_ativo_nome:
-        # Verifica se o ativo já existe pelo nome/patrimônio
         ativo_existente = Ativo.query.filter(
             or_(Ativo.nome.ilike(novo_ativo_nome), Ativo.tag_patrimonio.ilike(novo_ativo_nome))
         ).first()
@@ -221,20 +251,18 @@ def atualizar_info_chamado(chamado_id):
                 chamado.ativo_associado_id = ativo_existente.id
                 alteracoes.append(f"Ativo vinculado: {ativo_existente.nome}")
         else:
-            # Cria um novo ativo "Manual"
             novo_ativo = Ativo(
                 nome=novo_ativo_nome,
-                tag_patrimonio=f"MANUAL-{int(datetime.utcnow().timestamp())}", # Tag provisória
+                tag_patrimonio=f"MANUAL-{int(datetime.utcnow().timestamp())}", 
                 tipo="Outro",
                 status="Em Uso"
             )
             db.session.add(novo_ativo)
-            db.session.flush() # Pega ID
+            db.session.flush() 
             chamado.ativo_associado_id = novo_ativo.id
             alteracoes.append(f"Novo ativo criado e vinculado: {novo_ativo_nome}")
 
     elif 'ativo_nome' in request.form and not novo_ativo_nome:
-        # Se o campo veio vazio mas estava no form, significa que o usuário limpou o ativo
         if chamado.ativo_associado_id:
             chamado.ativo_associado_id = None
             alteracoes.append("Ativo desvinculado.")
@@ -248,11 +276,10 @@ def atualizar_info_chamado(chamado_id):
     
     return redirect(url_for('.detalhes_chamado', chamado_id=chamado_id))
 
-# (DEMAIS ROTAS MANTIDAS IGUAIS: assumir, status, anexar, baixar, arquivar, gestao, categorias...)
 @chamados_web_bp.route('/<int:chamado_id>/assumir', methods=['POST'])
 @login_required
-@permission_required(PERMISSOES_TECNICAS)
 def assumir_chamado_web(chamado_id):
+    verificar_acesso_ti()
     chamado = ChamadoTI.query.get_or_404(chamado_id)
     chamado.tecnico_atribuido_id = current_user.id
     if chamado.status == 'Aberto':
@@ -264,8 +291,8 @@ def assumir_chamado_web(chamado_id):
 
 @chamados_web_bp.route('/<int:chamado_id>/status', methods=['POST'])
 @login_required
-@permission_required(PERMISSOES_TECNICAS)
 def mudar_status_web(chamado_id):
+    verificar_acesso_ti()
     chamado = ChamadoTI.query.get_or_404(chamado_id)
     novo_status = request.form.get('novo_status')
     if novo_status in ['Aberto', 'Em Andamento', 'Pendente', 'Fechado']:
@@ -283,10 +310,13 @@ def mudar_status_web(chamado_id):
 @login_required
 def anexar_arquivo(chamado_id):
     chamado = ChamadoTI.query.get_or_404(chamado_id)
-    is_tecnico = current_user.tem_permissao(PERMISSOES_TECNICAS)
+    
+    # TI pode anexar em qualquer chamado; Usuário só no dele
+    is_tecnico = is_equipe_ti()
     if chamado.solicitante_id != current_user.id and not is_tecnico:
         flash('Sem permissão.', 'danger')
         return redirect(url_for('.meus_chamados'))
+        
     file = request.files.get('arquivo')
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
@@ -307,7 +337,8 @@ def anexar_arquivo(chamado_id):
 def baixar_anexo(anexo_id):
     anexo = ChamadoAnexo.query.get_or_404(anexo_id)
     chamado = ChamadoTI.query.get(anexo.chamado_id)
-    is_tecnico = current_user.tem_permissao(PERMISSOES_TECNICAS)
+    is_tecnico = is_equipe_ti()
+    
     if chamado.solicitante_id != current_user.id and not is_tecnico:
         return "Acesso negado", 403
     path_completo = os.path.join(current_app.config['UPLOAD_FOLDER'], anexo.path_armazenamento)
@@ -315,7 +346,7 @@ def baixar_anexo(anexo_id):
 
 @chamados_web_bp.route('/<int:chamado_id>/arquivar', methods=['POST'])
 @login_required
-@permission_required(['admin_ti', 'supervisor_ti'])
+@permission_required(['admin_ti', 'supervisor_ti']) # Arquivar mantém só pra chefia
 def arquivar_chamado(chamado_id):
     chamado = ChamadoTI.query.get_or_404(chamado_id)
     chamado.arquivado = True
@@ -330,15 +361,9 @@ def get_ativos_por_setor(setor_id):
     ativos = Ativo.query.filter_by(setor_id=setor_id).order_by(Ativo.nome).all()
     return jsonify([{'id': a.id, 'nome': a.nome, 'patrimonio': a.tag_patrimonio} for a in ativos])
 
-@chamados_web_bp.route('/gestao')
-@login_required
-@permission_required(PERMISSOES_TECNICAS)
-def gestao_chamados_react():
-    return render_template('chamados/gestao_react.html')
-
 @chamados_web_bp.route('/categorias', methods=['GET', 'POST'])
 @login_required
-@permission_required(['admin_ti', 'supervisor_ti'])
+@permission_required(['admin_ti', 'supervisor_ti']) # Gestão de Categorias mantém restrito
 def gerenciar_categorias():
     if request.method == 'POST':
         nome_categoria = request.form.get('nome')

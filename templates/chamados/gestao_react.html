@@ -1,209 +1,553 @@
 {% extends "base.html" %}
 
-{% block title %}Painel de Gestão de TI{% endblock %}
+{% block title %}Monitoramento de Chamados (TI){% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3><i class="bi bi-cpu-fill me-2"></i> Painel de Gestão de TI</h3>
-                <div class="text-end">
-                    <span class="badge bg-info text-dark me-2">Fase 1: Helpdesk</span>
-                    <span class="badge bg-success">React Powered</span>
-                </div>
-            </div>
-            <p class="text-muted">Central de atendimento e fila de chamados.</p>
+<div id="root" class="h-100 d-flex flex-column" style="background-color: #f4f6f9;">
+    <!-- Fallback caso o React não carregue -->
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted">Carregando painel de monitoramento...</p>
         </div>
     </div>
-
-    <!-- Barra de Ferramentas -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-2">
-            <ul class="nav nav-pills">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#">
-                        <i class="bi bi-kanban-fill me-2"></i> Kanban
-                    </a>
-                </li>
-                <li class="nav-item ms-2">
-                    <a class="nav-link" href="{{ url_for('chamados_web.gerenciar_categorias') }}">
-                        <i class="bi bi-tags-fill me-2"></i> Categorias
-                    </a>
-                </li>
-                <li class="nav-item ms-2">
-                    <a class="nav-link" href="{{ url_for('ativos.gestao_cautela') }}">
-                        <i class="bi bi-laptop me-2"></i> Cautela de Ativos
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- Container onde o React vai renderizar -->
-    <div id="root-helpdesk" style="min-height: 600px;"></div>
-
 </div>
-{% endblock %}
 
-{% block scripts %}
-{{ super() }}
-
-<!-- Dependências do React (Carregadas via CDN para prototipagem rápida) -->
+<!-- LIBRARIES (CDN) - ATUALIZADO PARA BABEL 7 -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<!-- Babel Standalone 7 -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-<!-- Código do Componente Kanban -->
-<script type="text/babel">
-{% raw %}
-    const { useState, useEffect } = React;
+<style>
+    /* --- ESTILOS DE TELA CHEIA (MODO QUIOSQUE/TV) --- */
+    
+    #root:fullscreen {
+        background-color: #f4f6f9;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden; 
+        padding: 0 !important;
+        margin: 0 !important;
+        position: fixed; 
+        top: 0;
+        left: 0;
+        z-index: 9999; 
+    }
 
-    const KanbanColumn = ({ title, status, chamados, onStatusChange, colorClass }) => {
-        return (
-            <div className="col-md-3">
-                <div className={`card shadow-sm h-100 border-top border-4 ${colorClass}`}>
-                    <div className="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-                        {title}
-                        <span className="badge bg-secondary rounded-pill">{chamados.length}</span>
-                    </div>
-                    <div className="card-body p-2 bg-light" style={{minHeight: '400px', maxHeight: '70vh', overflowY: 'auto'}}>
-                        {chamados.map(c => (
-                            <div key={c.id} className="card mb-2 shadow-sm border-0 card-hover">
-                                <div className="card-body p-3">
-                                    <div className="d-flex justify-content-between mb-2">
-                                        <span className="badge bg-light text-dark border">#{c.id}</span>
-                                        <small className="text-muted" style={{fontSize: '0.75rem'}}>{new Date(c.data_abertura).toLocaleDateString()}</small>
-                                    </div>
-                                    <h6 className="card-title mb-1 fw-bold text-primary">
-                                        <a href={`/chamados/${c.id}/detalhes`} className="text-decoration-none text-primary stretched-link-off">
-                                            {c.titulo}
-                                        </a>
-                                    </h6>
-                                    <p className="card-text small text-muted mb-2 text-truncate">{c.solicitante.nome.split(' ')[0]}</p>
-                                    
-                                    <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                                        <span className={`badge ${c.prioridade === 'Alta' ? 'bg-danger' : 'bg-secondary'} small`}>{c.prioridade}</span>
-                                        
-                                        {/* Botões de Ação Rápida */}
-                                        <div className="btn-group">
-                                            {status !== 'Aberto' && (
-                                                <button className="btn btn-xs btn-outline-secondary" title="Mover para Aberto" onClick={() => onStatusChange(c.id, 'Aberto')}>
-                                                    <i className="bi bi-arrow-left"></i>
-                                                </button>
-                                            )}
-                                            {status !== 'Em Andamento' && (
-                                                <button className="btn btn-xs btn-outline-primary" title="Mover para Andamento" onClick={() => onStatusChange(c.id, 'Em Andamento')}>
-                                                    <i className="bi bi-play-fill"></i>
-                                                </button>
-                                            )}
-                                            {status !== 'Fechado' && (
-                                                <button className="btn btn-xs btn-outline-success" title="Fechar Chamado" onClick={() => onStatusChange(c.id, 'Fechado')}>
-                                                    <i className="bi bi-check"></i>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {chamados.length === 0 && <p className="text-center text-muted small mt-4">Vazio</p>}
-                    </div>
-                </div>
-            </div>
-        );
+    #root:fullscreen .kanban-board {
+        height: calc(100vh - 80px); /* Ajuste para o header */
+        padding: 2rem; /* Mais espaçamento na TV */
+        gap: 2rem;
+    }
+
+    /* Colunas responsivas na TV: Ocupam espaço igual */
+    #root:fullscreen .kanban-column {
+        flex: 1 1 0; /* Cresce para ocupar espaço igual */
+        min-width: 350px; /* Largura mínima para não espremer */
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        border: none;
+    }
+
+    #root:fullscreen .ticket-card {
+        padding: 18px; /* Cards maiores */
+        font-size: 1.1rem;
+    }
+    
+    #root:fullscreen .kanban-header {
+        font-size: 1.2rem;
+        padding: 1.5rem;
+    }
+
+    /* Fallbacks para outros navegadores */
+    #root:-webkit-full-screen { background-color: #f4f6f9; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 9999; }
+    #root:-moz-full-screen { background-color: #f4f6f9; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 9999; }
+
+    /* --- ESTILOS GERAIS --- */
+    .kanban-board {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        overflow-x: auto;
+        height: calc(100vh - 180px);
+        align-items: flex-start;
+    }
+    
+    .kanban-column {
+        flex: 0 0 320px; /* Largura fixa no modo normal */
+        background-color: #ebecf0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
+        border: 1px solid #dfe1e6;
+        transition: all 0.3s ease;
+    }
+    .kanban-header {
+        padding: 12px 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid rgba(0,0,0,0.05);
+        background: #fff;
+        border-radius: 8px 8px 0 0;
+    }
+    .kanban-body {
+        padding: 12px;
+        overflow-y: auto;
+        flex-grow: 1;
+        scrollbar-width: thin;
+    }
+    
+    /* --- CARD (KANBAN) --- */
+    .ticket-card {
+        background: white;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-left: 5px solid #ccc;
+        transition: transform 0.2s;
+        position: relative;
+    }
+    .ticket-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+
+    /* --- TABELA (LISTA) --- */
+    .list-container {
+        padding: 1rem;
+        height: calc(100vh - 180px);
+        overflow-y: auto;
+    }
+    #root:fullscreen .list-container { height: calc(100vh - 80px); }
+
+    .table-custom thead th {
+        border-top: none;
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .table-hover tbody tr:hover {
+        background-color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transform: scale(1.002);
+        transition: all 0.2s;
+        z-index: 5;
+        position: relative;
+    }
+    
+    /* Status Badges */
+    .col-status-aberto { color: #dc3545; font-weight: bold; background: #fae3e5; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
+    .col-status-emandamento { color: #0d6efd; font-weight: bold; background: #e3f0fe; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
+    .col-status-pendente { color: #ffc107; font-weight: bold; background: #fff8e1; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
+    .col-status-fechado { color: #198754; font-weight: bold; background: #dff5e9; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
+
+    /* Utilitários de Prioridade */
+    .priority-Alta { border-left-color: #dc3545 !important; }
+    .priority-Media { border-left-color: #ffc107 !important; }
+    .priority-Baixa { border-left-color: #0d6efd !important; }
+    
+    .badge-priority-Alta { background-color: #dc3545; color: white; }
+    .badge-priority-Media { background-color: #ffc107; color: black; }
+    .badge-priority-Baixa { background-color: #0d6efd; color: white; }
+
+    /* Barra de Filtros */
+    .filter-bar {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        padding: 12px 20px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+    }
+    @keyframes slideDown { from { transform: translateY(-15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+
+<!-- CONFIGURAÇÃO FLASK -->
+<script>
+    const FLASK_URLS = {
+        nova: "{{ url_for('chamados_web.abrir_chamado') }}",
+        api_gestao: "/api/chamados/gestao",
+        detalhes_base: "/chamados/" 
     };
+    const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+</script>
 
-    const KanbanBoard = () => {
+{% raw %}
+<script type="text/babel" data-presets="env,react">
+    const { useState, useEffect, useMemo, useRef, Component } = React;
+
+    class ErrorBoundary extends Component {
+        constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+        }
+        static getDerivedStateFromError(error) { return { hasError: true, error }; }
+        render() {
+            if (this.state.hasError) {
+                return <div className="alert alert-danger m-5">Erro no painel: {this.state.error.toString()}</div>;
+            }
+            return this.props.children;
+        }
+    }
+
+    function App() {
         const [chamados, setChamados] = useState([]);
         const [loading, setLoading] = useState(true);
-        const [error, setError] = useState(null);
+        const [lastUpdate, setLastUpdate] = useState(new Date());
+        const [viewMode, setViewMode] = useState('kanban'); 
+        const [isFullscreen, setIsFullscreen] = useState(false);
+        const [showFilters, setShowFilters] = useState(false);
+        
+        // ESTADO DE FILTROS COMPLETOS
+        const [filters, setFilters] = useState({
+            texto: '',
+            categoria: '',
+            prioridade: '',
+            tecnico: '',
+            solicitante: '',
+            data: ''
+        });
 
-        const fetchChamados = async () => {
-            try {
-                const response = await fetch('/api/chamados/gestao');
-                if (!response.ok) throw new Error('Falha ao carregar dados');
-                const data = await response.json();
-                setChamados(data);
-                setLoading(false);
-            } catch (err) {
-                setError(err.message);
-                setLoading(false);
+        const [somHabilitado, setSomHabilitado] = useState(false);
+        const audioRef = useRef(new Audio(NOTIFICATION_SOUND));
+        const prevCountRef = useRef(0);
+
+        // --- OPÇÕES DINÂMICAS PARA SELECTS ---
+        const categoriasOpcoes = useMemo(() => {
+            const cats = chamados.map(c => c.categoria).filter(Boolean);
+            return [...new Set(cats)].sort();
+        }, [chamados]);
+
+        const tecnicosOpcoes = useMemo(() => {
+            const tecs = chamados.map(c => c.tecnico_atribuido?.nome).filter(Boolean);
+            return [...new Set(tecs)].sort();
+        }, [chamados]);
+
+        const toggleFullscreen = () => {
+            const rootEl = document.getElementById('root');
+            if (!document.fullscreenElement) {
+                if (rootEl.requestFullscreen) rootEl.requestFullscreen().then(() => setIsFullscreen(true));
+                else if (rootEl.webkitRequestFullscreen) { rootEl.webkitRequestFullscreen(); setIsFullscreen(true); }
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen().then(() => setIsFullscreen(false));
             }
         };
 
-        const handleStatusChange = async (id, novoStatus) => {
-            // Atualização Otimista
-            const chamadosAntigos = [...chamados];
-            setChamados(prev => prev.map(c => c.id === id ? { ...c, status: novoStatus } : c));
+        useEffect(() => {
+            const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+            document.addEventListener('fullscreenchange', handleFsChange);
+            return () => document.removeEventListener('fullscreenchange', handleFsChange);
+        }, []);
 
+        const fetchChamados = async (isAuto = false) => {
             try {
-                const res = await fetch(`/api/chamados/${id}/status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
-                });
-                if (!res.ok) throw new Error('Erro ao atualizar');
-                // Recarrega para garantir consistência
-                fetchChamados();
-            } catch (err) {
-                alert('Erro ao mover chamado: ' + err.message);
-                setChamados(chamadosAntigos); // Reverte
+                const response = await axios.get(FLASK_URLS.api_gestao);
+                const dados = response.data || [];
+                
+                if (isAuto && somHabilitado) {
+                    const abertosAntigo = prevCountRef.current;
+                    const abertosNovo = dados.filter(c => c.status === 'Aberto').length;
+                    if (abertosNovo > abertosAntigo) audioRef.current.play().catch(()=>{});
+                }
+                
+                prevCountRef.current = dados.filter(c => c.status === 'Aberto').length;
+                setChamados(dados);
+                setLastUpdate(new Date());
+                setLoading(false);
+            } catch (error) {
+                console.error("Erro API:", error);
             }
         };
 
         useEffect(() => {
             fetchChamados();
-            // Polling simples a cada 30s para atualizar
-            const interval = setInterval(fetchChamados, 30000);
+            const interval = setInterval(() => fetchChamados(true), 15000);
             return () => clearInterval(interval);
-        }, []);
+        }, [somHabilitado]);
 
-        if (loading) return <div className="text-center p-5"><div className="spinner-border text-primary"></div><p className="mt-2">Carregando Kanban...</p></div>;
-        if (error) return <div className="alert alert-danger">Erro: {error}</div>;
+        const moverChamado = async (id, novoStatus) => {
+            const original = [...chamados];
+            setChamados(prev => prev.map(c => c.id === id ? { ...c, status: novoStatus } : c));
+            try { await axios.post(`/api/chamados/${id}/status`, { status: novoStatus }); } 
+            catch { setChamados(original); alert("Erro ao salvar status."); }
+        };
+
+        const handleFilterChange = (field, value) => {
+            setFilters(prev => ({ ...prev, [field]: value }));
+        };
+
+        // --- LÓGICA DE FILTRAGEM ---
+        const dadosFiltrados = useMemo(() => {
+            return chamados.filter(c => {
+                // 1. Texto (Busca Geral em ID, Título, Protocolo)
+                if (filters.texto) {
+                    const lower = filters.texto.toLowerCase();
+                    const matchTexto = (c.titulo?.toLowerCase().includes(lower)) || 
+                                       (c.protocolo?.toLowerCase().includes(lower)) || 
+                                       (String(c.id).includes(lower));
+                    if (!matchTexto) return false;
+                }
+                // 2. Categoria
+                if (filters.categoria && c.categoria !== filters.categoria) return false;
+                // 3. Prioridade
+                if (filters.prioridade && c.prioridade !== filters.prioridade) return false;
+                // 4. Técnico
+                if (filters.tecnico) {
+                    if (!c.tecnico_atribuido || c.tecnico_atribuido.nome !== filters.tecnico) return false;
+                }
+                // 5. Solicitante (Busca parcial)
+                if (filters.solicitante) {
+                    if (!c.solicitante?.nome.toLowerCase().includes(filters.solicitante.toLowerCase())) return false;
+                }
+                // 6. Data (Match exato YYYY-MM-DD)
+                if (filters.data) {
+                    const dataChamado = c.data_abertura.split('T')[0];
+                    if (dataChamado !== filters.data) return false;
+                }
+                return true;
+            });
+        }, [chamados, filters]);
+
+        const stats = useMemo(() => ({
+            abertos: dadosFiltrados.filter(c => c.status === 'Aberto').length,
+            andamento: dadosFiltrados.filter(c => c.status === 'Em Andamento').length,
+            total: dadosFiltrados.length
+        }), [dadosFiltrados]);
+
+        if (loading) return <div className="d-flex justify-content-center align-items-center vh-100"><div className="spinner-border text-primary"></div></div>;
 
         return (
-            <div className="row g-3">
-                <KanbanColumn 
-                    title="Aberto" 
-                    status="Aberto" 
-                    chamados={chamados.filter(c => c.status === 'Aberto')} 
-                    onStatusChange={handleStatusChange}
-                    colorClass="border-danger"
-                />
-                <KanbanColumn 
-                    title="Em Andamento" 
-                    status="Em Andamento" 
-                    chamados={chamados.filter(c => c.status === 'Em Andamento')} 
-                    onStatusChange={handleStatusChange}
-                    colorClass="border-primary"
-                />
-                <KanbanColumn 
-                    title="Pendente" 
-                    status="Pendente" 
-                    chamados={chamados.filter(c => c.status === 'Pendente')} 
-                    onStatusChange={handleStatusChange}
-                    colorClass="border-warning"
-                />
-                <KanbanColumn 
-                    title="Fechado (Recentes)" 
-                    status="Fechado" 
-                    chamados={chamados.filter(c => c.status === 'Fechado')} 
-                    onStatusChange={handleStatusChange}
-                    colorClass="border-success"
-                />
+            <div className="d-flex flex-column h-100">
+                {/* TOOLBAR */}
+                <div className="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center shadow-sm" style={{zIndex: 100}}>
+                    <div className="d-flex align-items-center gap-3">
+                        <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
+                            <i className="bi bi-display me-2 text-primary"></i>
+                            <span className="d-none d-sm-inline">Monitor TI</span>
+                        </h5>
+                        
+                        <div className="btn-group btn-group-sm">
+                            <button className={`btn ${viewMode === 'kanban' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setViewMode('kanban')} title="Visão Kanban"><i className="bi bi-kanban"></i></button>
+                            <button className={`btn ${viewMode === 'lista' ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setViewMode('lista')} title="Visão Lista"><i className="bi bi-list-task"></i></button>
+                        </div>
+
+                        <span className="text-muted small border-start ps-3 d-none d-md-inline">
+                            <i className="bi bi-clock me-1"></i> {lastUpdate.toLocaleTimeString()}
+                        </span>
+                    </div>
+
+                    <div className="d-flex gap-2 align-items-center">
+                        <div className="d-none d-lg-flex gap-2 me-3">
+                            {stats.abertos > 0 && <span className="badge bg-danger shadow-sm">{stats.abertos} Aberto</span>}
+                            {stats.andamento > 0 && <span className="badge bg-primary shadow-sm">{stats.andamento} Atendendo</span>}
+                        </div>
+
+                        {/* Busca Rápida */}
+                        <input type="text" className="form-control form-control-sm" style={{width: '180px'}} placeholder="Busca Rápida..." value={filters.texto} onChange={(e) => handleFilterChange('texto', e.target.value)}/>
+                        
+                        <button className={`btn btn-sm ${showFilters ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setShowFilters(!showFilters)} title="Filtros Avançados">
+                            <i className="bi bi-funnel-fill"></i>
+                        </button>
+
+                        <button className={`btn btn-sm ${somHabilitado ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => { setSomHabilitado(!somHabilitado); if(!somHabilitado) audioRef.current.play().catch(()=>{}); }} title={somHabilitado ? "Som Ativado" : "Mudo"}>
+                            <i className={`bi ${somHabilitado ? 'bi-volume-up-fill' : 'bi-volume-mute-fill'}`}></i>
+                        </button>
+
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => fetchChamados(false)} title="Atualizar">
+                            <i className="bi bi-arrow-clockwise"></i>
+                        </button>
+
+                        <button className={`btn btn-sm ${isFullscreen ? 'btn-danger' : 'btn-dark'}`} onClick={toggleFullscreen} title={isFullscreen ? "Sair da TV" : "Modo TV"}>
+                            <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-tv'}`}></i>
+                        </button>
+                        
+                        <a href={FLASK_URLS.nova} className="btn btn-sm btn-dark shadow-sm" title="Novo Chamado"><i className="bi bi-plus-lg"></i></a>
+                    </div>
+                </div>
+
+                {/* BARRA DE FILTROS AVANÇADA */}
+                {showFilters && (
+                    <div className="filter-bar">
+                        <div className="d-flex gap-2 align-items-center flex-wrap w-100">
+                            <span className="text-muted small fw-bold text-uppercase me-2"><i className="bi bi-filter"></i> Filtros:</span>
+                            
+                            <select className="form-select form-select-sm shadow-sm" style={{width: '160px'}} value={filters.categoria} onChange={(e) => handleFilterChange('categoria', e.target.value)}>
+                                <option value="">Todas Categorias</option>
+                                {categoriasOpcoes.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+
+                            <select className="form-select form-select-sm shadow-sm" style={{width: '140px'}} value={filters.prioridade} onChange={(e) => handleFilterChange('prioridade', e.target.value)}>
+                                <option value="">Qualquer Prioridade</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Media">Média</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+
+                            <select className="form-select form-select-sm shadow-sm" style={{width: '160px'}} value={filters.tecnico} onChange={(e) => handleFilterChange('tecnico', e.target.value)}>
+                                <option value="">Todos Técnicos</option>
+                                {tecnicosOpcoes.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+
+                            <input type="text" className="form-control form-control-sm shadow-sm" style={{width: '160px'}} placeholder="Solicitante..." value={filters.solicitante} onChange={(e) => handleFilterChange('solicitante', e.target.value)} />
+                            
+                            <input type="date" className="form-control form-control-sm shadow-sm" style={{width: '140px'}} value={filters.data} onChange={(e) => handleFilterChange('data', e.target.value)} />
+
+                            <button className="btn btn-sm btn-link text-danger text-decoration-none ms-auto" onClick={() => setFilters({ texto: '', categoria: '', prioridade: '', tecnico: '', solicitante: '', data: '' })}>
+                                <i className="bi bi-x-circle me-1"></i> Limpar Filtros
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* AREA DE CONTEÚDO */}
+                <div className="flex-grow-1 bg-light">
+                    {viewMode === 'kanban' ? (
+                        <KanbanBoard chamados={dadosFiltrados} onMove={moverChamado} isFullscreen={isFullscreen} />
+                    ) : (
+                        <ListaBoard chamados={dadosFiltrados} onMove={moverChamado} isFullscreen={isFullscreen} />
+                    )}
+                </div>
             </div>
         );
-    };
+    }
 
-    const root = ReactDOM.createRoot(document.getElementById('root-helpdesk'));
-    root.render(<KanbanBoard />);
-{% endraw %}
+    function KanbanBoard({ chamados, onMove, isFullscreen }) {
+        const colunas = [
+            { id: 'Aberto', titulo: 'Aguardando', cor: '#dc3545', icon: 'bi-inbox-fill' },
+            { id: 'Em Andamento', titulo: 'Em Atendimento', cor: '#0d6efd', icon: 'bi-gear-wide-connected' },
+            { id: 'Pendente', titulo: 'Pendente', cor: '#ffc107', icon: 'bi-pause-circle-fill' },
+            { id: 'Fechado', titulo: 'Concluído', cor: '#198754', icon: 'bi-check-circle-fill' }
+        ];
+
+        return (
+            <div className="kanban-board">
+                {colunas.map(col => (
+                    <div key={col.id} className="kanban-column shadow-sm">
+                        <div className="kanban-header" style={{ color: col.cor, borderTop: `4px solid ${col.cor}` }}>
+                            <span><i className={`bi ${col.icon} me-2`}></i>{col.titulo}</span>
+                            <span className="badge rounded-pill bg-white text-dark border shadow-sm">
+                                {chamados.filter(c => c.status === col.id).length}
+                            </span>
+                        </div>
+                        <div className="kanban-body">
+                            {chamados.filter(c => c.status === col.id).map(c => (
+                                <CardKanban key={c.id} data={c} onMove={onMove} />
+                            ))}
+                            {chamados.filter(c => c.status === col.id).length === 0 && <div className="text-center text-muted mt-5 small opacity-50">Vazio</div>}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    function CardKanban({ data, onMove }) {
+        const dataFmt = new Date(data.data_abertura).toLocaleDateString('pt-BR');
+        return (
+            <div className={`ticket-card priority-${data.prioridade}`}>
+                <div className="d-flex justify-content-between mb-1">
+                    <span className="badge bg-light text-secondary border">#{data.protocolo || data.id}</span>
+                    <small className="text-muted" style={{fontSize: '0.7em'}}>{dataFmt}</small>
+                </div>
+                <div className="fw-bold mb-1 text-dark ticket-title" style={{fontSize: '0.9rem', lineHeight: '1.4'}}>{data.titulo}</div>
+                <div className="d-flex align-items-center mb-2 text-secondary" style={{fontSize: '0.8rem'}}>
+                    <i className="bi bi-person-circle me-1"></i>
+                    <span className="text-truncate" style={{maxWidth: '150px'}} title={data.solicitante?.nome}>{data.solicitante?.nome?.split(' ')[0] || 'N/A'}</span>
+                </div>
+                <div className="d-flex justify-content-between align-items-center mt-2 border-top pt-2">
+                    <div className="d-flex gap-1">
+                        <span className={`badge badge-priority-${data.prioridade} bg-opacity-75`} style={{fontSize: '0.6rem'}}>{data.prioridade}</span>
+                        {data.tecnico_atribuido && <span className="badge bg-info bg-opacity-10 text-primary border border-info border-opacity-25" style={{fontSize: '0.6rem'}}><i className="bi bi-tools me-1"></i>{data.tecnico_atribuido.nome.split(' ')[0]}</span>}
+                    </div>
+                    <AcoesDropdown id={data.id} status={data.status} onMove={onMove} />
+                </div>
+            </div>
+        );
+    }
+
+    function ListaBoard({ chamados, onMove, isFullscreen }) {
+        if (chamados.length === 0) return <div className="p-5 text-center text-muted">Nenhum chamado encontrado.</div>;
+        return (
+            <div className="list-container">
+                <div className="card shadow-sm border-0">
+                    <div className="card-body p-0">
+                        <div className="table-responsive">
+                            <table className="table table-hover table-custom align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style={{width: '90px'}}>ID</th>
+                                        <th style={{width: '130px'}}>Status</th>
+                                        <th style={{width: '100px'}}>Prioridade</th>
+                                        <th>Assunto / Categoria</th>
+                                        <th>Solicitante</th>
+                                        <th>Técnico</th>
+                                        <th>Abertura</th>
+                                        <th className="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {chamados.map(c => {
+                                        const statusClass = c.status ? c.status.toLowerCase().replace(' ', '') : 'aberto';
+                                        return (
+                                            <tr key={c.id}>
+                                                <td><small className="text-muted fw-bold">#{c.protocolo || c.id}</small></td>
+                                                <td><span className={`col-status-${statusClass}`}>{c.status}</span></td>
+                                                <td><span className={`badge badge-priority-${c.prioridade}`}>{c.prioridade}</span></td>
+                                                <td><div className="fw-bold text-dark">{c.titulo}</div><small className="text-muted">{c.categoria}</small></td>
+                                                <td><div className="d-flex align-items-center text-secondary"><i className="bi bi-person me-1"></i>{c.solicitante?.nome?.split(' ')[0] || 'N/A'}</div></td>
+                                                <td>{c.tecnico_atribuido ? <span className="text-primary fw-bold small">{c.tecnico_atribuido.nome.split(' ')[0]}</span> : <span className="text-muted small">-</span>}</td>
+                                                <td><small className="text-muted">{new Date(c.data_abertura).toLocaleDateString('pt-BR')}</small></td>
+                                                <td className="text-end"><AcoesDropdown id={c.id} status={c.status} onMove={onMove} /></td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function AcoesDropdown({ id, status, onMove }) {
+        return (
+            <div className="btn-group">
+                <a href={`${FLASK_URLS.detalhes_base}${id}/detalhes`} className="btn btn-sm btn-light border text-secondary" title="Ver Detalhes"><i className="bi bi-eye"></i></a>
+                <button className="btn btn-sm btn-light border text-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+                <ul className="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li><h6 className="dropdown-header text-uppercase small fw-bold">Alterar Status</h6></li>
+                    {status !== 'Aberto' && <li><button className="dropdown-item" onClick={() => onMove(id, 'Aberto')}><i className="bi bi-inbox me-2 text-danger"></i>Aguardando</button></li>}
+                    {status !== 'Em Andamento' && <li><button className="dropdown-item" onClick={() => onMove(id, 'Em Andamento')}><i className="bi bi-gear me-2 text-primary"></i>Em Andamento</button></li>}
+                    {status !== 'Pendente' && <li><button className="dropdown-item" onClick={() => onMove(id, 'Pendente')}><i className="bi bi-pause-circle me-2 text-warning"></i>Pendente</button></li>}
+                    <li><hr className="dropdown-divider"/></li>
+                    {status !== 'Fechado' && <li><button className="dropdown-item text-success fw-bold" onClick={() => onMove(id, 'Fechado')}><i className="bi bi-check-circle me-2"></i>Concluir</button></li>}
+                </ul>
+            </div>
+        );
+    }
+
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(<ErrorBoundary><App /></ErrorBoundary>);
+    }
 </script>
-
-<style>
-    .btn-xs { padding: 0.1rem 0.3rem; font-size: 0.75rem; }
-    .card-hover:hover { transform: translateY(-2px); transition: transform 0.2s; }
-</style>
+{% endraw %}
 {% endblock %}

@@ -3,32 +3,101 @@
 {% block title %}Novo Aviso{% endblock %}
 
 {% block content %}
-<h1 class="h2 mb-4">Publicar Novo Aviso</h1>
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('main.criar_aviso') }}" enctype="multipart/form-data">
-            
-            <div class="mb-3">
-                <label for="titulo" class="form-label">Título do Aviso</label>
-                <input type="text" class="form-control" id="titulo" name="titulo" required>
-            </div>
-            
-            <div class="mb-3">
-                <label for="conteudo" class="form-label">Conteúdo do Aviso</label>
-                <textarea class="form-control" id="conteudo" name="conteudo" rows="8" required></textarea>
-            </div>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-megaphone me-2"></i> Publicar Novo Aviso</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('avisos.criar_aviso') }}" method="POST">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <input type="text" class="form-control" name="titulo" required autofocus>
+                        </div>
 
-            <div class="mb-3">
-                <label for="anexos" class="form-label">Anexar Arquivos (Opcional)</label>
-                <input class="form-control" type="file" id="anexos" name="anexos" multiple>
-                <div class="form-text">Você pode selecionar múltiplos arquivos segurando Ctrl (ou Cmd).</div>
+                        <!-- CONTROLE DE PÚBLICO -->
+                        <div class="mb-4 p-3 bg-light border rounded">
+                            <label class="form-label fw-bold mb-2">Quem deve ver este aviso?</label>
+                            
+                            {% if nivel_acesso in ['DIRETORIA', 'GESTAO'] %}
+                                <!-- TI, RH e DIRETORIA veem estas opções -->
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="publico_geral" name="publico_geral" checked onchange="toggleSetores()">
+                                    <label class="form-check-label" for="publico_geral">
+                                        <i class="bi bi-globe me-1"></i> Público Geral (Todos os colaboradores)
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="target_supervisores" name="target_supervisores">
+                                    <label class="form-check-label" for="target_supervisores">
+                                        <i class="bi bi-briefcase me-1"></i> Mural dos Supervisores (Tático)
+                                    </label>
+                                </div>
+                            {% endif %}
+
+                            {% if nivel_acesso == 'DIRETORIA' %}
+                                <!-- SÓ DIRETORIA vê esta opção -->
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="target_diretoria" name="target_diretoria">
+                                    <label class="form-check-label text-danger" for="target_diretoria">
+                                        <i class="bi bi-shield-lock me-1"></i> Mural da Diretoria (Estratégico)
+                                    </label>
+                                </div>
+                            {% endif %}
+
+                            {% if nivel_acesso == 'SUPERVISOR' %}
+                                <div class="alert alert-info py-2 small">
+                                    <i class="bi bi-info-circle"></i> Publicação restrita à sua equipe/setor.
+                                </div>
+                            {% endif %}
+
+                            <!-- LISTA DE SETORES -->
+                            <div id="container-setores" class="{{ 'd-none' if nivel_acesso in ['DIRETORIA', 'GESTAO'] else '' }}">
+                                <label class="form-label mt-2">Setores Alvo:</label>
+                                <select class="form-select" name="setores" multiple size="5">
+                                    {% for setor in setores %}
+                                        <option value="{{ setor.id }}" 
+                                            {% if nivel_acesso == 'SUPERVISOR' %}selected{% endif %}>
+                                            {{ setor.nome }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if nivel_acesso != 'SUPERVISOR' %}
+                                    <div class="form-text">Segure Ctrl para selecionar múltiplos setores.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mensagem</label>
+                            <textarea class="form-control" name="conteudo" rows="6" required></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('avisos.listar_avisos') }}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Publicar</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            
-            <div class="d-flex justify-content-end">
-                <a href="{{ url_for('main.listar_avisos') }}" class="btn btn-secondary me-2">Cancelar</a>
-                <button type="submit" class="btn btn-brand">Publicar Aviso</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
+
+<script>
+    function toggleSetores() {
+        const checkGeral = document.getElementById('publico_geral');
+        const container = document.getElementById('container-setores');
+        
+        // Se existir checkbox Geral e estiver marcado, esconde setores
+        if (checkGeral && checkGeral.checked) {
+            container.classList.add('d-none');
+        } else {
+            container.classList.remove('d-none');
+        }
+    }
+</script>
 {% endblock %}

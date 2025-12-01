@@ -22,6 +22,12 @@ funcionario_sistemas = db.Table('funcionario_sistemas',
     db.Column('observacao', db.String(255))
 )
 
+# NOVO: Tabela para vincular avisos a múltiplos setores
+aviso_setores = db.Table('aviso_setores',
+    db.Column('aviso_id', db.Integer, db.ForeignKey('aviso.id'), primary_key=True),
+    db.Column('setor_id', db.Integer, db.ForeignKey('setor.id'), primary_key=True)
+)
+
 # --- Modelos Principais ---
 
 class Usuario(db.Model, UserMixin):
@@ -107,10 +113,21 @@ class Aviso(db.Model):
     data_publicacao = db.Column(db.DateTime, default=datetime.utcnow)
     autor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     
+    # --- NOVOS CAMPOS HIERARQUIA ---
+    publico_geral = db.Column(db.Boolean, default=True, nullable=False) 
+    
+    # Separação Supervisor vs Diretoria
+    target_supervisores = db.Column(db.Boolean, default=False, nullable=False) # Mural de Supervisores
+    target_diretoria = db.Column(db.Boolean, default=False, nullable=False)    # Mural de Diretoria
+    
+    arquivado = db.Column(db.Boolean, default=False, nullable=False)
+
     autor = db.relationship('Usuario')
     logs_ciencia = db.relationship('LogCienciaAviso', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
     anexos = db.relationship('AvisoAnexo', backref='aviso', lazy='dynamic', cascade="all, delete-orphan")
-    arquivado = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relacionamento M2M com Setores
+    setores_alvo = db.relationship('Setor', secondary=aviso_setores, backref=db.backref('avisos_exclusivos', lazy='dynamic'))
 
 class LogCienciaAviso(db.Model):
     __tablename__ = 'log_ciencia_aviso'
@@ -136,7 +153,9 @@ class Documento(db.Model):
     path_armazenamento = db.Column(db.String(512), nullable=False, unique=True)
     funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False)
     data_upload = db.Column(db.DateTime, default=datetime.utcnow)
-    requisicao_id = db.Column(db.Integer, db.ForeignKey('requisicao_documento.id'), nullable=True)
+    
+    # CORREÇÃO: Adicionado use_alter=True para evitar Ciclo de Dependência
+    requisicao_id = db.Column(db.Integer, db.ForeignKey('requisicao_documento.id', use_alter=True), nullable=True)
 
     # --- CAMPOS ADICIONADOS PARA O FLUXO DE REVISÃO ---
     status = db.Column(db.String(50), default='Pendente de Revisão', nullable=False)
@@ -172,7 +191,10 @@ class RequisicaoDocumento(db.Model):
 
     tipo_documento_id = db.Column(db.Integer, db.ForeignKey('tipo_documento.id'), nullable=False)
     destinatario_id = db.Column(db.Integer, db.ForeignKey('funcionario.id'), nullable=False, index=True)
-    documento_enviado_id = db.Column(db.Integer, db.ForeignKey('documento.id'), nullable=True)
+    
+    # CORREÇÃO: Adicionado use_alter=True para evitar Ciclo de Dependência
+    documento_enviado_id = db.Column(db.Integer, db.ForeignKey('documento.id', use_alter=True), nullable=True)
+    
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
 
     tipo = db.relationship('TipoDocumento', backref='requisicoes')
