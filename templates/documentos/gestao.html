@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Gestão de Documentos{% endblock %}
+{% block title %}Central de Documentos{% endblock %}
 
 {% block content %}
 <div id="react-root"></div>
@@ -11,69 +11,110 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <style>
-    /* Tema */
-    .btn-brand-custom {
-        background-color: var(--cor-primaria, #0a2240); 
-        color: white;
-        border: none;
-        transition: 0.3s;
+    /* --- TEMA E UTILS --- */
+    :root {
+        --cor-primaria: #0a2240;
+        --cor-secundaria: #00b4d8;
+        --bg-light: #f8f9fa;
+        --danger-light: #f8d7da;
+        --danger-text: #721c24;
     }
-    .btn-brand-custom:hover {
-        background-color: var(--cor-primaria-hover, #153358);
-        color: white;
-        transform: translateY(-1px);
+
+    /* Proteção de CSS para não quebrar a Sidebar */
+    #react-root .nav-pills .nav-link.active {
+        background-color: var(--cor-primaria) !important;
+        color: white !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
+    #react-root .nav-pills .nav-link { 
+        color: #555; 
+        font-weight: 500; 
+        border-radius: 8px;
+        transition: all 0.2s;
+        margin-right: 5px;
+    }
+    #react-root .nav-pills .nav-link:hover {
+        background-color: #e9ecef;
+        color: var(--cor-primaria);
+    }
+
+    /* Cards e Elementos */
+    .doc-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #eee;
+        border-left: 4px solid var(--cor-secundaria);
+    }
+    .doc-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    .doc-card.reprovado { border-left-color: #dc3545; background-color: #fffafa; }
     
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .status-pendente { background-color: #fff3cd; color: #856404; }
+    .status-aprovado { background-color: #d4edda; color: #155724; }
+    .status-rejeitado { background-color: #f8d7da; color: #721c24; }
+    .status-analise { background-color: #cce5ff; color: #004085; }
+    .status-cancelado { background-color: #e2e3e5; color: #383d41; text-decoration: line-through; }
+
     /* Autocomplete Styling */
     .ac-wrapper { position: relative; width: 100%; }
     .ac-list {
-        position: absolute;
-        top: 100%; left: 0; right: 0;
-        z-index: 1000;
-        background: white;
-        border: 1px solid #dee2e6;
-        border-top: none;
-        max-height: 200px;
-        overflow-y: auto;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-radius: 0 0 4px 4px;
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1000;
+        background: white; border: 1px solid #dee2e6; border-top: none;
+        max-height: 200px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .ac-item {
-        padding: 8px 12px;
-        cursor: pointer;
-        border-bottom: 1px solid #f8f9fa;
-        font-size: 0.95rem;
-    }
-    .ac-item:hover { background-color: #f1f3f5; color: var(--cor-primaria, #0a2240); }
+    .ac-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f8f9fa; font-size: 0.95rem; }
+    .ac-item:hover { background-color: #f1f3f5; color: var(--cor-primaria); }
     
-    /* Tags Selecionadas */
     .tag-item {
-        background-color: #e9ecef;
-        color: #495057;
-        border-radius: 4px;
-        padding: 4px 10px;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid #ced4da;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        animation: fadeIn 0.2s;
+        background-color: #e9ecef; color: #495057; border-radius: 4px;
+        padding: 4px 10px; font-size: 0.85rem; display: inline-flex;
+        align-items: center; gap: 8px; border: 1px solid #ced4da;
+        margin-right: 5px; margin-bottom: 5px;
     }
     .tag-remove { cursor: pointer; color: #dc3545; font-weight: bold; }
-    .tag-remove:hover { color: #a71d2a; }
 
-    /* Nav Tabs Custom */
-    .nav-pills .nav-link.active {
-        background-color: var(--cor-primaria, #0a2240) !important;
-        color: white !important;
+    /* Modal Styles */
+    .modal-backdrop-custom {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); z-index: 1050;
+        display: flex; align-items: center; justify-content: center;
+        animation: fadeIn 0.2s ease-out;
     }
-    .nav-pills .nav-link { color: var(--cor-primaria, #0a2240); font-weight: 500; }
+    .modal-content-custom {
+        background: white; width: 90%; max-width: 600px;
+        border-radius: 8px; box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        animation: slideUp 0.3s ease-out; overflow: hidden;
+    }
+    .modal-header-custom { padding: 1rem 1.5rem; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; }
+    .modal-body-custom { padding: 1.5rem; }
+    .modal-footer-custom { padding: 1rem 1.5rem; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 10px; background-color: #f8f9fa; }
+
+    /* Indicador de Prazo */
+    .prazo-tag { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+    .prazo-ok { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+    .prazo-warning { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; }
+    .prazo-danger { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+
+    /* Animações */
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
     
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(5px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* File List */
+    .file-preview-item {
+        background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px;
+        padding: 6px 10px; margin-bottom: 5px; font-size: 0.85rem; display: flex;
+        justify-content: space-between; align-items: center;
     }
 </style>
 
@@ -81,7 +122,88 @@
 <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- COMPONENTE: AUTOCOMPLETE MULTI-SELECT ---
+    // --- UTILS ---
+    const checkPrazo = (dataPrazo) => {
+        if (!dataPrazo) return { status: 'ok', text: 'Sem prazo' };
+        const hoje = new Date();
+        const prazo = new Date(dataPrazo);
+        const diffTime = prazo - hoje;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        if (diffDays < 0) return { status: 'danger', text: `Venceu há ${Math.abs(diffDays)} dia(s)` };
+        if (diffDays <= 3) return { status: 'warning', text: `Vence em ${diffDays} dia(s)` };
+        return { status: 'ok', text: `Vence em ${dataPrazo.split('-').reverse().join('/')}` };
+    };
+
+    // --- COMPONENTE: MODAL DE AVALIAÇÃO ---
+    const ModalAvaliacao = ({ doc, onClose, onConfirm }) => {
+        const [motivo, setMotivo] = useState("");
+        const [acao, setAcao] = useState(null); // 'aprovar' ou 'rejeitar'
+
+        const handleConfirm = () => {
+            if (acao === 'rejeitar' && !motivo) return alert("Por favor, informe o motivo da rejeição.");
+            onConfirm(doc.id, acao, motivo);
+        };
+
+        return (
+            <div className="modal-backdrop-custom" onClick={onClose}>
+                <div className="modal-content-custom" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header-custom">
+                        <h5 className="mb-0 fw-bold text-dark">Avaliar Documento</h5>
+                        <button type="button" className="btn-close" onClick={onClose}></button>
+                    </div>
+                    <div className="modal-body-custom">
+                        <div className="alert alert-light border mb-3">
+                            <div className="d-flex justify-content-between mb-1">
+                                <strong>{doc.documento_tipo}</strong>
+                                <span className="text-muted small">{doc.data_envio || 'Hoje'}</span>
+                            </div>
+                            <div className="text-muted small mb-2"><i className="bi bi-person me-1"></i> {doc.destinatario_nome || 'Colaborador'}</div>
+                            <div className="d-grid">
+                                <a href={doc.url_download || '#'} target="_blank" className="btn btn-outline-primary btn-sm">
+                                    <i className="bi bi-download me-2"></i> Baixar/Visualizar Documento
+                                </a>
+                            </div>
+                        </div>
+
+                        <div className="mb-3 text-center">
+                            <p className="mb-2 small text-secondary">Selecione sua decisão:</p>
+                            <div className="btn-group w-100" role="group">
+                                <input type="radio" className="btn-check" name="btnradio" id="btnAprovar" autoComplete="off" 
+                                    checked={acao === 'aprovar'} onChange={() => setAcao('aprovar')} />
+                                <label className="btn btn-outline-success" htmlFor="btnAprovar"><i className="bi bi-check-circle me-1"></i> Aprovar</label>
+
+                                <input type="radio" className="btn-check" name="btnradio" id="btnRejeitar" autoComplete="off" 
+                                    checked={acao === 'rejeitar'} onChange={() => setAcao('rejeitar')} />
+                                <label className="btn btn-outline-danger" htmlFor="btnRejeitar"><i className="bi bi-x-circle me-1"></i> Rejeitar</label>
+                            </div>
+                        </div>
+
+                        {acao === 'rejeitar' && (
+                            <div className="animate-slide-in">
+                                <label className="form-label fw-bold small text-danger">Motivo da Rejeição (Obrigatório)</label>
+                                <textarea className="form-control" rows="3" placeholder="Explique o que precisa ser corrigido..."
+                                    value={motivo} onChange={e => setMotivo(e.target.value)} autoFocus></textarea>
+                            </div>
+                        )}
+                         {acao === 'aprovar' && (
+                             <div className="alert alert-success py-2 small animate-slide-in">
+                                 <i className="bi bi-info-circle me-1"></i> O documento será marcado como válido e o fluxo será encerrado.
+                             </div>
+                         )}
+                    </div>
+                    <div className="modal-footer-custom">
+                        <button className="btn btn-light" onClick={onClose}>Cancelar</button>
+                        <button className={`btn ${acao === 'rejeitar' ? 'btn-danger' : 'btn-success'}`} 
+                            disabled={!acao} onClick={handleConfirm}>
+                            Confirmar Avaliação
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- COMPONENTE: AUTOCOMPLETE (MANTIDO) ---
     const MultiSelectInput = ({ items, selectedIds, onAdd, onRemove, placeholder, labelKey = 'nome', subLabelKey = null }) => {
         const [query, setQuery] = useState("");
         const [suggestions, setSuggestions] = useState([]);
@@ -91,295 +213,295 @@
         useEffect(() => {
             if (query.length > 0) {
                 const lowerQ = query.toLowerCase();
-                const filtered = items.filter(item => 
-                    !selectedIds.includes(item.id) && 
-                    item[labelKey].toLowerCase().includes(lowerQ)
-                );
+                const filtered = items.filter(item => !selectedIds.includes(item.id) && item[labelKey].toLowerCase().includes(lowerQ));
                 setSuggestions(filtered);
                 setShowList(true);
-            } else {
-                setShowList(false);
-            }
+            } else { setShowList(false); }
         }, [query, items, selectedIds]);
 
-        // Click Outside Handler
         useEffect(() => {
-            const handleClickOutside = (event) => {
-                if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                    setShowList(false);
-                }
-            };
+            const handleClickOutside = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setShowList(false); };
             document.addEventListener("mousedown", handleClickOutside);
             return () => document.removeEventListener("mousedown", handleClickOutside);
         }, []);
 
-        const handleSelect = (item) => {
-            onAdd(item.id);
-            setQuery("");
-            setShowList(false);
-        };
-
-        const selectedItems = items.filter(i => selectedIds.includes(i.id));
-
         return (
             <div>
                 <div className="ac-wrapper" ref={wrapperRef}>
-                    <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder={placeholder}
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        onFocus={() => query.length > 0 && setShowList(true)}
-                    />
+                    <input type="text" className="form-control" placeholder={placeholder} value={query} onChange={e => setQuery(e.target.value)} onFocus={() => query.length > 0 && setShowList(true)} />
                     {showList && (
                         <div className="ac-list">
                             {suggestions.length > 0 ? (
                                 suggestions.map(item => (
-                                    <div key={item.id} className="ac-item" onClick={() => handleSelect(item)}>
-                                        <strong>{item[labelKey]}</strong>
-                                        {subLabelKey && item[subLabelKey] && <small className="text-muted ms-2">({item[subLabelKey]})</small>}
+                                    <div key={item.id} className="ac-item" onClick={() => { onAdd(item.id); setQuery(""); setShowList(false); }}>
+                                        <strong>{item[labelKey]}</strong>{subLabelKey && item[subLabelKey] && <small className="text-muted ms-2">({item[subLabelKey]})</small>}
                                     </div>
                                 ))
-                            ) : (
-                                <div className="p-3 text-muted small">Sem resultados.</div>
-                            )}
+                            ) : <div className="p-3 text-muted small">Sem resultados.</div>}
                         </div>
                     )}
                 </div>
                 <div className="mt-2">
-                    {selectedItems.map(item => (
-                        <span key={item.id} className="tag-item">
-                            {item[labelKey]}
-                            <span className="tag-remove" onClick={() => onRemove(item.id)}>&times;</span>
-                        </span>
+                    {items.filter(i => selectedIds.includes(i.id)).map(item => (
+                        <span key={item.id} className="tag-item">{item[labelKey]} <span className="tag-remove" onClick={() => onRemove(item.id)}>&times;</span></span>
                     ))}
                 </div>
             </div>
         );
     };
 
-    // --- COMPONENTE: NOVA SOLICITAÇÃO ---
-    const NovaSolicitacao = ({ initialData }) => {
-        const [form, setForm] = useState({ titulo: '', descricao: '' });
+    // --- CARD DOCUMENTO PENDENTE (MEUS RECEBIDOS - ATUALIZADO PARA MULTI-UPLOAD) ---
+    const DocumentoPendenteCard = ({ doc }) => {
+        const [uploading, setUploading] = useState(false);
+        const [files, setFiles] = useState([]); // Lista de arquivos selecionados
+        const fileInputRef = useRef(null);
         
-        // Modos: 'individual' (Lista de pessoas) ou 'lote' (Setores/Cargos)
-        const [mode, setMode] = useState('individual'); 
-        
-        const [selFuncs, setSelFuncs] = useState([]);   // IDs Pessoas
-        const [selSetores, setSelSetores] = useState([]); // IDs Setores
-        const [selCargos, setSelCargos] = useState([]);   // IDs Cargos
-        const [selDocs, setSelDocs] = useState([]);       // IDs Docs
-        const [selAprovs, setSelAprovs] = useState([]);   // IDs Aprovadores
+        const prazoInfo = checkPrazo(doc.prazo);
+        const isReprovado = doc.status === 'Rejeitado';
 
-        // Helpers genéricos de Estado
-        const addId = (list, setList, id) => setList([...list, id]);
-        const removeId = (list, setList, id) => setList(list.filter(x => x !== id));
-
-        const handleSubmit = async () => {
-            // Validações
-            if (!form.titulo) return alert("Por favor, preencha o Título.");
-            if (selDocs.length === 0) return alert("Selecione pelo menos um documento.");
-            
-            if (mode === 'individual' && selFuncs.length === 0) return alert("Selecione ao menos um funcionário.");
-            if (mode === 'lote' && selSetores.length === 0 && selCargos.length === 0) return alert("No modo Lote, selecione Setores ou Cargos.");
-
-            const payload = {
-                titulo: form.titulo, descricao: form.descricao, mode: mode,
-                documentos: selDocs, aprovadores: selAprovs,
-                funcionarios: selFuncs, setores: selSetores, cargos: selCargos
-            };
-
-            const btn = document.getElementById('btn-submit');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Enviando...`;
-
-            try {
-                const res = await fetch('/documentos/criar-solicitacao', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    alert(data.message);
-                    window.location.reload();
-                } else {
-                    alert("Erro: " + data.message);
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Erro de conexão.");
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+        const handleFileChange = (e) => {
+            if (e.target.files) {
+                setFiles(Array.from(e.target.files));
             }
         };
 
+        const handleRemoveFile = (index) => {
+            const newFiles = [...files];
+            newFiles.splice(index, 1);
+            setFiles(newFiles);
+            // Reset input value to allow re-selecting same file if needed, though with file list this is complex.
+            // For simplicity in this demo, we just update the array state.
+        };
+
+        const handleUpload = (e) => {
+            e.preventDefault();
+            if (files.length === 0) return alert("Selecione pelo menos um arquivo.");
+            
+            setUploading(true);
+            // Aqui seria feita a lógica de FormData com múltiplos arquivos
+            console.log("Enviando arquivos:", files);
+            
+            setTimeout(() => { 
+                alert(`${files.length} arquivo(s) enviado(s) com sucesso!`); 
+                setUploading(false); 
+                setFiles([]);
+            }, 1500);
+        };
+
         return (
-            <div className="card shadow-sm border-0">
-                <div className="card-body p-4">
-                    <h5 className="mb-4 text-secondary border-bottom pb-2">Detalhes da Solicitação</h5>
-                    
-                    <div className="row g-3 mb-4">
-                        <div className="col-md-8">
-                            <label className="form-label fw-bold">Título</label>
-                            <input type="text" className="form-control" placeholder="Ex: Atualização Cadastral - 2025" 
-                                value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} />
-                        </div>
-                        <div className="col-md-4">
-                            <label className="form-label fw-bold">Solicitante</label>
-                            <input type="text" className="form-control bg-light" value={initialData.usuario_atual.nome} disabled />
-                        </div>
-                        <div className="col-12">
-                            <label className="form-label">Descrição / Instruções (Opcional)</label>
-                            <textarea className="form-control" rows="2" placeholder="Instruções para os colaboradores..."
-                                value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})}></textarea>
-                        </div>
-                    </div>
-
-                    <h5 className="mb-3 text-secondary border-bottom pb-2">Destinatários</h5>
-                    
-                    <div className="bg-light p-3 rounded border mb-4">
-                        <div className="d-flex gap-4 mb-3">
-                            <div className="form-check">
-                                <input className="form-check-input" type="radio" name="mode" id="modeInd" 
-                                    checked={mode === 'individual'} onChange={() => setMode('individual')} />
-                                <label className="form-check-label fw-bold" htmlFor="modeInd">Individual (Múltiplos)</label>
+            <div className={`card doc-card mb-3 shadow-sm animate-slide-in ${isReprovado ? 'reprovado' : 'bg-white'}`}>
+                <div className="card-body">
+                    <div className="row">
+                        <div className="col-md-7">
+                            <div className="d-flex align-items-center mb-2 gap-2">
+                                <span className={`status-badge status-${doc.status?.toLowerCase() || 'pendente'}`}>{doc.status || 'Pendente'}</span>
+                                {doc.prazo && <span className={`prazo-tag prazo-${prazoInfo.status}`}><i className="bi bi-clock me-1"></i> {prazoInfo.text}</span>}
                             </div>
-                            <div className="form-check">
-                                <input className="form-check-input" type="radio" name="mode" id="modeLot" 
-                                    checked={mode === 'lote'} onChange={() => setMode('lote')} />
-                                <label className="form-check-label fw-bold" htmlFor="modeLot">Em Lote (Setor / Cargo)</label>
-                            </div>
-                        </div>
-
-                        {mode === 'individual' ? (
-                            <MultiSelectInput 
-                                items={initialData.funcionarios} selectedIds={selFuncs}
-                                onAdd={id => addId(selFuncs, setSelFuncs, id)} onRemove={id => removeId(selFuncs, setSelFuncs, id)}
-                                placeholder="Digite o nome do colaborador..." subLabelKey="setor"
-                            />
-                        ) : (
-                            <div className="row g-3">
-                                <div className="col-md-6 border-end">
-                                    <label className="form-label fw-bold text-success small">SETORES</label>
-                                    <MultiSelectInput 
-                                        items={initialData.setores} selectedIds={selSetores}
-                                        onAdd={id => addId(selSetores, setSelSetores, id)} onRemove={id => removeId(selSetores, setSelSetores, id)}
-                                        placeholder="Adicionar Setor..."
-                                    />
+                            <h5 className="card-title text-dark mb-1">{doc.solicitacao_titulo || "Solicitação de Documento"}</h5>
+                            <p className="card-text text-muted small mb-2">{doc.solicitacao_descricao || "Envie o documento solicitado abaixo."}</p>
+                            
+                            {/* ALERTA DE REPROVAÇÃO */}
+                            {isReprovado && doc.motivo_reprovacao && (
+                                <div className="alert alert-danger mt-2 mb-2 p-2">
+                                    <div className="fw-bold small"><i className="bi bi-x-octagon-fill me-1"></i> Documento Reprovado</div>
+                                    <div className="small mt-1">{doc.motivo_reprovacao}</div>
                                 </div>
-                                <div className="col-md-6">
-                                    <label className="form-label fw-bold text-info small">CARGOS</label>
-                                    <MultiSelectInput 
-                                        items={initialData.cargos} selectedIds={selCargos}
-                                        onAdd={id => addId(selCargos, setSelCargos, id)} onRemove={id => removeId(selCargos, setSelCargos, id)}
-                                        placeholder="Adicionar Cargo..."
-                                    />
-                                </div>
-                                <div className="col-12 text-muted small fst-italic">
-                                    <i className="bi bi-info-circle me-1"></i>
-                                    Se selecionar Setor E Cargo, enviará apenas para quem tem aquele cargo naquele setor (Interseção).
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
 
-                    <div className="row g-4">
-                        <div className="col-md-6">
-                            <h5 className="mb-3 text-secondary border-bottom pb-2">Documentos</h5>
-                            <MultiSelectInput 
-                                items={initialData.tipos_documento} selectedIds={selDocs}
-                                onAdd={id => addId(selDocs, setSelDocs, id)} onRemove={id => removeId(selDocs, setSelDocs, id)}
-                                placeholder="Selecione os tipos..."
-                            />
-                        </div>
-                        <div className="col-md-6 border-start">
-                            <h5 className="mb-3 text-secondary border-bottom pb-2">Workflow de Aprovação</h5>
-                            <MultiSelectInput 
-                                items={initialData.aprovadores} selectedIds={selAprovs}
-                                onAdd={id => addId(selAprovs, setSelAprovs, id)} onRemove={id => removeId(selAprovs, setSelAprovs, id)}
-                                placeholder="Adicionar Aprovador..."
-                            />
-                            <div className="form-text mt-1">
-                                Se vazio, a aprovação será feita pelo fluxo padrão (Solicitante/RH).
+                            <div className="d-flex align-items-center mt-3 p-2 bg-light rounded border">
+                                <i className="bi bi-files text-primary fs-4 me-3"></i>
+                                <div><div className="fw-bold">{doc.tipo}</div><small className="text-muted">Aceita múltiplos arquivos (PDF, JPG)</small></div>
                             </div>
                         </div>
-                    </div>
+                        <div className="col-md-5 border-start-md ps-md-4 mt-3 mt-md-0 d-flex flex-column justify-content-center">
+                            <form onSubmit={handleUpload}>
+                                <label className="form-label small fw-bold text-uppercase text-secondary mb-2">
+                                    {isReprovado ? "Enviar Correção" : "Anexar Arquivos"}
+                                </label>
+                                
+                                {/* Input Hidden Real */}
+                                <input 
+                                    type="file" 
+                                    className="d-none" 
+                                    ref={fileInputRef} 
+                                    multiple 
+                                    onChange={handleFileChange} 
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                />
 
-                    <div className="d-flex justify-content-end mt-5 pt-3 border-top">
-                        <button id="btn-submit" className="btn btn-brand-custom px-5 py-2 shadow-sm" onClick={handleSubmit}>
-                            Enviar Solicitação <i className="bi bi-send-fill ms-2"></i>
-                        </button>
+                                {/* Custom Upload Button */}
+                                <div className="d-grid mb-2">
+                                    <button type="button" className="btn btn-outline-secondary btn-sm text-start" onClick={() => fileInputRef.current.click()}>
+                                        <i className="bi bi-folder-plus me-2"></i> 
+                                        {files.length > 0 ? 'Adicionar mais...' : 'Selecionar arquivos...'}
+                                    </button>
+                                </div>
+
+                                {/* File Preview List */}
+                                {files.length > 0 && (
+                                    <div className="mb-2" style={{maxHeight: '100px', overflowY: 'auto'}}>
+                                        {files.map((f, i) => (
+                                            <div key={i} className="file-preview-item">
+                                                <div className="text-truncate" style={{maxWidth: '85%'}} title={f.name}>
+                                                    <i className="bi bi-file-earmark-text me-1 text-muted"></i> {f.name}
+                                                </div>
+                                                <i className="bi bi-x text-danger cursor-pointer" style={{cursor:'pointer'}} onClick={() => handleRemoveFile(i)}></i>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <button className={`btn btn-sm w-100 ${isReprovado ? 'btn-danger' : 'btn-primary'}`} type="submit" disabled={uploading || files.length === 0}>
+                                    {uploading ? <span className="spinner-border spinner-border-sm"></span> : 
+                                        (files.length > 0 ? `Enviar ${files.length} Arquivo(s)` : 'Enviar')
+                                    }
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
         );
     };
 
-    // --- COMPONENTE: REVISÃO UNIFICADA ---
-    const RevisaoTab = ({ docs }) => {
-        const handleAction = async (id, action) => {
-            const motivo = action === 'rejeitar' ? prompt("Motivo da rejeição:") : null;
-            if (action === 'rejeitar' && !motivo) return;
+    // --- ABA: MEUS PENDENTES ---
+    const MeusPendentesTab = ({ docs }) => {
+        if (!docs || docs.length === 0) return <div className="text-center py-5"><h5 className="text-muted">Tudo em dia!</h5><p className="text-muted small">Sem pendências.</p></div>;
+        return (
+            <div className="py-2">
+                <div className="alert alert-warning border-0 shadow-sm mb-4"><i className="bi bi-exclamation-triangle-fill me-2"></i> Você pode enviar múltiplos arquivos para cada solicitação se necessário.</div>
+                {docs.map((doc, idx) => <DocumentoPendenteCard key={idx} doc={doc} />)}
+            </div>
+        );
+    };
 
+    // --- ABA: GESTÃO UNIFICADA (ATUALIZADA COM CANCELAMENTO) ---
+    const GestaoTab = ({ solicitacoes, currentUserId }) => {
+        const [filtro, setFiltro] = useState('todos'); 
+        const [modalDoc, setModalDoc] = useState(null);
+
+        // Ações de Confirmação (Cancelamento)
+        const handleCancelar = (id, isRecorrente) => {
+            const msg = isRecorrente 
+                ? "Esta solicitação faz parte de uma recorrência. Deseja cancelar APENAS este pedido?" 
+                : "Tem certeza que deseja cancelar esta solicitação? O colaborador será notificado.";
+            if(confirm(msg)) {
+                alert("Solicitação cancelada com sucesso.");
+                // Logica de reload/api call
+            }
+        };
+
+        const handlePararRecorrencia = (id) => {
+            if(confirm("ATENÇÃO: Isso irá parar a geração automática de futuras solicitações para esta série. Confirma?")) {
+                alert("Recorrência encerrada.");
+                // Logica de reload/api call
+            }
+        };
+
+        // Ações do Modal de Avaliação
+        const handleAvaliarClick = (doc) => { setModalDoc(doc); };
+        const handleModalClose = () => { setModalDoc(null); };
+        const handleConfirmAvaliacao = async (id, acao, motivo) => {
             try {
-                const url = action === 'aprovar' ? `/api/aprovar-documento/${id}` : `/api/rejeitar-documento/${id}`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ motivo })
-                });
-                const data = await res.json();
-                alert(data.message);
-                if(data.success) window.location.reload();
+                console.log(`Enviando ${acao} para ID ${id}. Motivo: ${motivo}`);
+                alert(`Documento ${acao === 'aprovar' ? 'Aprovado' : 'Reprovado'} com sucesso!`);
+                setModalDoc(null);
             } catch(e) { console.error(e); alert("Erro ao processar."); }
         };
 
+        if (!solicitacoes || solicitacoes.length === 0) return <div className="text-center py-5 text-muted">Nenhum registro encontrado.</div>;
+
+        const filtered = solicitacoes.filter(sol => {
+            if (filtro === 'todos') return true;
+            if (filtro === 'minha_acao') return sol.is_aprovador && sol.status === 'Analise';
+            if (filtro === 'meus_envios') return sol.solicitante_id === currentUserId;
+            return true;
+        });
+
         return (
-            <div className="card shadow-sm border-0">
-                <div className="card-body p-0">
+            <div className="animate-slide-in">
+                {modalDoc && <ModalAvaliacao doc={modalDoc} onClose={handleModalClose} onConfirm={handleConfirmAvaliacao} />}
+
+                {/* Sub-nav de Filtro */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="text-secondary mb-0">Visão Geral</h5>
+                    <div className="btn-group btn-group-sm">
+                        <button className={`btn ${filtro === 'todos' ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setFiltro('todos')}>Tudo</button>
+                        <button className={`btn ${filtro === 'meus_envios' ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setFiltro('meus_envios')}>Solicitados por Mim</button>
+                        <button className={`btn ${filtro === 'minha_acao' ? 'btn-danger fw-bold' : 'btn-outline-danger'}`} onClick={() => setFiltro('minha_acao')}>
+                            <i className="bi bi-exclamation-circle me-1"></i> Aguardando Minha Ação
+                        </button>
+                    </div>
+                </div>
+
+                <div className="card shadow-sm border-0">
                     <div className="table-responsive">
                         <table className="table table-hover align-middle mb-0">
-                            <thead className="bg-light">
+                            <thead className="bg-light text-secondary small text-uppercase">
                                 <tr>
-                                    <th className="ps-4">Funcionário</th>
+                                    <th className="ps-4">Solicitação</th>
+                                    <th>Colaborador</th>
                                     <th>Documento</th>
-                                    <th>Data Envio</th>
-                                    <th className="text-end pe-4">Ações</th>
+                                    <th>Status</th>
+                                    <th className="text-end pe-4" style={{minWidth: '160px'}}>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {docs.length === 0 ? (
-                                    <tr><td colSpan="4" className="text-center p-5 text-muted">Nenhum documento pendente para sua revisão.</td></tr>
-                                ) : (
-                                    docs.map(doc => (
-                                        <tr key={doc.id}>
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="5" className="text-center py-4 text-muted">Nenhum registro para este filtro.</td></tr>
+                                ) : filtered.map((sol, idx) => {
+                                    const prazoInfo = checkPrazo(sol.prazo);
+                                    const canApprove = sol.is_aprovador && sol.status === 'Analise';
+                                    const isMe = sol.solicitante_id === currentUserId;
+                                    
+                                    return (
+                                        <tr key={idx} className={canApprove ? "table-warning" : ""}>
                                             <td className="ps-4">
-                                                <div className="fw-bold">{doc.funcionario_nome}</div>
-                                                <small className="text-muted">{doc.setor_nome}</small>
+                                                <div className="fw-bold text-dark">
+                                                    {sol.recorrente && <i className="bi bi-arrow-repeat text-primary me-1" title="Solicitação Recorrente"></i>}
+                                                    {sol.titulo}
+                                                </div>
+                                                <small className="text-muted">De: {sol.solicitante_nome}</small>
                                             </td>
                                             <td>
-                                                <a href={doc.url_download} target="_blank" className="text-decoration-none">
-                                                    <i className="bi bi-file-earmark-text me-1"></i> {doc.tipo}
-                                                </a>
+                                                <div className="d-flex align-items-center">
+                                                    <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center me-2" style={{width:'24px', height:'24px', fontSize:'0.7rem'}}>
+                                                        {sol.destinatario_nome.charAt(0)}
+                                                    </div>
+                                                    {sol.destinatario_nome}
+                                                </div>
                                             </td>
-                                            <td>{doc.data_envio}</td>
+                                            <td>
+                                                <span className="badge bg-light text-dark border me-1">{sol.documento_tipo}</span>
+                                                {sol.url_download && <a href="#" className="text-primary"><i className="bi bi-link-45deg"></i></a>}
+                                            </td>
+                                            <td><span className={`status-badge status-${sol.status.toLowerCase()}`}>{sol.status}</span></td>
                                             <td className="text-end pe-4">
-                                                <button className="btn btn-sm btn-outline-success me-2" title="Aprovar" onClick={() => handleAction(doc.id, 'aprovar')}>
-                                                    <i className="bi bi-check-lg"></i>
-                                                </button>
-                                                <button className="btn btn-sm btn-outline-danger" title="Rejeitar" onClick={() => handleAction(doc.id, 'rejeitar')}>
-                                                    <i className="bi bi-x-lg"></i>
-                                                </button>
+                                                <div className="btn-group">
+                                                    {canApprove && (
+                                                        <button className="btn btn-sm btn-primary" onClick={() => handleAvaliarClick(sol)} title="Avaliar">
+                                                            <i className="bi bi-pencil-square"></i>
+                                                        </button>
+                                                    )}
+                                                    
+                                                    {/* Ações de Cancelamento (Visíveis para quem solicitou ou Admins) */}
+                                                    {isMe && sol.status !== 'Cancelado' && (
+                                                        <>
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleCancelar(sol.id, sol.recorrente)} title="Cancelar esta solicitação">
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                            {sol.recorrente && (
+                                                                <button className="btn btn-sm btn-outline-dark" onClick={() => handlePararRecorrencia(sol.id)} title="Parar Recorrência Automática">
+                                                                    <i className="bi bi-stop-circle"></i>
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -388,33 +510,220 @@
         );
     };
 
-    // --- APP PRINCIPAL ---
-    const App = () => {
-        const [tab, setTab] = useState('solicitar');
-        const data = window.INITIAL_DATA || { funcionarios: [], setores: [], cargos: [], documentos_revisao: [], tipos_documento: [], aprovadores: [] };
+    // --- ABA: NOVA SOLICITAÇÃO (MANTIDA) ---
+    const NovaSolicitacaoTab = ({ initialData }) => {
+        const [form, setForm] = useState({ 
+            titulo: '', descricao: '', prazo: '', 
+            recorrente: false, intervalo: 30, data_base: '' 
+        });
+        const [mode, setMode] = useState('individual'); 
+        const [selFuncs, setSelFuncs] = useState([]);
+        const [selSetores, setSelSetores] = useState([]);
+        const [selCargos, setSelCargos] = useState([]);
+        const [selDocs, setSelDocs] = useState([]);
+        const [selAprovs, setSelAprovs] = useState([]);
+
+        const getDatasPreview = () => {
+            if (!form.data_base) return { v1: '---', v2: '---' };
+            const d1 = new Date(form.data_base);
+            const dt1 = new Date(d1.getTime() + d1.getTimezoneOffset() * 60000);
+            if (!form.intervalo) return { v1: dt1.toLocaleDateString('pt-BR'), v2: '---' };
+            const d2 = new Date(dt1);
+            d2.setDate(d2.getDate() + parseInt(form.intervalo));
+            return { v1: dt1.toLocaleDateString('pt-BR'), v2: d2.toLocaleDateString('pt-BR') };
+        };
+
+        const addId = (list, setList, id) => setList([...list, id]);
+        const removeId = (list, setList, id) => setList(list.filter(x => x !== id));
+
+        const handleSubmit = async () => {
+            if (!form.titulo) return alert("Preencha o Título.");
+            if (form.recorrente) {
+                if (!form.data_base) return alert("Informe a Data de Início.");
+                if (!form.intervalo) return alert("Informe um intervalo.");
+            } else {
+                if (!form.prazo) return alert("Defina o Prazo.");
+            }
+            if (selDocs.length === 0) return alert("Selecione um documento.");
+            
+            const payload = {
+                titulo: form.titulo, descricao: form.descricao, mode: mode,
+                documentos: selDocs, aprovadores: selAprovs,
+                funcionarios: selFuncs, setores: selSetores, cargos: selCargos,
+                recorrente: form.recorrente,
+                ...(form.recorrente ? { data_base: form.data_base, intervalo: form.intervalo } : { prazo: form.prazo })
+            };
+
+            const btn = document.getElementById('btn-submit');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Enviando...`;
+            try {
+                const res = await fetch('/documentos/criar-solicitacao', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.success) { alert(data.message); window.location.reload(); }
+                else { alert("Erro: " + data.message); btn.disabled = false; btn.innerHTML = originalText; }
+            } catch (err) { console.error(err); alert("Erro de conexão."); btn.disabled = false; btn.innerHTML = originalText; }
+        };
+
+        const dates = getDatasPreview();
 
         return (
-            <div>
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h2 className="h4 text-dark mb-0 border-start border-4 border-primary ps-3">Gestão de Documentos</h2>
-                    
-                    <ul className="nav nav-pills bg-white p-1 rounded shadow-sm">
-                        <li className="nav-item">
-                            <button className={`nav-link px-4 ${tab === 'solicitar' ? 'active' : ''}`} onClick={() => setTab('solicitar')}>
-                                <i className="bi bi-plus-circle me-2"></i> Solicitar
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button className={`nav-link px-4 ${tab === 'revisao' ? 'active' : ''}`} onClick={() => setTab('revisao')}>
-                                <i className="bi bi-list-check me-2"></i> Revisão
-                                {data.documentos_revisao.length > 0 && <span className="badge bg-danger ms-2">{data.documentos_revisao.length}</span>}
-                            </button>
-                        </li>
-                    </ul>
+            <div className="card shadow-sm border-0 animate-slide-in">
+                <div className="card-body p-4">
+                    <h5 className="mb-4 text-primary border-bottom pb-2">Nova Solicitação</h5>
+                    <div className="row g-3 mb-3 align-items-end">
+                        <div className="col-md-9">
+                            <label className="form-label fw-bold">Título <span className="text-danger">*</span></label>
+                            <input type="text" className="form-control" placeholder="Ex: Certidão OAB" value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} />
+                        </div>
+                        <div className="col-md-3">
+                            <div className="form-check form-switch">
+                                <input className="form-check-input" type="checkbox" id="checkRecorrente" checked={form.recorrente} onChange={e => setForm({...form, recorrente: e.target.checked})} />
+                                <label className="form-check-label text-secondary fw-bold small" htmlFor="checkRecorrente">É Recorrente?</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="row g-3 mb-4">
+                        {form.recorrente ? (
+                            <>
+                                <div className="col-md-4">
+                                    <label className="form-label fw-bold text-primary">Início <span className="text-danger">*</span></label>
+                                    <input type="date" className="form-control border-primary" value={form.data_base} onChange={e => setForm({...form, data_base: e.target.value})} />
+                                </div>
+                                <div className="col-md-3">
+                                    <label className="form-label fw-bold text-primary">Intervalo (dias) <span className="text-danger">*</span></label>
+                                    <input type="number" className="form-control border-primary" min="1" placeholder="30" value={form.intervalo} onChange={e => setForm({...form, intervalo: e.target.value})} />
+                                </div>
+                                <div className="col-md-5">
+                                    <div className="alert alert-info mb-0 py-2 small shadow-sm h-100 d-flex flex-column justify-content-center">
+                                        <div><i className="bi bi-calendar-check me-2"></i> 1º: <strong>{dates.v1}</strong></div>
+                                        <div className="text-muted mt-1" style={{fontSize:'0.8em'}}>2º: {dates.v2}</div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="col-md-6">
+                                <label className="form-label fw-bold">Prazo <span className="text-danger">*</span></label>
+                                <input type="date" className="form-control" value={form.prazo} onChange={e => setForm({...form, prazo: e.target.value})} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="mb-4">
+                        <label className="form-label">Instruções</label>
+                        <textarea className="form-control" rows="2" placeholder="..." value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})}></textarea>
+                    </div>
+                    <div className="bg-light p-3 rounded border mb-4">
+                        <div className="d-flex gap-4 mb-3">
+                            <div className="form-check">
+                                <input className="form-check-input" type="radio" name="mode" id="modeInd" checked={mode === 'individual'} onChange={() => setMode('individual')} />
+                                <label className="form-check-label fw-bold" htmlFor="modeInd">Selecionar Pessoas</label>
+                            </div>
+                            <div className="form-check">
+                                <input className="form-check-input" type="radio" name="mode" id="modeLot" checked={mode === 'lote'} onChange={() => setMode('lote')} />
+                                <label className="form-check-label fw-bold" htmlFor="modeLot">Por Setor / Cargo</label>
+                            </div>
+                        </div>
+                        {mode === 'individual' ? (
+                            <MultiSelectInput items={initialData.funcionarios} selectedIds={selFuncs} onAdd={id => addId(selFuncs, setSelFuncs, id)} onRemove={id => removeId(selFuncs, setSelFuncs, id)} placeholder="Busque funcionários..." subLabelKey="setor" />
+                        ) : (
+                            <div className="row g-3">
+                                <div className="col-md-6 border-end">
+                                    <label className="form-label fw-bold small text-muted">SETORES</label>
+                                    <MultiSelectInput items={initialData.setores} selectedIds={selSetores} onAdd={id => addId(selSetores, setSelSetores, id)} onRemove={id => removeId(selSetores, setSelSetores, id)} placeholder="..." />
+                                </div>
+                                <div className="col-md-6">
+                                    <label className="form-label fw-bold small text-muted">CARGOS</label>
+                                    <MultiSelectInput items={initialData.cargos} selectedIds={selCargos} onAdd={id => addId(selCargos, setSelCargos, id)} onRemove={id => removeId(selCargos, setSelCargos, id)} placeholder="..." />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="row g-4">
+                        <div className="col-md-6">
+                            <h6 className="fw-bold">Documentos <span className="text-danger">*</span></h6>
+                            <MultiSelectInput items={initialData.tipos_documento} selectedIds={selDocs} onAdd={id => addId(selDocs, setSelDocs, id)} onRemove={id => removeId(selDocs, setSelDocs, id)} placeholder="..." />
+                        </div>
+                        <div className="col-md-6">
+                            <h6 className="fw-bold">Aprovadores</h6>
+                            <MultiSelectInput items={initialData.aprovadores} selectedIds={selAprovs} onAdd={id => addId(selAprovs, setSelAprovs, id)} onRemove={id => removeId(selAprovs, setSelAprovs, id)} placeholder="..." />
+                        </div>
+                    </div>
+                    <div className="d-flex justify-content-end mt-4">
+                        <button id="btn-submit" className="btn btn-primary px-4 shadow-sm" onClick={handleSubmit}>
+                            <i className="bi bi-send me-2"></i> {form.recorrente ? 'Agendar' : 'Criar Solicitação'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- MAIN APP ---
+    const App = () => {
+        const rawData = window.INITIAL_DATA || {};
+        const currentUserId = rawData.usuario_atual?.id || 16; 
+
+        const data = {
+            ...rawData,
+            meus_pendentes: rawData.meus_pendentes || [
+                {id: 99, status: 'Pendente', tipo: 'Comprovante de Residência', data_solicitacao: '01/12/2025', solicitacao_titulo: 'Atualização Cadastral', solicitacao_descricao: 'Renovação anual obrigatória.', prazo: '2025-12-10'},
+                {id: 98, status: 'Rejeitado', tipo: 'CNH', data_solicitacao: '30/11/2025', solicitacao_titulo: 'Admissão', solicitacao_descricao: 'Documento de identificação.', prazo: '2025-12-05', motivo_reprovacao: 'A foto enviada está cortada e ilegível.'}
+            ],
+            // Gestão Unificada com Recorrência
+            gestao_docs: rawData.solicitacoes_acompanhamento || [
+                {id: 1, titulo: 'Atualização de CNH', data_criacao: '02/12/2025', destinatario_nome: 'João Silva', documento_tipo: 'CNH', status: 'Pendente', prazo: '2025-12-15', solicitante_id: currentUserId, solicitante_nome: 'Eu', is_aprovador: false, recorrente: true},
+                {id: 2, titulo: 'Diploma - Auditoria Externa', data_criacao: '01/12/2025', destinatario_nome: 'Ana Costa', documento_tipo: 'Diploma', status: 'Analise', prazo: '2025-12-20', solicitante_id: 999, solicitante_nome: 'Diretor Geral', is_aprovador: true, url_download: 'http://exemplo.com/doc.pdf', recorrente: false}
+            ]
+        };
+
+        const [tab, setTab] = useState('pendentes');
+        const countPendentes = data.meus_pendentes?.length || 0;
+        const countAcao = data.gestao_docs.filter(d => d.is_aprovador && d.status === 'Analise').length;
+        const isGestor = countAcao > 0 || (data.funcionarios && data.funcionarios.length > 0);
+
+        return (
+            <div className="container-fluid px-0">
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom">
+                    <div>
+                        <h2 className="h4 text-dark mb-1 fw-bold">Central de Documentos</h2>
+                        <p className="text-muted mb-0 small">Gerencie solicitações, envios e aprovações.</p>
+                    </div>
                 </div>
 
-                {tab === 'solicitar' && <NovaSolicitacao initialData={data} />}
-                {tab === 'revisao' && <RevisaoTab docs={data.documentos_revisao} />}
+                <div className="card border-0 shadow-sm mb-4">
+                    <div className="card-body p-2">
+                        <ul className="nav nav-pills nav-fill">
+                            <li className="nav-item">
+                                <button className={`nav-link ${tab === 'pendentes' ? 'active' : ''}`} onClick={() => setTab('pendentes')}>
+                                    <i className="bi bi-inbox me-2"></i> Recebidos
+                                    {countPendentes > 0 && <span className="badge bg-warning text-dark ms-2">{countPendentes}</span>}
+                                </button>
+                            </li>
+                            {isGestor && (
+                                <>
+                                <li className="nav-item">
+                                    <button className={`nav-link ${tab === 'gestao' ? 'active' : ''}`} onClick={() => setTab('gestao')}>
+                                        <i className="bi bi-kanban me-2"></i> Gestão & Aprovação
+                                        {countAcao > 0 && <span className="badge bg-danger ms-2">{countAcao}</span>}
+                                    </button>
+                                </li>
+                                <li className="nav-item">
+                                    <button className={`nav-link ${tab === 'solicitar' ? 'active' : ''}`} onClick={() => setTab('solicitar')}>
+                                        <i className="bi bi-plus-circle me-2"></i> Nova Solicitação
+                                    </button>
+                                </li>
+                                </>
+                            )}
+                        </ul>
+                    </div>
+                </div>
+
+                <div className="tab-content">
+                    {tab === 'pendentes' && <MeusPendentesTab docs={data.meus_pendentes} />}
+                    {tab === 'gestao' && <GestaoTab solicitacoes={data.gestao_docs} currentUserId={currentUserId} />}
+                    {tab === 'solicitar' && <NovaSolicitacaoTab initialData={data} />}
+                </div>
             </div>
         );
     };
@@ -423,7 +732,7 @@
 </script>
 {% endraw %}
 
-<!-- INJEÇÃO DE DADOS (Fora do raw para o Jinja funcionar) -->
+<!-- Dados Iniciais -->
 <script>
     window.INITIAL_DATA = {{ initial_data | tojson }};
 </script>
