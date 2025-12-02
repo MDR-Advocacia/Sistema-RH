@@ -21,6 +21,15 @@
         {% if current_user.is_authenticated %}
         
         <div class="sidebar-links-container">
+            
+            {# --- DEFINIÇÃO DE VARIÁVEIS DE PERMISSÃO (MOVIDO PARA O TOPO) --- #}
+            {% set is_ti_member = false %}
+            {% if current_user.funcionario and current_user.funcionario.setor %}
+                {% set setor_nome = current_user.funcionario.setor.nome|upper %}
+                {% if 'TI' in setor_nome or 'TECNOLOGIA' in setor_nome or 'SUPORTE' in setor_nome or 'INFRA' in setor_nome %}
+                    {% set is_ti_member = true %}
+                {% endif %}
+            {% endif %}
         
             <ul class="nav nav-pills flex-column"> 
                 <li class="nav-item">
@@ -28,6 +37,38 @@
                         <i class="bi bi-grid-1x2-fill"></i> Dashboard
                     </a>
                 </li>
+
+                <!-- Link Helpdesk (Acesso Geral) -->
+                <li>
+                    <a href="{{ url_for('chamados_web.meus_chamados') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.') and 'gestao' not in request.endpoint and 'categorias' not in request.endpoint and 'relatorios' not in request.endpoint %}active{% endif %}">
+                        <i class="bi bi-headset"></i> Meus Chamados
+                    </a>
+                </li>
+
+                <!-- ###################################################### -->
+                <!-- ##   LINKS DE GESTÃO EM DESTAQUE (FORA DOS MENUS)   ## -->
+                <!-- ###################################################### -->
+
+                <!-- Gestão de Documentos (Acesso RH/DP) -->
+                {% if current_user.tem_permissao(['admin_rh', 'depto_pessoal']) %}
+                <li>
+                    <a href="{{ url_for('documentos.gestao_documentos') }}" class="nav-link {% if request.endpoint == 'documentos.gestao_documentos' %}active{% endif %}">
+                        <i class="bi bi-file-earmark-zip-fill"></i> Documentos
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- Gestão de Chamados (Acesso TI) -->
+                {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti', 'tecnico_ti']) or is_ti_member %}
+                <li>
+                    <a href="{{ url_for('chamados_web.gestao_chamados_react') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.gestao') or request.endpoint.startswith('chamados_web.gerenciar_cat') or request.endpoint.startswith('chamados_web.relat') %}active{% endif %}">
+                        <i class="bi bi-kanban-fill"></i> Chamados
+                    </a>
+                </li>
+                {% endif %}
+                
+                <!-- ###################################################### -->
+
                 <li>
                     <a href="{{ url_for('main.listar_avisos') }}" class="nav-link {% if 'aviso' in request.endpoint %}active{% endif %}">
                         <i class="bi bi-megaphone-fill"></i> Mural de Avisos
@@ -45,19 +86,12 @@
                         <i class="bi bi-shield-exclamation"></i> Canal de Denúncias
                     </a>
                 </li>
-
-                <!-- Link Helpdesk (Todos) -->
-                <li>
-                    <a href="{{ url_for('chamados_web.meus_chamados') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.') and 'gestao' not in request.endpoint and 'categorias' not in request.endpoint and 'relatorios' not in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-headset"></i> Meus Chamados
-                    </a>
-                </li>
                 
                 {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor', 'supervisor_ti', 'tecnico_ti']) %}
                 <hr class="text-secondary">
                 {% endif %}
 
-                <!-- Link Funcionários (Permissões Atualizadas) -->
+                <!-- Link Funcionários -->
                 {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'depto_pessoal', 'supervisor_ti', 'tecnico_ti']) %}
                 <li class="nav-item">
                     <a href="{{ url_for('main.listar_funcionarios') }}" class="nav-link {% if request.endpoint.startswith('main.') and 'funcionario' in request.endpoint %}active{% endif %}">
@@ -72,7 +106,6 @@
                     
                     {# Lógica para expandir "Gestão" se estiver ativo #}
                     {% set gestao_prefixes = [
-                        'documentos.gestao_documentos', 
                         'artigos.gerenciar', 'artigos.criar', 'artigos.editar', 
                         'ponto.', 
                         'denuncias.gestao_denuncias', 'denuncias.ver_denuncia'
@@ -91,13 +124,7 @@
                         <div class="collapse {% if is_gestao_active %}show{% endif %}" id="submenu-gestao">
                             <ul class="nav flex-column ms-3">
                                 
-                                {% if current_user.tem_permissao(['admin_rh', 'depto_pessoal']) %}
-                                <li>
-                                    <a href="{{ url_for('documentos.gestao_documentos') }}" class="nav-link {% if request.endpoint == 'documentos.gestao_documentos' %}active{% endif %}">
-                                        <i class="bi bi-file-earmark-zip-fill"></i> Gestão de Documentos
-                                    </a>
-                                </li>
-                                {% endif %}
+                                {# REMOVIDO DAQUI: Gestão de Documentos (Foi para o topo) #}
 
                                 {% if current_user.tem_permissao(['admin_rh', 'admin_ti', 'supervisor']) %}
                                 <li>
@@ -155,20 +182,10 @@
                 {% endif %}
 
 
-                
-                {# --- NOVA LÓGICA DE PERMISSÃO PARA O MENU ADMIN TI --- #}
-                {% set is_ti_member = false %}
-                {% if current_user.funcionario and current_user.funcionario.setor %}
-                    {% set setor_nome = current_user.funcionario.setor.nome|upper %}
-                    {% if 'TI' in setor_nome or 'TECNOLOGIA' in setor_nome or 'SUPORTE' in setor_nome or 'INFRA' in setor_nome %}
-                        {% set is_ti_member = true %}
-                    {% endif %}
-                {% endif %}
-
                 {% if current_user.tem_permissao(['admin_ti', 'supervisor_ti', 'tecnico_ti']) or is_ti_member %}
                     
                     <!-- Lógica Admin TI Atualizada -->
-                    {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs', 'chamados_web.gestao_chamados_react', 'chamados_web.gerenciar_categorias', 'chamados_web.relatorios'] %}
+                    {% set ti_prefixes = ['vinculo_ad.', 'main.ver_logs', 'chamados_web.gerenciar_categorias', 'chamados_web.relatorios'] %}
                     {% set is_ti_active = false %}
                     {% for prefix in ti_prefixes %}
                         {% if request.endpoint.startswith(prefix) %}
@@ -194,18 +211,13 @@
                                     </a>
                                 </li>
                                 
-                                <!-- Link Gestão de Chamados (Hub Central) -->
-                                <li>
-                                    <a href="{{ url_for('chamados_web.gestao_chamados_react') }}" class="nav-link {% if request.endpoint.startswith('chamados_web.gestao') or request.endpoint.startswith('chamados_web.gerenciar_cat') or request.endpoint.startswith('chamados_web.relat') %}active{% endif %}">
-                                        <i class="bi bi-kanban-fill"></i> Gestão de Chamados
-                                    </a>
-                                </li>
+                                {# REMOVIDO DAQUI: Gestão de Chamados (Foi para o topo) #}
                             </ul>
                         </div>
                     </li>
                 {% endif %}
 
-                </ul>
+            </ul>
             
         </div>
 
@@ -264,7 +276,7 @@
                 }, 5000);
             });
 
-            // --- SCRIPT DO SELETOR DE TEMA (VERSÃO CORRIGIDA E ROBUSTA) ---
+            // --- SCRIPT DO SELETOR DE TEMA ---
             const themeSwitcher = document.getElementById('theme-switcher');
             const body = document.body;
 

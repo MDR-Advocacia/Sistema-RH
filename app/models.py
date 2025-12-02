@@ -1,10 +1,9 @@
-# app/models.py
 import jwt
 from flask import current_app
 from datetime import datetime, timedelta, timezone
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean, Date
 from flask_login import UserMixin
 
 # --- Tabelas de Associação ---
@@ -145,6 +144,12 @@ class Solicitacao(db.Model):
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     status_geral = db.Column(db.String(50), default='Aberta') # Aberta, Concluída, Cancelada
+    
+    # --- NOVOS CAMPOS PARA RECORRÊNCIA ---
+    recorrente = db.Column(db.Boolean, default=False)
+    data_base = db.Column(db.Date, nullable=True) # Data de início/referência
+    intervalo_dias = db.Column(db.Integer, nullable=True) # Ex: 30
+    ativa = db.Column(db.Boolean, default=True) # Para parar a recorrência
 
     solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
     # Relacionamento com as requisições filhas
@@ -200,7 +205,9 @@ class Documento(db.Model):
     data_revisao = db.Column(db.DateTime, nullable=True)
     observacao_revisao = db.Column(db.Text, nullable=True)
 
-    funcionario = db.relationship('Funcionario', backref='documentos')
+    # RELACIONAMENTO RESTAURADO (ESSENCIAL PARA OS FILTROS FUNCIONAREM)
+    funcionario = db.relationship('Funcionario', backref=db.backref('documentos', lazy=True))
+    
     # Relacionamento para as aprovações detalhadas
     aprovacoes = db.relationship('DocumentoAprovacao', back_populates='documento', cascade="all, delete-orphan")
 

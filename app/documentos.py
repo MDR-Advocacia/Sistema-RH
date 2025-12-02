@@ -1,8 +1,10 @@
 import os
 import uuid
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, send_from_directory, jsonify)
 from flask_login import login_required, current_user
@@ -36,16 +38,13 @@ def allowed_file(filename):
 def gestao_documentos():
     """Página unificada para gestão de documentos (Com suporte a React)."""
     
-    # --- LÓGICA LEGADA (MANTIDA PARA COMPATIBILIDADE COM FORMS ANTIGOS) ---
     if request.method == 'POST':
         return solicitar_documento_legado()
 
-    # --- PREPARAÇÃO DE DADOS (PARA O NOVO FRONTEND REACT) ---
+    # --- PREPARAÇÃO DE DADOS ---
     
-    # 1. Filtros de Hierarquia (Quem eu posso ver?)
+    # 1. Filtros de Hierarquia
     funcionarios_query = Funcionario.query.filter_by(status='Ativo')
-    
-    # Admins, Financeiro e Diretoria veem tudo
     is_global_admin = current_user.tem_permissao(['admin_rh', 'depto_pessoal', 'admin_ti', 'financeiro', 'diretoria'])
     is_supervisor = current_user.tem_permissao('supervisor')
 
@@ -53,24 +52,107 @@ def gestao_documentos():
         if current_user.funcionario and current_user.funcionario.setor_id:
             funcionarios_query = funcionarios_query.filter_by(setor_id=current_user.funcionario.setor_id)
         else:
-            funcionarios_query = funcionarios_query.filter_by(id=-1) # Sem setor, não vê ninguém
+            funcionarios_query = funcionarios_query.filter_by(id=-1) 
 
     funcionarios = funcionarios_query.order_by(Funcionario.nome).all()
-    
-    # Listas auxiliares para os filtros inteligentes
     tipos_documento = TipoDocumento.query.order_by(TipoDocumento.nome).all()
     setores = Setor.query.order_by(Setor.nome).all()
     cargos = Cargo.query.order_by(Cargo.nome).all()
-    
-    # Lista de Documentos para Revisão (Visão Geral ou do Setor)
-    doc_query = Documento.query.filter_by(status='Pendente de Revisão')
-    if not is_global_admin and is_supervisor and current_user.funcionario.setor_id:
-        doc_query = doc_query.join(Funcionario).filter(Funcionario.setor_id == current_user.funcionario.setor_id)
-    
-    documentos_para_revisar = doc_query.order_by(Documento.data_upload.asc()).all()
-
-    # Lista de possíveis aprovadores (Todos usuários ativos)
     aprovadores_disponiveis = Usuario.query.join(Funcionario).filter(Funcionario.status=='Ativo').order_by(Funcionario.nome).all()
+    
+    # 2. Documentos para Revisão (Minhas Pendências de Aprovação)
+    # Busca aprovações onde EU sou o aprovador e está pendente
+    minhas_aprovacoes = DocumentoAprovacao.query.filter_by(
+        aprovador_id=current_user.id, 
+        status='Pendente'
+    ).all()
+    ids_docs_para_mim = [a.documento_id for a in minhas_aprovacoes]
+
+    # FIX DEFINITIVO: Voltamos a usar CLASSE.ATRIBUTO pois o models.py já foi corrigido e possui 'funcionario'.
+    # Isso resolve o ArgumentError das strings e o AttributeError pois a relação existe.
+    doc_query = Documento.query.options(joinedload(Documento.funcionario).joinedload(Funcionario.setor))
+    
+    if is_global_admin:
+        doc_query = doc_query.filter(or_(
+            Documento.id.in_(ids_docs_para_mim),
+            Documento.status == 'Pendente de Revisão'
+        ))
+    else:
+        doc_query = doc_query.filter(Documento.id.in_(ids_docs_para_mim))
+        
+    documentos_revisao = doc_query.order_by(Documento.data_upload.asc()).all()
+
+    # 3. Solicitações para Gestão (Aba "Gestão")
+    ids_sol_aprovador = db.session.query(SolicitacaoAprovador.solicitacao_id).filter_by(aprovador_id=current_user.id).all()
+    ids_sol_aprovador = [i[0] for i in ids_sol_aprovador]
+
+    # FIX: Usando CLASSE.ATRIBUTO aqui também
+    req_query = RequisicaoDocumento.query.options(
+        joinedload(RequisicaoDocumento.solicitacao_pai),
+        joinedload(RequisicaoDocumento.destinatario),
+        joinedload(RequisicaoDocumento.tipo),
+        joinedload(RequisicaoDocumento.solicitante).joinedload(Usuario.funcionario)
+    ).join(Solicitacao).filter(
+        or_(
+            Solicitacao.solicitante_id == current_user.id,
+            Solicitacao.id.in_(ids_sol_aprovador)
+        )
+    ).order_by(Solicitacao.data_criacao.desc()).limit(100).all()
+
+    lista_gestao = []
+    for req in req_query:
+        sou_aprovador = False
+        # FIX: Usando CLASSE.ATRIBUTO
+        doc_anexado = Documento.query.options(joinedload(Documento.funcionario)).filter_by(requisicao_id=req.id).order_by(Documento.id.desc()).first()
+        
+        if doc_anexado:
+            aprov_pendente = DocumentoAprovacao.query.filter_by(documento_id=doc_anexado.id, aprovador_id=current_user.id, status='Pendente').first()
+            if aprov_pendente: sou_aprovador = True
+            elif is_global_admin and doc_anexado.status == 'Pendente de Revisão': sou_aprovador = True
+        
+        solicitante_nome = "Sistema"
+        if req.solicitante and req.solicitante.funcionario:
+            solicitante_nome = req.solicitante.funcionario.nome
+        elif req.solicitacao_pai and req.solicitacao_pai.solicitante and req.solicitacao_pai.solicitante.funcionario:
+            solicitante_nome = req.solicitacao_pai.solicitante.funcionario.nome
+
+        lista_gestao.append({
+            'id': doc_anexado.id if doc_anexado else 0,
+            'req_id': req.id,
+            'solicitacao_id': req.solicitacao_id,
+            'titulo': req.solicitacao_pai.titulo if req.solicitacao_pai else "Solicitação Avulsa",
+            'data_criacao': req.data_requisicao.strftime('%d/%m/%Y'),
+            'destinatario_nome': req.destinatario.nome if req.destinatario else "Desconhecido",
+            'documento_tipo': req.tipo.nome if req.tipo else "Documento",
+            'status': doc_anexado.status if doc_anexado else req.status,
+            'prazo': None,
+            'solicitante_id': req.solicitante_id,
+            'solicitante_nome': solicitante_nome,
+            'is_aprovador': sou_aprovador,
+            'recorrente': req.solicitacao_pai.recorrente if req.solicitacao_pai else False,
+            'url_download': url_for('documentos.download_documento', filename=doc_anexado.path_armazenamento) if doc_anexado else None
+        })
+
+    # --- MONTAGEM DA LISTA DE REVISÃO ---
+    lista_docs_revisao = []
+    for d in documentos_revisao:
+        # Acesso seguro
+        if d.funcionario:
+            f_nome = d.funcionario.nome
+            s_nome = d.funcionario.setor.nome if d.funcionario.setor else '-'
+        else:
+            f_nome = "Funcionário Desconhecido"
+            s_nome = "-"
+
+        lista_docs_revisao.append({
+            'id': d.id,
+            'funcionario_nome': f_nome,
+            'setor_nome': s_nome,
+            'tipo': d.tipo_documento,
+            'data_envio': d.data_upload.strftime('%d/%m/%Y %H:%M'),
+            'status': d.status,
+            'url_download': url_for('documentos.download_documento', filename=d.path_armazenamento)
+        })
 
     # --- JSON PARA O REACT ---
     initial_data = {
@@ -79,27 +161,18 @@ def gestao_documentos():
         'setores': [{'id': s.id, 'nome': s.nome} for s in setores],
         'cargos': [{'id': c.id, 'nome': c.nome} for c in cargos],
         'aprovadores': [{'id': u.id, 'nome': u.funcionario.nome} for u in aprovadores_disponiveis],
-        'documentos_revisao': [{
-            'id': d.id,
-            'funcionario_nome': d.funcionario.nome,
-            'setor_nome': d.funcionario.setor.nome if d.funcionario.setor else '-',
-            'tipo': d.tipo_documento,
-            'data_envio': d.data_upload.strftime('%d/%m/%Y %H:%M'),
-            'status': d.status,
-            'url_download': url_for('documentos.download_documento', filename=d.path_armazenamento)
-        } for d in documentos_para_revisar],
+        'documentos_revisao': lista_docs_revisao,
+        'solicitacoes_acompanhamento': lista_gestao,
         'usuario_atual': {
-            'nome': current_user.funcionario.nome,
+            'id': current_user.id,
+            'nome': current_user.funcionario.nome if current_user.funcionario else current_user.username,
             'is_admin': is_global_admin
         }
     }
 
     return render_template(
         'documentos/gestao.html',
-        initial_data=initial_data,
-        documentos_para_revisar=documentos_para_revisar, # Fallback para Jinja se necessário
-        funcionarios=funcionarios,
-        tipos_documento=tipos_documento
+        initial_data=initial_data
     )
 
 def solicitar_documento_legado():
@@ -145,23 +218,21 @@ def solicitar_documento_legado():
 @login_required
 @permission_required(PERMISSOES_DOCS)
 def criar_solicitacao_complexa():
-    """
-    API para criar solicitações via React.
-    Suporta listas de Setores e Cargos com lógica de interseção inteligente.
-    """
     data = request.get_json()
     
     titulo = data.get('titulo')
     descricao = data.get('descricao')
-    
-    # Modos: 'individual' ou 'lote'
     mode = data.get('mode', 'individual') 
     
-    # Listas de IDs
-    ids_funcionarios = data.get('funcionarios', []) # Lista de IDs (Individual Múltiplo)
-    ids_setores = data.get('setores', [])           # Lista de IDs (Lote)
-    ids_cargos = data.get('cargos', [])             # Lista de IDs (Lote)
-    
+    # Recorrência
+    recorrente = data.get('recorrente', False)
+    data_base_str = data.get('data_base')
+    intervalo = data.get('intervalo')
+    prazo_str = data.get('prazo')
+
+    ids_funcionarios = data.get('funcionarios', []) 
+    ids_setores = data.get('setores', [])           
+    ids_cargos = data.get('cargos', [])             
     ids_tipos_doc = data.get('documentos', [])
     ids_aprovadores = data.get('aprovadores', [])
 
@@ -172,48 +243,42 @@ def criar_solicitacao_complexa():
     destinatarios_finais = set()
 
     if mode == 'individual':
-        # Adiciona cada funcionário selecionado manualmente
         for uid in ids_funcionarios:
-            destinatarios_finais.add(int(uid))
-            
+            destinatarios_finais.add(int(uid))     
     elif mode == 'lote':
         query = Funcionario.query.filter_by(status='Ativo')
-        
-        # Lógica de Interseção:
-        # Se selecionou Setores E Cargos -> Pega quem está nesses setores E tem esses cargos
-        # Se selecionou só Setores -> Pega todos desses setores
-        # Se selecionou só Cargos -> Pega todos com esses cargos
-        
         filtros_aplicados = False
-        
         if ids_setores:
             query = query.filter(Funcionario.setor_id.in_(ids_setores))
             filtros_aplicados = True
-            
         if ids_cargos:
             query = query.filter(Funcionario.cargo_id.in_(ids_cargos))
             filtros_aplicados = True
-            
         if not filtros_aplicados:
             return jsonify({'success': False, 'message': 'No modo lote, selecione ao menos um Setor ou Cargo.'}), 400
-            
         candidatos = query.all()
         for f in candidatos:
             destinatarios_finais.add(f.id)
 
     if not destinatarios_finais:
-        return jsonify({'success': False, 'message': 'Nenhum funcionário encontrado para os critérios selecionados.'}), 400
+        return jsonify({'success': False, 'message': 'Nenhum funcionário encontrado.'}), 400
 
     try:
         # --- 2. CRIAR ESTRUTURA NO BANCO ---
         
-        # Capa da Solicitação
         nova_solicitacao = Solicitacao(
             titulo=titulo,
             descricao=descricao,
             solicitante_id=current_user.id,
-            status_geral='Aberta'
+            status_geral='Aberta',
+            recorrente=recorrente
         )
+
+        if recorrente and data_base_str and intervalo:
+            nova_solicitacao.data_base = datetime.strptime(data_base_str, '%Y-%m-%d').date()
+            nova_solicitacao.intervalo_dias = int(intervalo)
+            nova_solicitacao.ativa = True
+        
         db.session.add(nova_solicitacao)
         db.session.flush()
 
@@ -226,11 +291,10 @@ def criar_solicitacao_complexa():
                 )
                 db.session.add(aprov_link)
 
-        # Requisições Individuais (Explosão)
+        # Requisições Individuais
         count_reqs = 0
         for func_id in destinatarios_finais:
             for doc_type_id in ids_tipos_doc:
-                # Evita duplicar pendência já existente
                 existe = RequisicaoDocumento.query.filter_by(
                     destinatario_id=func_id,
                     tipo_documento_id=int(doc_type_id),
@@ -250,20 +314,15 @@ def criar_solicitacao_complexa():
                     count_reqs += 1
         
         db.session.commit()
-        
-        registrar_log(f"Criou solicitação '{titulo}' (Modo: {mode}) gerando {count_reqs} pendências para {len(destinatarios_finais)} colaboradores.")
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Sucesso! {count_reqs} solicitações geradas para {len(destinatarios_finais)} colaboradores.'
-        })
+        registrar_log(f"Criou solicitação '{titulo}' (Recorrente: {recorrente}) para {len(destinatarios_finais)} colaboradores.")
+        return jsonify({'success': True, 'message': f'Sucesso! {count_reqs} solicitações geradas.'})
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erro ao criar solicitação: {e}")
         return jsonify({'success': False, 'message': f'Erro interno: {str(e)}'}), 500
 
-# --- ROTAS API: RESPONDER / APROVAR / REJEITAR ---
+# --- ROTAS API: RESPONDER (MULTI-UPLOAD) ---
 
 @documentos_bp.route('/requisicao/<int:req_id>/responder', methods=['POST'])
 @login_required
@@ -271,54 +330,64 @@ def responder_requisicao(req_id):
     requisicao = RequisicaoDocumento.query.get_or_404(req_id)
     if requisicao.destinatario_id != current_user.funcionario.id:
         return jsonify({'success': False, 'message': 'Acesso não autorizado.'}), 403
-    if 'arquivo' not in request.files:
+    
+    # SUPORTE A MÚLTIPLOS ARQUIVOS
+    files = request.files.getlist('arquivo') # Pega lista de arquivos
+    if not files or files[0].filename == '':
         return jsonify({'success': False, 'message': 'Nenhum arquivo enviado.'}), 400
-    file = request.files['arquivo']
-    if file.filename == '' or not allowed_file(file.filename):
-        return jsonify({'success': False, 'message': 'Arquivo inválido.'}), 400
 
     try:
-        filename_seguro = secure_filename(file.filename)
-        extensao = filename_seguro.rsplit('.', 1)[1]
-        nome_unico = f"{uuid.uuid4()}.{extensao}"
-        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
-        file.save(os.path.join(upload_path, nome_unico))
+        count_saved = 0
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename_seguro = secure_filename(file.filename)
+                extensao = filename_seguro.rsplit('.', 1)[1]
+                nome_unico = f"{uuid.uuid4()}.{extensao}"
+                upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'])
+                file.save(os.path.join(upload_path, nome_unico))
 
-        novo_documento = Documento(
-            nome_arquivo=filename_seguro,
-            tipo_documento=requisicao.tipo.nome,
-            path_armazenamento=nome_unico,
-            funcionario_id=current_user.funcionario.id,
-            requisicao_id=requisicao.id,
-            status='Pendente de Aprovação'
-        )
-        db.session.add(novo_documento)
-        db.session.flush()
+                novo_documento = Documento(
+                    nome_arquivo=filename_seguro,
+                    tipo_documento=requisicao.tipo.nome,
+                    path_armazenamento=nome_unico,
+                    funcionario_id=current_user.funcionario.id,
+                    requisicao_id=requisicao.id,
+                    status='Pendente de Aprovação'
+                )
+                db.session.add(novo_documento)
+                db.session.flush()
 
-        # Lógica de Workflow
-        if requisicao.solicitacao_pai:
-            aprovadores = requisicao.solicitacao_pai.aprovadores_previstos.all()
-            if aprovadores:
-                for ap in aprovadores:
-                    tarefa = DocumentoAprovacao(
-                        documento_id=novo_documento.id,
-                        aprovador_id=ap.aprovador_id,
-                        status='Pendente'
-                    )
-                    db.session.add(tarefa)
-            else:
-                # Se não há aprovadores definidos, cai na revisão geral (RH/Solicitante)
-                novo_documento.status = 'Pendente de Revisão'
+                # Lógica de Workflow para CADA documento
+                if requisicao.solicitacao_pai:
+                    aprovadores = requisicao.solicitacao_pai.aprovadores_previstos.all()
+                    if aprovadores:
+                        for ap in aprovadores:
+                            tarefa = DocumentoAprovacao(
+                                documento_id=novo_documento.id,
+                                aprovador_id=ap.aprovador_id,
+                                status='Pendente'
+                            )
+                            db.session.add(tarefa)
+                    else:
+                        novo_documento.status = 'Pendente de Revisão'
+                else:
+                    novo_documento.status = 'Pendente de Revisão'
+                
+                count_saved += 1
+
+        if count_saved > 0:
+            requisicao.status = 'Em Revisão' # Atualiza status da requisição pai
+            requisicao.observacao = None
+            db.session.commit()
+            return jsonify({'success': True, 'message': f'{count_saved} arquivos enviados com sucesso!'})
         else:
-            novo_documento.status = 'Pendente de Revisão'
+            return jsonify({'success': False, 'message': 'Nenhum arquivo válido.'}), 400
 
-        requisicao.status = 'Em Revisão'
-        requisicao.observacao = None
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Enviado com sucesso!'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# --- ROTAS API: APROVAÇÃO / REPROVAÇÃO ---
 
 @documentos_bp.route('/api/aprovar-documento/<int:doc_id>', methods=['POST'])
 @login_required
@@ -327,18 +396,19 @@ def api_aprovar_documento(doc_id):
     aprovacao_pendente = DocumentoAprovacao.query.filter_by(documento_id=doc_id, aprovador_id=current_user.id, status='Pendente').first()
     is_super_admin = current_user.tem_permissao(['admin_rh', 'admin_ti'])
 
-    if not aprovacao_pendente and not is_super_admin:
-        return jsonify({'success': False, 'message': 'Sem permissão.'}), 403
+    if not aprovacao_pendente and not is_super_admin and documento.status != 'Pendente de Revisão':
+        return jsonify({'success': False, 'message': 'Sem permissão ou nada a aprovar.'}), 403
 
     try:
         if aprovacao_pendente:
             aprovacao_pendente.status = 'Aprovado'
             aprovacao_pendente.data_acao = datetime.utcnow()
         
+        # Verifica se TODOS aprovaram
         todas = DocumentoAprovacao.query.filter_by(documento_id=doc_id).all()
+        todos_aprovaram = all(a.status == 'Aprovado' for a in todas)
         
-        # Aprovação final ocorre se TODOS aprovaram OU se foi aprovado por Super Admin (bypass)
-        if all(a.status == 'Aprovado' for a in todas) or is_super_admin:
+        if (todas and todos_aprovaram) or is_super_admin:
             documento.status = 'Aprovado'
             documento.data_revisao = datetime.utcnow()
             documento.revisor_id = current_user.id
@@ -376,7 +446,7 @@ def api_rejeitar_documento(doc_id):
         
         documento.status = 'Rejeitado'
         if documento.requisicao:
-            documento.requisicao.status = 'Pendente'
+            documento.requisicao.status = 'Rejeitado' # Usar status Rejeitado na req também para aparecer vermelho no front
             documento.requisicao.observacoes_rh = f"Rejeitado por {current_user.funcionario.nome}: {motivo}"
             
         db.session.commit()
@@ -385,13 +455,49 @@ def api_rejeitar_documento(doc_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# --- NOVAS ROTAS: CANCELAMENTO E PARAR RECORRÊNCIA ---
+
+@documentos_bp.route('/api/solicitacao/<int:sol_id>/cancelar', methods=['POST'])
+@login_required
+@permission_required(PERMISSOES_DOCS)
+def cancelar_solicitacao(sol_id):
+    """Cancela uma solicitação específica (Requisição)"""
+    # Como o front manda o ID da requisicao (req_id), carregamos a requisição
+    req = RequisicaoDocumento.query.get_or_404(sol_id)
+    
+    try:
+        req.status = 'Cancelado'
+        docs = Documento.query.filter_by(requisicao_id=req.id).all()
+        for d in docs:
+            d.status = 'Cancelado'
+            
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Solicitação cancelada.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@documentos_bp.route('/api/solicitacao/<int:sol_id>/parar-recorrencia', methods=['POST'])
+@login_required
+@permission_required(PERMISSOES_DOCS)
+def parar_recorrencia(sol_id):
+    """Para a recorrência de uma solicitação PAI."""
+    sol = Solicitacao.query.get_or_404(sol_id)
+    if not sol.recorrente:
+        return jsonify({'success': False, 'message': 'Esta solicitação não é recorrente.'}), 400
+        
+    try:
+        sol.ativa = False
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Recorrência interrompida com sucesso.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @documentos_bp.route('/download/<path:filename>')
 @login_required
 def download_documento(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
-# --- ROTAS LEGADAS (CRUD Tipos e Compatibilidade) ---
-
+# --- ROTAS LEGADAS (MANTIDAS) ---
 @documentos_bp.route('/tipos', methods=['GET', 'POST'])
 @login_required
 def gerenciar_tipos_documento():
@@ -422,19 +528,6 @@ def upload_manual_documento(): return redirect(url_for('documentos.gestao_docume
 @login_required
 def historico_documentos_funcionario(funcionario_id): return jsonify([])
 
-@documentos_bp.route('/documento/<int:documento_id>/aprovar', methods=['POST'])
-@login_required
-def aprovar_documento(documento_id):
-    """Rota legada para compatibilidade."""
-    return api_aprovar_documento(documento_id)
-
-@documentos_bp.route('/documento/<int:documento_id>/reprovar', methods=['POST'])
-@login_required
-def reprovar_documento(documento_id):
-    """Rota legada para compatibilidade."""
-    return api_rejeitar_documento(documento_id)
-
-# --- ROTAS DE VIZUALIZAÇÃO PERFIL (MANTIDAS) ---
 @documentos_bp.route('/funcionario/<int:funcionario_id>')
 @login_required
 @permission_required(['admin_rh', 'depto_pessoal'])

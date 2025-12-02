@@ -278,14 +278,38 @@
             if (files.length === 0) return alert("Selecione pelo menos um arquivo.");
             
             setUploading(true);
-            // Aqui seria feita a lógica de FormData com múltiplos arquivos
-            console.log("Enviando arquivos:", files);
             
-            setTimeout(() => { 
-                alert(`${files.length} arquivo(s) enviado(s) com sucesso!`); 
-                setUploading(false); 
-                setFiles([]);
-            }, 1500);
+            // Preparar FormData com múltiplos arquivos
+            const formData = new FormData();
+            files.forEach((file) => {
+                formData.append('arquivo', file); // Backend deve esperar 'arquivo' como lista
+            });
+
+            // URL dinâmica baseada no ID da requisição (req_id) que está no objeto 'doc'
+            // IMPORTANTE: No backend, o objeto 'doc' na lista 'meus_pendentes' é construído a partir de RequisicaoDocumento
+            // mas geralmente chamamos o ID da requisição de 'id' mesmo no JSON.
+            const url = `/documentos/requisicao/${doc.id}/responder`;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                setUploading(false);
+                if (data.success) {
+                    alert(`${files.length} arquivo(s) enviado(s) com sucesso!`);
+                    setFiles([]);
+                    window.location.reload();
+                } else {
+                    alert("Erro ao enviar: " + data.message);
+                }
+            })
+            .catch(error => {
+                setUploading(false);
+                console.error('Erro:', error);
+                alert("Erro de conexão ao enviar arquivos.");
+            });
         };
 
         return (
@@ -381,20 +405,34 @@
         const [modalDoc, setModalDoc] = useState(null);
 
         // Ações de Confirmação (Cancelamento)
-        const handleCancelar = (id, isRecorrente) => {
+        const handleCancelar = async (id, isRecorrente) => {
             const msg = isRecorrente 
                 ? "Esta solicitação faz parte de uma recorrência. Deseja cancelar APENAS este pedido?" 
                 : "Tem certeza que deseja cancelar esta solicitação? O colaborador será notificado.";
+            
             if(confirm(msg)) {
-                alert("Solicitação cancelada com sucesso.");
-                // Logica de reload/api call
+                try {
+                    const res = await fetch(`/documentos/api/solicitacao/${id}/cancelar`, { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                } catch (e) {
+                    alert("Erro ao cancelar.");
+                }
             }
         };
 
-        const handlePararRecorrencia = (id) => {
+        const handlePararRecorrencia = async (id) => {
             if(confirm("ATENÇÃO: Isso irá parar a geração automática de futuras solicitações para esta série. Confirma?")) {
-                alert("Recorrência encerrada.");
-                // Logica de reload/api call
+                try {
+                    // ID aqui deve ser da Solicitação Pai. O objeto 'sol' tem 'solicitacao_id'.
+                    const res = await fetch(`/documentos/api/solicitacao/${id}/parar-recorrencia`, { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                } catch (e) {
+                    alert("Erro ao parar recorrência.");
+                }
             }
         };
 
@@ -403,9 +441,16 @@
         const handleModalClose = () => { setModalDoc(null); };
         const handleConfirmAvaliacao = async (id, acao, motivo) => {
             try {
-                console.log(`Enviando ${acao} para ID ${id}. Motivo: ${motivo}`);
-                alert(`Documento ${acao === 'aprovar' ? 'Aprovado' : 'Reprovado'} com sucesso!`);
+                const url = acao === 'aprovar' ? `/documentos/api/aprovar-documento/${id}` : `/documentos/api/rejeitar-documento/${id}`;
+                const res = await fetch(url, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motivo }) 
+                });
+                const data = await res.json();
+                alert(data.message);
                 setModalDoc(null);
+                if (data.success) window.location.reload();
             } catch(e) { console.error(e); alert("Erro ao processar."); }
         };
 
@@ -451,7 +496,7 @@
                                     <tr><td colSpan="5" className="text-center py-4 text-muted">Nenhum registro para este filtro.</td></tr>
                                 ) : filtered.map((sol, idx) => {
                                     const prazoInfo = checkPrazo(sol.prazo);
-                                    const canApprove = sol.is_aprovador && sol.status === 'Analise';
+                                    const canApprove = sol.is_aprovador && sol.status === 'Analise'; // Verifica se status é 'Analise' ou 'Pendente de Revisão'
                                     const isMe = sol.solicitante_id === currentUserId;
                                     
                                     return (
@@ -473,25 +518,25 @@
                                             </td>
                                             <td>
                                                 <span className="badge bg-light text-dark border me-1">{sol.documento_tipo}</span>
-                                                {sol.url_download && <a href="#" className="text-primary"><i className="bi bi-link-45deg"></i></a>}
+                                                {sol.url_download && <a href={sol.url_download} target="_blank" className="text-primary"><i className="bi bi-link-45deg"></i></a>}
                                             </td>
-                                            <td><span className={`status-badge status-${sol.status.toLowerCase()}`}>{sol.status}</span></td>
+                                            <td><span className={`status-badge status-${sol.status.toLowerCase().replace(/ /g, '')}`}>{sol.status}</span></td>
                                             <td className="text-end pe-4">
                                                 <div className="btn-group">
-                                                    {canApprove && (
+                                                    {(canApprove || (sol.status === 'Pendente de Revisão' && sol.is_aprovador)) && (
                                                         <button className="btn btn-sm btn-primary" onClick={() => handleAvaliarClick(sol)} title="Avaliar">
                                                             <i className="bi bi-pencil-square"></i>
                                                         </button>
                                                     )}
                                                     
-                                                    {/* Ações de Cancelamento (Visíveis para quem solicitou ou Admins) */}
+                                                    {/* Ações de Cancelamento (Visíveis para quem solicitou) */}
                                                     {isMe && sol.status !== 'Cancelado' && (
                                                         <>
-                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleCancelar(sol.id, sol.recorrente)} title="Cancelar esta solicitação">
+                                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleCancelar(sol.req_id, sol.recorrente)} title="Cancelar esta solicitação">
                                                                 <i className="bi bi-trash"></i>
                                                             </button>
                                                             {sol.recorrente && (
-                                                                <button className="btn btn-sm btn-outline-dark" onClick={() => handlePararRecorrencia(sol.id)} title="Parar Recorrência Automática">
+                                                                <button className="btn btn-sm btn-outline-dark" onClick={() => handlePararRecorrencia(sol.solicitacao_id)} title="Parar Recorrência Automática">
                                                                     <i className="bi bi-stop-circle"></i>
                                                                 </button>
                                                             )}
@@ -662,24 +707,18 @@
     // --- MAIN APP ---
     const App = () => {
         const rawData = window.INITIAL_DATA || {};
-        const currentUserId = rawData.usuario_atual?.id || 16; 
+        const currentUserId = rawData.usuario_atual?.id; // Pega ID real do usuário
 
         const data = {
             ...rawData,
-            meus_pendentes: rawData.meus_pendentes || [
-                {id: 99, status: 'Pendente', tipo: 'Comprovante de Residência', data_solicitacao: '01/12/2025', solicitacao_titulo: 'Atualização Cadastral', solicitacao_descricao: 'Renovação anual obrigatória.', prazo: '2025-12-10'},
-                {id: 98, status: 'Rejeitado', tipo: 'CNH', data_solicitacao: '30/11/2025', solicitacao_titulo: 'Admissão', solicitacao_descricao: 'Documento de identificação.', prazo: '2025-12-05', motivo_reprovacao: 'A foto enviada está cortada e ilegível.'}
-            ],
-            // Gestão Unificada com Recorrência
-            gestao_docs: rawData.solicitacoes_acompanhamento || [
-                {id: 1, titulo: 'Atualização de CNH', data_criacao: '02/12/2025', destinatario_nome: 'João Silva', documento_tipo: 'CNH', status: 'Pendente', prazo: '2025-12-15', solicitante_id: currentUserId, solicitante_nome: 'Eu', is_aprovador: false, recorrente: true},
-                {id: 2, titulo: 'Diploma - Auditoria Externa', data_criacao: '01/12/2025', destinatario_nome: 'Ana Costa', documento_tipo: 'Diploma', status: 'Analise', prazo: '2025-12-20', solicitante_id: 999, solicitante_nome: 'Diretor Geral', is_aprovador: true, url_download: 'http://exemplo.com/doc.pdf', recorrente: false}
-            ]
+            // REMOVIDOS DADOS MOCKADOS - AGORA USA APENAS O QUE VEM DO BACKEND
+            meus_pendentes: rawData.meus_pendentes || [],
+            gestao_docs: rawData.solicitacoes_acompanhamento || []
         };
 
         const [tab, setTab] = useState('pendentes');
-        const countPendentes = data.meus_pendentes?.length || 0;
-        const countAcao = data.gestao_docs.filter(d => d.is_aprovador && d.status === 'Analise').length;
+        const countPendentes = data.meus_pendentes.length || 0;
+        const countAcao = data.gestao_docs.filter(d => d.is_aprovador && (d.status === 'Analise' || d.status === 'Pendente de Revisão')).length;
         const isGestor = countAcao > 0 || (data.funcionarios && data.funcionarios.length > 0);
 
         return (
