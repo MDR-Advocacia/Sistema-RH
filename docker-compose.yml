@@ -1,35 +1,52 @@
 services:
+  # --- APLICAÇÃO WEB (MDRH) ---
   web:
     build: .
+    container_name: mdrh_app
+    restart: always
     ports:
-      - "5000:5000"
+      # MUDANÇA: Mapeamos a porta 5001 do Mac para a 5000 do Container
+      # Acesse via http://localhost:5001
+      - "5001:5000"
     volumes:
+      # Mapeia o código para facilitar debug se precisar (opcional em produção)
       - .:/app
-      - uploads_data:/app/uploads
+      # Persiste uploads fora do container
+      - ./uploads:/app/uploads
     env_file:
-      - .env  # Carrega todas as variáveis do arquivo .env  
+      - .env
     environment:
-      - FLASK_APP=run.py
-      - FLASK_ENV=development
-      # A URL agora é construída com as variáveis do .env
+      # Sobrescreve a URL do banco para usar o host 'db' interno do Docker
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - FLASK_APP=run.py
+      # Gunicorn roda melhor sem reload em 'prod', mas em teste ok
+      - FLASK_DEBUG=0 
     depends_on:
       - db
+    networks:
+      - mdrh_net
 
+  # --- BANCO DE DADOS ---
   db:
     image: postgres:16
+    container_name: mdrh_db
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    # O serviço do banco de dados também usa as variáveis para a inicialização
+    env_file:
+      - .env
     environment:
+      # Garante que o PG use as mesmas credenciais do .env
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-    env_file:
-      - .env  # Carrega as variáveis do banco (POSTGRES_USER, etc.)  
+    networks:
+      - mdrh_net
 
+  # --- SERVIÇO DE BACKUP (Agendado) ---
   backup:
     image: postgres:16
+    container_name: mdrh_backup
     volumes:
       - ./scripts:/scripts
       - ./backups:/backups
@@ -42,13 +59,16 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - db
-    command: ["/scripts/backup.sh"]
+    # Script que roda o pg_dump periodicamente
+    command: ["/bin/bash", "/scripts/backup.sh"] 
+    networks:
+      - mdrh_net
 
-    # --- NOVO SERVIÇO ADICIONADO AQUI ---
+  # --- SERVIÇO DE RESTAURAÇÃO (Manual) ---
   restore:
     image: postgres:16
+    container_name: mdrh_restore
     volumes:
-      # Mapeia a pasta de backups para que o pg_restore possa lê-la
       - ./backups:/backups
     env_file:
       - .env
@@ -59,11 +79,14 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - db
-    # O entrypoint é o comando que será executado.
-    # Ele espera receber o nome do arquivo como argumento.
-    entrypoint: ["pg_restore", "-U", "admin", "-d", "mdrh_db", "--clean", "--if-exists"]
+    networks:
+      - mdrh_net
+    # Entrypoint configurado para receber o arquivo como argumento
+    # Usa --clean para limpar o banco antes de restaurar e --if-exists para evitar erro se não existir
+    entrypoint: ["pg_restore", "-h", "db", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "--clean", "--if-exists", "--no-owner", "--role=${POSTGRES_USER}"]
 
 volumes:
   postgres_data:
-  uploads_data:
-  backups_data: # Declara o novo volume para os backups    
+
+networks:
+  mdrh_net:
